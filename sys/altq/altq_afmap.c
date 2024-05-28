@@ -96,7 +96,7 @@ afm_alloc(struct ifnet *ifp)
 	/* add this afm_head to the chain */
 	LIST_INSERT_HEAD(&afhead_chain, head, afh_chain);
 
-	return (0);
+	return 0;
 }
 
 /*
@@ -120,7 +120,7 @@ afm_dealloc(struct ifnet *ifp)
 	if_afm_locate(head, ifp);
 
 	if (head == NULL)
-		return (-1);
+		return -1;
 
 	afm_removeall(ifp);
 
@@ -140,7 +140,7 @@ afm_top(struct ifnet *ifp)
 	if (head == NULL)
 		return NULL;
 
-	return (head->afh_head.lh_first);
+	return head->afh_head.lh_first;
 }
 
 int
@@ -152,22 +152,22 @@ afm_add(struct ifnet *ifp, struct atm_flowmap *flowmap)
 	if_afm_locate(head, ifp);
 
 	if (head == NULL)
-		return (-1);
+		return -1;
 
 	if (flowmap->af_flowinfo.fi_family == AF_INET) {
 		if (flowmap->af_flowinfo.fi_len != sizeof(struct flowinfo_in))
-			return (EINVAL);
+			return EINVAL;
 #ifdef INET6
 	} else if (flowmap->af_flowinfo.fi_family == AF_INET6) {
 		if (flowmap->af_flowinfo.fi_len != sizeof(struct flowinfo_in6))
-			return (EINVAL);
+			return EINVAL;
 #endif
 	} else
-		return (EINVAL);
+		return EINVAL;
 
 	afm = malloc(sizeof(struct afm), M_DEVBUF, M_WAITOK|M_ZERO);
 	if (afm == NULL)
-		return (ENOMEM);
+		return ENOMEM;
 
 	afm->afm_vci = flowmap->af_vci;
 	afm->afm_vpi = flowmap->af_vpi;
@@ -183,7 +183,7 @@ afm_remove(struct afm *afm)
 {
 	LIST_REMOVE(afm, afm_list);
 	free(afm, M_DEVBUF);
-	return (0);
+	return 0;
 }
 
 int
@@ -195,11 +195,11 @@ afm_removeall(struct ifnet *ifp)
 	if_afm_locate(head, ifp);
 
 	if (head == NULL)
-		return (-1);
+		return -1;
 
 	while ((afm = head->afh_head.lh_first) != NULL)
 		afm_remove(afm);
-	return (0);
+	return 0;
 }
 
 struct afm *
@@ -243,7 +243,7 @@ afm_match4(struct afm_head *head, struct flowinfo_in *fp)
 		    afm->afm_flowinfo4.fi_proto != fp->fi_proto)
 			continue;
 		/* match found! */
-		return (afm);
+		return afm;
 	}
 	return NULL;
 }
@@ -281,7 +281,7 @@ afm_match6(struct afm_head *head, struct flowinfo_in6 *fp)
 		    afm->afm_flowinfo6.fi6_proto != fp->fi6_proto)
 			continue;
 		/* match found! */
-		return (afm);
+		return afm;
 	}
 	return NULL;
 }
@@ -362,7 +362,7 @@ afmioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		    KAUTH_NETWORK_ALTQ, KAUTH_REQ_NETWORK_ALTQ_AFMAP, NULL,
 		    NULL, NULL);
 		if (error)
-			return (error);
+			return error;
 		break;
 	}
 
