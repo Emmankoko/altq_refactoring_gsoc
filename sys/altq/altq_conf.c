@@ -182,30 +182,44 @@ const struct cdevsw altq_cdevsw = {
 	.d_flag = D_OTHER,
 };
 
+enum device_routine {open, close};
+
+
+/*
+ * altq device open and close routine definition
+ */
 int
-altqopen(dev_t dev, int flag, int fmt, struct lwp *l)
+altq_routine(enum device_routine routine, dev_t dev,
+int flag, int fmt, struct lwp *l )
 {
 	int unit = minor(dev);
 
 	if (unit == 0)
 		return 0;
 	if (unit < naltqsw)
-		return (*altqsw[unit].d_open)(dev, flag, fmt, l);
-
+	{
+		switch(routine)
+		{
+			case open:
+				return (*altqsw[unit].d_open)(dev, flag, fmt, l);
+			case close:
+				return (*altqsw[unit].d_close)(dev, flag, fmt, l);
+			default:
+				break;
+		}
+	}
 	return ENXIO;
+}
+int
+altqopen(dev_t dev, int flag, int fmt, struct lwp *l)
+{
+	return altq_routine(open, dev, flag, fmt, l);
 }
 
 int
 altqclose(dev_t dev, int flag, int fmt, struct lwp *l)
 {
-	int unit = minor(dev);
-
-	if (unit == 0)
-		return 0;
-	if (unit < naltqsw)
-		return (*altqsw[unit].d_close)(dev, flag, fmt, l);
-
-	return ENXIO;
+	return altq_routine(close, dev, flag, fmt, l);
 }
 
 int
