@@ -234,7 +234,6 @@ if_validate(struct ifnet *ifp, char ifname[IFNAMSIZ])
 	return 1;
 }
 
-
 /*
  * ioclt routines for altq device
  */
@@ -266,6 +265,19 @@ get_tbr(struct ifnet *ifp, struct tbrreq *tbrreq, void *addr)
 	return tbr_get(&ifp->if_snd, &tbrreq->tb_prof);
 }
 
+/*
+ * authorize network operation
+ */
+bool altq_auth(int *error, struct lwp *l)
+{
+	if ((*error = kauth_authorize_network(
+		l->l_cred, KAUTH_NETWORK_ALTQ,
+		KAUTH_REQ_NETWORK_ALTQ_CONF, NULL, NULL,
+		NULL)) != 0)
+		return 0; /* not authorized*/
+	return 1; /* authorized */
+}
+
 int
 altqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag, struct lwp *l)
 {
@@ -279,25 +291,16 @@ altqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag, struct lwp *l)
 
 		switch (cmd) {
 		case ALTQGTYPE:
-		case ALTQTBRGET:
-			break;
-		default:
-			if ((error = kauth_authorize_network(
-			    l->l_cred, KAUTH_NETWORK_ALTQ,
-			    KAUTH_REQ_NETWORK_ALTQ_CONF, NULL, NULL,
-			    NULL)) != 0)
-				return error;
-			break;
-		}
-
-		switch (cmd) {
-		case ALTQGTYPE:
 			return get_queue_type(ifp, typereq, addr);
 		case ALTQTBRSET:
+			if (!altq_auth(&error, l))
+				return error;
 			return set_tbr(ifp, tbrreq, addr);
 		case ALTQTBRGET:
 			return get_tbr(ifp, tbrreq, addr);
 		default:
+			if (!altq_auth(&error, l))
+				return error;
 			return EINVAL;
 		}
 	}
