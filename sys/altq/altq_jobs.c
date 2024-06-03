@@ -149,7 +149,7 @@ typedef unsigned long long ull;
 enum remove_postion{
 	FRONT,
 	REAR
-}
+};
 
 /* setup functions */
 
@@ -160,7 +160,7 @@ jobs_attach(struct ifaltq *ifq, u_int bandwidth, u_int qlimit, u_int separate)
 
 	jif = malloc(sizeof(struct jobs_if), M_DEVBUF, M_WAITOK|M_ZERO);
 	if (jif == NULL)
-	        return (NULL);
+	        return NULL;
 
 	jif->jif_bandwidth = bandwidth;
 	jif->jif_qlimit = qlimit;
@@ -188,7 +188,7 @@ jobs_attach(struct ifaltq *ifq, u_int bandwidth, u_int qlimit, u_int separate)
 	jif->jif_next = jif_list;
 	jif_list = jif;
 
-	return (jif);
+	return jif;
 }
 
 static void
@@ -230,7 +230,7 @@ jobs_clear_interface(struct jobs_if *jif)
 		if ((cl = jif->jif_classes[pri]) != NULL)
 			jobs_class_destroy(cl);
 
-	return (0);
+	return 0;
 }
 
 static int
@@ -243,7 +243,7 @@ jobs_request(struct ifaltq *ifq, int req, void *arg)
 		jobs_purge(jif);
 		break;
 	}
-	return (0);
+	return 0;
 }
 
 /* discard all the queued packets on the interface */
@@ -282,7 +282,7 @@ jobs_class_create(struct jobs_if *jif, int pri, int64_t adc, int64_t rdc,
 		cl = malloc(sizeof(struct jobs_class), M_DEVBUF,
 		    M_WAITOK|M_ZERO);
 		if (cl == NULL)
-			return (NULL);
+			return NULL;
 
 		cl->cl_q = malloc(sizeof(class_queue_t), M_DEVBUF,
 		    M_WAITOK|M_ZERO);
@@ -447,7 +447,7 @@ jobs_class_create(struct jobs_if *jif, int pri, int64_t adc, int64_t rdc,
 
 	now = read_machclk();
 	cl->idletime = now;
-	return (cl);
+	return cl;
 
  err_ret:
 	if (cl->cl_q != NULL)
@@ -456,7 +456,7 @@ jobs_class_create(struct jobs_if *jif, int pri, int64_t adc, int64_t rdc,
 		free(cl->arv_tm, M_DEVBUF);
 
 	free(cl, M_DEVBUF);
-	return (NULL);
+	return NULL;
 }
 
 static int
@@ -489,7 +489,7 @@ jobs_class_destroy(struct jobs_class *cl)
 	tslist_destroy(cl);
 	free(cl->cl_q, M_DEVBUF);
 	free(cl, M_DEVBUF);
-	return (0);
+	return 0;
 }
 
 /*
@@ -645,7 +645,7 @@ jobs_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	jif->avg_cycles_enqueue += cycles;
 	jif->avg_cycles2_enqueue += cycles * cycles;
 
-	return (return_flag);
+	return return_flag;
 }
 
 /*
@@ -694,7 +694,7 @@ jobs_dequeue(struct ifaltq *ifq, int op)
 		jif->avg_cycles_dequeue += cycles;
 		jif->avg_cycles2_dequeue += cycles * cycles;
 
-		return (NULL);
+		return NULL;
 	}
 
 	/*
@@ -736,7 +736,7 @@ jobs_dequeue(struct ifaltq *ifq, int op)
 		jif->avg_cycles_dequeue += cycles;
 		jif->avg_cycles2_dequeue += cycles * cycles;
 
-		return (jobs_pollq(cl));
+		return jobs_pollq(cl);
 	}
 
 	if (cl != NULL)
@@ -772,7 +772,7 @@ jobs_dequeue(struct ifaltq *ifq, int op)
 	jif->avg_cycles_dequeue += cycles;
 	jif->avg_cycles2_dequeue += cycles * cycles;
 
-	return (m);
+	return m;
 }
 
 static int
@@ -875,7 +875,7 @@ jobs_addq(struct jobs_class *cl, struct mbuf *m, struct jobs_if *jif)
 						m_freem(m); /* the packet is trashed here */
 						tslist_drop(victim_class); /* and its timestamp as well */
 					}
-					return (-1);
+					return -1;
 				}
 			}
 		} else {
@@ -912,7 +912,7 @@ jobs_addq(struct jobs_class *cl, struct mbuf *m, struct jobs_if *jif)
 				m_freem(m); /* the packet is trashed here */
 				tslist_drop(victim_class); /* and its timestamp as well */
 			}
-			return (-1);
+			return -1;
 		}
 	}
 	/* else: no drop */
@@ -920,7 +920,7 @@ jobs_addq(struct jobs_class *cl, struct mbuf *m, struct jobs_if *jif)
 	_addq(cl->cl_q, m);
 	tslist_enqueue(cl, now);
 
-	return (0);
+	return 0;
 }
 
 static struct mbuf *
@@ -967,7 +967,7 @@ tslist_alloc(void)
 
 	list_init = malloc(sizeof(TSLIST), M_DEVBUF, M_WAITOK);
 	TAILQ_INIT(list_init);
-	return (list_init);
+	return list_init;
 }
 
 static void
@@ -985,11 +985,11 @@ tslist_enqueue(struct jobs_class *cl, u_int64_t arv)
 	TSENTRY *pushed;
 	pushed = malloc(sizeof(TSENTRY), M_DEVBUF, M_WAITOK);
 	if (pushed == NULL)
-		return (0);	
+		return 0;
 
 	pushed->timestamp = arv;
 	TAILQ_INSERT_TAIL(cl->arv_tm, pushed, ts_list);
-	return (1);
+	return 1;
 }
 
 static void
@@ -1075,7 +1075,7 @@ enforce_wc(struct jobs_if *jif)
 		}
 	}
 
-	return (updated);
+	return updated;
 }
 
 /*
@@ -1156,7 +1156,7 @@ adjust_rates_rdc(struct jobs_if *jif)
 	}
 
 	if (bk == 0)
-		return (result);
+		return result;
 
 	for (i = 0; i <= jif->jif_maxpri; i++) {
 		cl = jif->jif_classes[i];
@@ -1545,7 +1545,7 @@ assign_rate_drops_adc(struct jobs_if *jif)
 	free(k, M_DEVBUF);
 	free(available, M_DEVBUF);
 
-	return (result);
+	return result;
 
 fail5: __unused
 	free(available, M_DEVBUF);
@@ -1690,7 +1690,7 @@ proj_delay(struct jobs_if *jif, int i)
 	if (is_backlogged)
 		return ((int64_t)delay_diff(now, tslist_first(cl->arv_tm)->timestamp));
 
-	return (0); /* NOTREACHED */
+	return 0; /* NOTREACHED */
 }
 
 /*
@@ -1822,7 +1822,7 @@ pick_dropped_rlc(struct jobs_if *jif)
 	}
 
 	free(loss_error, M_DEVBUF);
-	return (class_dropped);
+	return class_dropped;
 }
 
 /*
@@ -1972,9 +1972,9 @@ jobscmd_if_attach(struct jobs_attach *ap)
 	int error;
 
 	if ((ifp = ifunit(ap->iface.jobs_ifname)) == NULL)
-		return (ENXIO);
+		return ENXIO;
 	if ((jif = jobs_attach(&ifp->if_snd, ap->bandwidth, ap->qlimit, ap->separate)) == NULL)
-		return (ENOMEM);
+		return ENOMEM;
 
 	/*
 	 * set JOBS to this ifnet structure.
@@ -1984,7 +1984,7 @@ jobscmd_if_attach(struct jobs_attach *ap)
 				 &jif->jif_classifier, acc_classify)) != 0)
 		jobs_detach(jif);
 
-	return (error);
+	return error;
 }
 
 static int
@@ -1994,13 +1994,13 @@ jobscmd_if_detach(struct jobs_interface *ap)
 	int error;
 
 	if ((jif = altq_lookup(ap->jobs_ifname, ALTQT_JOBS)) == NULL)
-		return (EBADF);
+		return EBADF;
 
 	if (ALTQ_IS_ENABLED(jif->jif_ifq))
 		altq_disable(jif->jif_ifq);
 
 	if ((error = altq_detach(jif->jif_ifq)))
-		return (error);
+		return error;
 
 	jobs_detach(jif);
 	return 0;
@@ -2013,20 +2013,20 @@ jobscmd_add_class(struct jobs_add_class *ap)
 	struct jobs_class *cl;
 
 	if ((jif = altq_lookup(ap->iface.jobs_ifname, ALTQT_JOBS)) == NULL)
-		return (EBADF);
+		return EBADF;
 
 	if (ap->pri < 0 || ap->pri >= JOBS_MAXPRI)
-		return (EINVAL);
+		return EINVAL;
 
 	if ((cl = jobs_class_create(jif, ap->pri,
 				    ap->cl_adc, ap->cl_rdc,
 				    ap->cl_alc, ap->cl_rlc, ap-> cl_arc,
 				    ap->flags)) == NULL)
-		return (ENOMEM);
+		return ENOMEM;
 
 	/* return a class handle to the user */
 	ap->class_handle = clp_to_clh(cl);
-	return (0);
+	return 0;
 }
 
 static int
@@ -2036,10 +2036,10 @@ jobscmd_delete_class(struct jobs_delete_class *ap)
 	struct jobs_class *cl;
 
 	if ((jif = altq_lookup(ap->iface.jobs_ifname, ALTQT_JOBS)) == NULL)
-		return (EBADF);
+		return EBADF;
 
 	if ((cl = clh_to_clp(jif, ap->class_handle)) == NULL)
-		return (EINVAL);
+		return EINVAL;
 
 	return jobs_class_destroy(cl);
 }
@@ -2051,13 +2051,13 @@ jobscmd_modify_class(struct jobs_modify_class *ap)
 	struct jobs_class *cl;
 
 	if ((jif = altq_lookup(ap->iface.jobs_ifname, ALTQT_JOBS)) == NULL)
-		return (EBADF);
+		return EBADF;
 
 	if (ap->pri < 0 || ap->pri >= JOBS_MAXPRI)
-		return (EINVAL);
+		return EINVAL;
 
 	if ((cl = clh_to_clp(jif, ap->class_handle)) == NULL)
-		return (EINVAL);
+		return EINVAL;
 
 	/*
 	 * if priority is changed, move the class to the new priority
@@ -2075,7 +2075,7 @@ jobscmd_modify_class(struct jobs_modify_class *ap)
 				    ap->cl_adc, ap->cl_rdc,
 				    ap->cl_alc, ap->cl_rlc, ap->cl_arc,
 				    ap->flags)) == NULL)
-		return (ENOMEM);
+		return ENOMEM;
 	return 0;
 }
 
@@ -2086,10 +2086,10 @@ jobscmd_add_filter(struct jobs_add_filter *ap)
 	struct jobs_class *cl;
 
 	if ((jif = altq_lookup(ap->iface.jobs_ifname, ALTQT_JOBS)) == NULL)
-		return (EBADF);
+		return EBADF;
 
 	if ((cl = clh_to_clp(jif, ap->class_handle)) == NULL)
-		return (EINVAL);
+		return EINVAL;
 
 	return acc_add_filter(&jif->jif_classifier, &ap->filter,
 			      cl, &ap->filter_handle);
@@ -2101,7 +2101,7 @@ jobscmd_delete_filter(struct jobs_delete_filter *ap)
 	struct jobs_if *jif;
 
 	if ((jif = altq_lookup(ap->iface.jobs_ifname, ALTQT_JOBS)) == NULL)
-		return (EBADF);
+		return EBADF;
 
 	return acc_delete_filter(&jif->jif_classifier, ap->filter_handle);
 }
@@ -2115,7 +2115,7 @@ jobscmd_class_stats(struct jobs_class_stats *ap)
 	int pri, error;
 
 	if ((jif = altq_lookup(ap->iface.jobs_ifname, ALTQT_JOBS)) == NULL)
-		return (EBADF);
+		return EBADF;
 
 	ap->maxpri = jif->jif_maxpri;
 
@@ -2128,9 +2128,9 @@ jobscmd_class_stats(struct jobs_class_stats *ap)
 			get_class_stats(&stats, cl);
 		if ((error = copyout((void *)&stats, (void *)usp++,
 				     sizeof(stats))) != 0)
-			return (error);
+			return error;
 	}
-	return (0);
+	return 0;
 }
 
 static void
@@ -2185,19 +2185,19 @@ clh_to_clp(struct jobs_if *jif, u_long chandle)
 #if 1
 		printf("clh_to_cl: unaligned pointer %p\n", cl);
 #endif
-		return (NULL);
+		return NULL;
 	}
 
 	if (cl == NULL || cl->cl_handle != chandle || cl->cl_jif != jif)
-		return (NULL);
-	return (cl);
+		return NULL;
+	return cl;
 }
 
 /* convert a class pointer to the corresponding class handle */
 static u_long
 clp_to_clh(struct jobs_class *cl)
 {
-	return (cl->cl_handle);
+	return cl->cl_handle;
 }
 
 #ifdef KLD_MODULE
