@@ -257,19 +257,6 @@ altq_routine(enum device_routine routine, dev_t dev, int flag,
 	return ENXIO;
 }
 
-
-/*
- * simple boolean to validate network interface
- */
-
-bool
-if_validate(struct ifnet *ifp, char ifname[IFNAMSIZ])
-{
-	if ((ifp = ifunit(ifname)) == NULL)
-		return 0;
-	return 1;
-}
-
 /*
  * ioclt routines for altq device
  */
@@ -277,7 +264,7 @@ int
 get_queue_type(struct ifnet *ifp, struct altqreq *typereq, void *addr)
 {
 	typereq = (struct altqreq *)addr;
-	if (!if_validate(ifp, typereq->ifname))
+	if ((ifp = ifunit(typereq->ifname)) == NULL)
 		return EINVAL;
 	typereq->arg = (u_long)ifp->if_snd.altq_type;
 	return 0;
@@ -287,7 +274,7 @@ int
 set_tbr(struct ifnet *ifp, struct tbrreq *tbrreq, void *addr)
 {
 	tbrreq = (struct tbrreq *)addr;
-	if (!if_validate(ifp, tbrreq->ifname))
+	if ((ifp = ifunit(tbrreq->ifname)) == NULL)
 		return EINVAL;
 	return tbr_set(&ifp->if_snd, &tbrreq->tb_prof);
 }
@@ -296,7 +283,7 @@ int
 get_tbr(struct ifnet *ifp, struct tbrreq *tbrreq, void *addr)
 {
 	tbrreq = (struct tbrreq *)addr;
-	if (!if_validate(ifp, tbrreq->ifname))
+	if ((ifp = ifunit(tbrreq->ifname)) == NULL)
 		return EINVAL;
 	return tbr_get(&ifp->if_snd, &tbrreq->tb_prof);
 }
