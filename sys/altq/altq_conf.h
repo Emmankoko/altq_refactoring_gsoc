@@ -72,6 +72,15 @@ int altqclose(dev_t, int, int, struct proc *);
 int altqioctl(dev_t, u_long, void *, int, struct proc *);
 #endif
 
+enum device_routine; /* device routine types */
+
+int altq_routine(enum device_routine, dev_t, int, int, struct lwp *);
+bool if_validate(struct ifnet *, char ifname[]);
+int get_queue_type(struct ifnet *, struct altqreq *, void *);
+int set_tbr(struct ifnet *, struct tbrreq *, void *);
+int get_tbr(struct ifnet *, struct tbrreq *, void *);
+bool altq_auth(int *, struct lwp *);
+
 /*
  * altq queueing discipline switch structure
  */

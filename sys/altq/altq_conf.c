@@ -182,15 +182,61 @@ const struct cdevsw altq_cdevsw = {
 	.d_flag = D_OTHER,
 };
 
-enum device_routine {open, close};
+enum device_routine {
+	OPEN,
+	CLOSE
+};
 
+int
+altqopen(dev_t dev, int flag, int fmt, struct lwp *l)
+{
+	return altq_routine(OPEN, dev, flag, fmt, l);
+}
+
+int
+altqclose(dev_t dev, int flag, int fmt, struct lwp *l)
+{
+	return altq_routine(CLOSE, dev, flag, fmt, l);
+}
+
+int
+altqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag, struct lwp *l)
+{
+	int unit = minor(dev);
+
+	if (unit == 0) {
+		struct ifnet *ifp;
+		struct altqreq *typereq;
+		struct tbrreq *tbrreq;
+		int error;
+
+		switch (cmd) {
+		case ALTQGTYPE:
+			return get_queue_type(ifp, typereq, addr);
+		case ALTQTBRSET:
+			if (!altq_auth(&error, l))
+				return error;
+			return set_tbr(ifp, tbrreq, addr);
+		case ALTQTBRGET:
+			return get_tbr(ifp, tbrreq, addr);
+		default:
+			if (!altq_auth(&error, l))
+				return error;
+			return EINVAL;
+		}
+	}
+	if (unit < naltqsw)
+		return (*altqsw[unit].d_ioctl)(dev, cmd, addr, flag, l);
+
+	return ENXIO;
+}
 
 /*
  * altq device open and close routine definition
  */
 int
-altq_routine(enum device_routine routine, dev_t dev,
-int flag, int fmt, struct lwp *l )
+altq_routine(enum device_routine routine, dev_t dev, int flag,
+			 int fmt, struct lwp *l )
 {
 	int unit = minor(dev);
 
@@ -200,9 +246,9 @@ int flag, int fmt, struct lwp *l )
 	{
 		switch(routine)
 		{
-			case open:
+			case OPEN:
 				return (*altqsw[unit].d_open)(dev, flag, fmt, l);
-			case close:
+			case CLOSE:
 				return (*altqsw[unit].d_close)(dev, flag, fmt, l);
 			default:
 				break;
@@ -210,17 +256,7 @@ int flag, int fmt, struct lwp *l )
 	}
 	return ENXIO;
 }
-int
-altqopen(dev_t dev, int flag, int fmt, struct lwp *l)
-{
-	return altq_routine(open, dev, flag, fmt, l);
-}
 
-int
-altqclose(dev_t dev, int flag, int fmt, struct lwp *l)
-{
-	return altq_routine(close, dev, flag, fmt, l);
-}
 
 /*
  * simple boolean to validate network interface
@@ -278,37 +314,6 @@ bool altq_auth(int *error, struct lwp *l)
 	return 1; /* authorized */
 }
 
-int
-altqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag, struct lwp *l)
-{
-	int unit = minor(dev);
-
-	if (unit == 0) {
-		struct ifnet *ifp;
-		struct altqreq *typereq;
-		struct tbrreq *tbrreq;
-		int error;
-
-		switch (cmd) {
-		case ALTQGTYPE:
-			return get_queue_type(ifp, typereq, addr);
-		case ALTQTBRSET:
-			if (!altq_auth(&error, l))
-				return error;
-			return set_tbr(ifp, tbrreq, addr);
-		case ALTQTBRGET:
-			return get_tbr(ifp, tbrreq, addr);
-		default:
-			if (!altq_auth(&error, l))
-				return error;
-			return EINVAL;
-		}
-	}
-	if (unit < naltqsw)
-		return (*altqsw[unit].d_ioctl)(dev, cmd, addr, flag, l);
-
-	return ENXIO;
-}
 
 #ifdef __FreeBSD__
 static int altq_devsw_installed = 0;
