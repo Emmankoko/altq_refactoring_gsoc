@@ -126,6 +126,7 @@ static u_long clp_to_clh(struct jobs_class *);
 static TSLIST *tslist_alloc(void);
 static void tslist_destroy(struct jobs_class *);
 static int tslist_enqueue(struct jobs_class *, u_int64_t);
+static void tslist_remove(enum remove_position, struct jobs_class *);
 static void tslist_dequeue(struct jobs_class *);
 static void tslist_drop(struct jobs_class *);
 
@@ -143,6 +144,12 @@ altqdev_decl(jobs);
 static struct jobs_if *jif_list = NULL;
 
 typedef unsigned long long ull;
+
+/* removal positions for timestamp list */
+enum remove_postion{
+	FRONT,
+	REAR
+}
 
 /* setup functions */
 
@@ -988,23 +995,35 @@ tslist_enqueue(struct jobs_class *cl, u_int64_t arv)
 static void
 tslist_dequeue(struct jobs_class *cl)
 {
-	TSENTRY *popped;
-	popped = tslist_first(cl->arv_tm);
-	if (popped != NULL) {
-		  TAILQ_REMOVE(cl->arv_tm, popped, ts_list);
-		  free(popped, M_DEVBUF);
-	}
-	return;
+	tslist_remove(FRONT, cl);
 }
 
 static void
 tslist_drop(struct jobs_class *cl)
 {
+	tslist_remove(REAR, cl);
+}
+
+/*
+ * removal is either dequeuing which is from the front
+ * and dropping which is from the rear position
+ */
+static void
+tslist_remove(enum remove_position position, struct jobs_class * cl)
+{
 	TSENTRY *popped;
-	popped = tslist_last(cl->arv_tm);
-	if (popped != NULL) {
-		  TAILQ_REMOVE(cl->arv_tm, popped, ts_list);
-		  free(popped, M_DEVBUF);
+	switch (position)
+	{
+		case FRONT:
+			popped = tslist_first(cl->arv_tm);
+		case REAR:
+			popped = tslist_last(cl->arv_tm);
+		default:
+			return;
+	}
+	if (popped != NULL){
+		TAILQ_REMOVE(cl->arv_tm, popped, ts_list);
+		free(popped, M_DEVBUF);
 	}
 	return;
 }

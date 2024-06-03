@@ -361,6 +361,8 @@ struct jobs_class {
 	u_int64_t	idletime;
 };
 
+enum remove_position; // remove from timestamp list
+
 /*
  * jobs interface state
  */
