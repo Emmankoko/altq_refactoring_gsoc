@@ -166,7 +166,7 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		if ((error = kauth_authorize_network(l->l_cred,
 		    KAUTH_NETWORK_ALTQ, KAUTH_REQ_NETWORK_ALTQ_BLUE, NULL,
 		    NULL, NULL)) != 0)
-			return (error);
+			return error;
 		break;
 	}
 
@@ -330,7 +330,7 @@ blue_detach(blue_queue_t *rqp)
 		altq_disable(rqp->rq_ifq);
 
 	if ((error = altq_detach(rqp->rq_ifq)))
-		return (error);
+		return error;
 
 	if (blue_list == rqp)
 		blue_list = rqp->rq_next;
@@ -347,7 +347,7 @@ blue_detach(blue_queue_t *rqp)
 	free(rqp->rq_q, M_DEVBUF);
 	free(rqp->rq_blue, M_DEVBUF);
 	free(rqp, M_DEVBUF);
-	return (error);
+	return error;
 }
 
 /*
@@ -376,7 +376,7 @@ blue_init(blue_t *rp, int flags, int pkttime, int blue_max_pmark,
 	}
 
 	microtime(&rp->blue_last);
-	return (0);
+	return 0;
 }
 
 /*
@@ -492,10 +492,10 @@ blue_addq(blue_t *rp, class_queue_t *q, struct mbuf *m,
 		rp->blue_stats.drop_bytes += m->m_pkthdr.len;
 #endif
 		m_freem(m);
-		return (-1);
+		return -1;
 	}
 	/* successfully queued */
-	return (0);
+	return 0;
 }
 
 /*
@@ -507,10 +507,10 @@ drop_early(blue_t *rp)
 {
 	if ((cprng_fast32() % rp->blue_max_pmark) < rp->blue_pmark) {
 		/* drop or mark */
-		return (1);
+		return 1;
 	}
 	/* no drop/mark */
-	return (0);
+	return 0;
 }
 
 /*
@@ -524,7 +524,7 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 
 	if (pktattr == NULL ||
 	    (pktattr->pattr_af != AF_INET && pktattr->pattr_af != AF_INET6))
-		return (0);
+		return 0;
 
 	/* verify that pattr_hdr is within the mbuf data */
 	for (m0 = m; m0 != NULL; m0 = m0->m_next)
@@ -534,7 +534,7 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 	if (m0 == NULL) {
 		/* ick, pattr_hdr is stale */
 		pktattr->pattr_af = AF_UNSPEC;
-		return (0);
+		return 0;
 	}
 
 	switch (pktattr->pattr_af) {
@@ -545,11 +545,11 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 			int sum;
 
 			if (ip->ip_v != 4)
-				return (0);	/* version mismatch! */
+				return 0;	/* version mismatch! */
 			if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
-				return (0);	/* not-ECT */
+				return 0;	/* not-ECT */
 			if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
-				return (1);	/* already marked */
+				return 1;	/* already marked */
 
 			/*
 			 * ecn-capable but not marked,
@@ -566,7 +566,7 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 			sum = (sum >> 16) + (sum & 0xffff);
 			sum += (sum >> 16);  /* add carry */
 			ip->ip_sum = htons(~sum & 0xffff);
-			return (1);
+			return 1;
 		}
 		break;
 #ifdef INET6
@@ -577,26 +577,26 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 
 			flowlabel = ntohl(ip6->ip6_flow);
 			if ((flowlabel >> 28) != 6)
-				return (0);	/* version mismatch! */
+				return 0;	/* version mismatch! */
 			if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
 			    (IPTOS_ECN_NOTECT << 20))
-				return (0);	/* not-ECT */
+				return 0;	/* not-ECT */
 			if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
 			    (IPTOS_ECN_CE << 20))
-				return (1);	/* already marked */
+				return 1;	/* already marked */
 			/*
 			 * ecn-capable but not marked,  mark CE
 			 */
 			flowlabel |= (IPTOS_ECN_CE << 20);
 			ip6->ip6_flow = htonl(flowlabel);
-			return (1);
+			return 1;
 		}
 		break;
 #endif  /* INET6 */
 	}
 
 	/* not marked */
-	return (0);
+	return 0;
 }
 
 /*
@@ -614,7 +614,7 @@ blue_dequeue(struct ifaltq * ifq, int op)
 	struct mbuf *m = NULL;
 
 	if (op == ALTDQ_POLL)
-		return (qhead(rqp->rq_q));
+		return qhead(rqp->rq_q);
 
 	m = blue_getq(rqp->rq_blue, rqp->rq_q);
 	if (m != NULL)
@@ -640,7 +640,7 @@ blue_getq(blue_t *rp, class_queue_t *q)
 	rp->blue_stats.xmit_packets++;
 	rp->blue_stats.xmit_bytes += m->m_pkthdr.len;
 #endif
-	return (m);
+	return m;
 }
 
 static int
@@ -655,7 +655,7 @@ blue_request(struct ifaltq *ifq, int req, void *arg)
 			ifq->ifq_len = 0;
 		break;
 	}
-	return (0);
+	return 0;
 }
 
 
