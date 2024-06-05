@@ -122,9 +122,7 @@ static int blue_request(struct ifaltq *, int, void *);
 int blue_enable(struct blue_interface *, int *, void *, blue_queue_t *);
 int blue_disable(struct blue_interface *, int *, void *, blue_queue_t *);
 int blue_if_detach(struct blue_interface * , int *, void *, blue_queue_t *);
-int blue_getstats(void *, blue_queue_t *);
-int blue_config(void *, blue_queue_t *);
-int blue_state_alloc(blue_queue_t *, int *);
+int blue_state_alloc(blue_queue_t *, int *, struct ifnet *);
 
 /*
  * blue device interface
@@ -188,14 +186,19 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		break;
 
 	case BLUE_IF_ATTACH:
-		ifp = ifunit(((struct blue_interface *)addr)->blue_ifname);
-		if (ifp == NULL) {
+		if ((ifp = ifunit(((struct blue_interface *)addr)->blue_ifname)) == NULL){
 			error = ENXIO;
 			break;
 		}
 
 		/* allocate and initialize blue_state_t */
-		error = blue_state_alloc(rqp, &error);
+		if ((rqp = malloc(sizeof(blue_queue_t), M_DEVBUF, M_WAITOK|M_ZERO)) == NULL){
+			error = ENOMEM;
+			return error;
+		}
+
+		/* allocate and initialize blue_state_t fields */
+		error = blue_state_alloc(rqp, &error, ifp);
 		if (error == ENOMEM)
 			break;
 
@@ -225,12 +228,61 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		break;
 
 	case BLUE_GETSTATS:
-		error = blue_getstats(&error, addr, rqp);
-		break;
+			do {
+				struct blue_stats *q_stats;
+				blue_t *rp;
+
+				q_stats = (struct blue_stats *)addr;
+				if ((rqp = altq_lookup(q_stats->iface.blue_ifname,
+								ALTQT_BLUE)) == NULL) {
+					error = EBADF;
+					break;
+				}
+
+				q_stats->q_len 	   = qlen(rqp->rq_q);
+				q_stats->q_limit   = qlimit(rqp->rq_q);
+
+				rp = rqp->rq_blue;
+				q_stats->q_pmark = rp->blue_pmark;
+				q_stats->xmit_packets  = rp->blue_stats.xmit_packets;
+				q_stats->xmit_bytes    = rp->blue_stats.xmit_bytes;
+				q_stats->drop_packets  = rp->blue_stats.drop_packets;
+				q_stats->drop_bytes    = rp->blue_stats.drop_bytes;
+				q_stats->drop_forced   = rp->blue_stats.drop_forced;
+				q_stats->drop_unforced = rp->blue_stats.drop_unforced;
+				q_stats->marked_packets = rp->blue_stats.marked_packets;
+
+			} while (/*CONSTCOND*/ 0);
+			break;
 
 	case BLUE_CONFIG:
-		error = blue_config(&error, addr, rqp);
-		break;
+			do {
+				struct blue_conf *fc;
+				int limit;
+
+				fc = (struct blue_conf *)addr;
+				if ((rqp = altq_lookup(fc->iface.blue_ifname,
+							ALTQT_BLUE)) == NULL) {
+					error = EBADF;
+					break;
+				}
+				limit = fc->blue_limit;
+				qlimit(rqp->rq_q) = limit;
+				fc->blue_limit = limit;	/* write back the new value */
+				if (fc->blue_pkttime > 0)
+					rqp->rq_blue->blue_pkttime = fc->blue_pkttime;
+				if (fc->blue_max_pmark > 0)
+					rqp->rq_blue->blue_max_pmark = fc->blue_max_pmark;
+				if (fc->blue_hold_time > 0)
+					rqp->rq_blue->blue_hold_time = fc->blue_hold_time;
+				rqp->rq_blue->blue_flags = fc->blue_flags;
+
+				blue_init(rqp->rq_blue, rqp->rq_blue->blue_flags,
+					rqp->rq_blue->blue_pkttime,
+					rqp->rq_blue->blue_max_pmark,
+					rqp->rq_blue->blue_hold_time);
+			} while (/*CONSTCOND*/ 0);
+			break;
 
 	default:
 		error = EINVAL;
@@ -337,7 +389,7 @@ blue_addq(blue_t *rp, class_queue_t *q, struct mbuf *m,
 	 * and we should decrement marking probability
 	 *
 	 */
-	if (rp->blue_idle) {
+	if (rp->blue_idle){
 		struct timeval now;
 		int t;
 		rp->blue_idle = 0;
@@ -347,14 +399,14 @@ blue_addq(blue_t *rp, class_queue_t *q, struct mbuf *m,
 			rp->blue_pmark = 1;
 			microtime(&rp->blue_last);
 		} else {
-			t = t * 1000000 + (now.tv_usec - rp->blue_last.tv_usec);
-			if (t > rp->blue_hold_time) {
-				rp->blue_pmark--;
-				if (rp->blue_pmark < 0) rp->blue_pmark = 0;
-				microtime(&rp->blue_last);
-			}
+		t = t * 1000000 + (now.tv_usec - rp->blue_last.tv_usec);
+		if (t > rp->blue_hold_time) {
+			rp->blue_pmark--;
+			if (rp->blue_pmark < 0) rp->blue_pmark = 0;
+			microtime(&rp->blue_last);
 		}
 	}
+}
 
 	/* see if we drop early */
 	droptype = DTYPE_NODROP;
@@ -598,7 +650,7 @@ blue_disable(struct blue_interface * ifacep, int *error, void *addr, blue_queue_
 	ifacep = (struct blue_interface *)addr;
 	if ((rqp = altq_lookup(ifacep->blue_ifname, ALTQT_BLUE)) == NULL) {
 		*error = EBADF;
-		return *error
+		return *error;
 	}
 	*error = altq_disable(rqp->rq_ifq);
 	return *error;
@@ -618,26 +670,18 @@ blue_if_detach(struct blue_interface * ifacep, int *error, void *addr, blue_queu
 }
 
 int
-blue_state_alloc(blue_queue_t *rqp, int *error)
+blue_state_alloc(blue_queue_t *rqp, int *error, struct ifnet *ifp)
 {
-	/* allocate and initialize blue_state_t */
-	rqp = malloc(sizeof(blue_queue_t), M_DEVBUF, M_WAITOK|M_ZERO);
-	if (rqp == NULL) {
-		*error = ENOMEM;
-		return *error;
-	}
 	/* allocate and initialize class queue of blue stats */
-	rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
-		M_WAITOK|M_ZERO);
-	if (rqp->rq_q == NULL) {
+	if ((rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
+		M_WAITOK|M_ZERO)) == NULL){
 		free(rqp, M_DEVBUF);
 		*error = ENOMEM;
 		return *error;
 	}
 	/* allocate and initialize blue queue of blue state*/
-	rqp->rq_blue = malloc(sizeof(blue_t), M_DEVBUF,
-		M_WAITOK|M_ZERO);
-	if (rqp->rq_blue == NULL) {
+	if ((rqp->rq_blue = malloc(sizeof(blue_t), M_DEVBUF,
+		M_WAITOK|M_ZERO)) == NULL){
 		free(rqp->rq_q, M_DEVBUF);
 		free(rqp, M_DEVBUF);
 		*error = ENOMEM;
@@ -648,68 +692,7 @@ blue_state_alloc(blue_queue_t *rqp, int *error)
 	qtail(rqp->rq_q) = NULL;
 	qlen(rqp->rq_q) = 0;
 	qlimit(rqp->rq_q) = BLUE_LIMIT;
-}
 
-int
-blue_getstats(int *error, void *addr, blue_queue_t *rqp)
-{
-	do {
-		struct blue_stats *q_stats;
-		blue_t *rp;
-
-		q_stats = (struct blue_stats *)addr;
-		if ((rqp = altq_lookup(q_stats->iface.blue_ifname,
-						ALTQT_BLUE)) == NULL) {
-			*error = EBADF;
-			return *error;
-		}
-
-		q_stats->q_len 	   = qlen(rqp->rq_q);
-		q_stats->q_limit   = qlimit(rqp->rq_q);
-
-		rp = rqp->rq_blue;
-		q_stats->q_pmark = rp->blue_pmark;
-		q_stats->xmit_packets  = rp->blue_stats.xmit_packets;
-		q_stats->xmit_bytes    = rp->blue_stats.xmit_bytes;
-		q_stats->drop_packets  = rp->blue_stats.drop_packets;
-		q_stats->drop_bytes    = rp->blue_stats.drop_bytes;
-		q_stats->drop_forced   = rp->blue_stats.drop_forced;
-		q_stats->drop_unforced = rp->blue_stats.drop_unforced;
-		q_stats->marked_packets = rp->blue_stats.marked_packets;
-
-	} while (/*CONSTCOND*/ 0);
-	return *error;
-}
-
-int
-blue_config(int *error, void *addr, blue_queue_t *rqp)
-{
-	do {
-		struct blue_conf *fc;
-		int limit;
-
-		fc = (struct blue_conf *)addr;
-		if ((rqp = altq_lookup(fc->iface.blue_ifname,
-						ALTQT_BLUE)) == NULL) {
-			*error = EBADF;
-			return *error;
-		}
-		limit = fc->blue_limit;
-		qlimit(rqp->rq_q) = limit;
-		fc->blue_limit = limit;	/* write back the new value */
-		if (fc->blue_pkttime > 0)
-			rqp->rq_blue->blue_pkttime = fc->blue_pkttime;
-		if (fc->blue_max_pmark > 0)
-			rqp->rq_blue->blue_max_pmark = fc->blue_max_pmark;
-		if (fc->blue_hold_time > 0)
-			rqp->rq_blue->blue_hold_time = fc->blue_hold_time;
-		rqp->rq_blue->blue_flags = fc->blue_flags;
-
-		blue_init(rqp->rq_blue, rqp->rq_blue->blue_flags,
-				rqp->rq_blue->blue_pkttime,
-				rqp->rq_blue->blue_max_pmark,
-				rqp->rq_blue->blue_hold_time);
-	} while (/*CONSTCOND*/ 0);
 	return *error;
 }
 
