@@ -39,6 +39,8 @@
 #ifndef _ALTQ_ALTQ_CLASSQ_H_
 #define	_ALTQ_ALTQ_CLASSQ_H_
 
+#include <sys/cprng.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -155,7 +157,7 @@ _getq_random(class_queue_t *q)
 	else {
 		struct mbuf *prev = NULL;
 
-		n = random() % qlen(q) + 1;
+		n = cprng_fast32() % qlen(q) + 1;
 		for (i = 0; i < n; i++) {
 			prev = m;
 			m = m->m_nextpkt;
