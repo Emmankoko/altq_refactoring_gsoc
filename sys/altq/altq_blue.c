@@ -123,6 +123,7 @@ int blue_enable(struct blue_interface *, int *, void *, blue_queue_t *);
 int blue_disable(struct blue_interface *, int *, void *, blue_queue_t *);
 int blue_if_detach(struct blue_interface * , int *, void *, blue_queue_t *);
 int blue_state_alloc(blue_queue_t *, int *, struct ifnet *);
+void enqueue_on_empty(blue_t *);
 
 /*
  * blue device interface
@@ -389,24 +390,8 @@ blue_addq(blue_t *rp, class_queue_t *q, struct mbuf *m,
 	 * and we should decrement marking probability
 	 *
 	 */
-	if (rp->blue_idle){
-		struct timeval now;
-		int t;
-		rp->blue_idle = 0;
-		microtime(&now);
-		t = (now.tv_sec - rp->blue_last.tv_sec);
-		if ( t > 1) {
-			rp->blue_pmark = 1;
-			microtime(&rp->blue_last);
-		} else {
-		t = t * 1000000 + (now.tv_usec - rp->blue_last.tv_usec);
-		if (t > rp->blue_hold_time) {
-			rp->blue_pmark--;
-			if (rp->blue_pmark < 0) rp->blue_pmark = 0;
-			microtime(&rp->blue_last);
-		}
-	}
-}
+	if (rp->blue_idle)
+		enqueue_on_empty(rp);
 
 	/* see if we drop early */
 	droptype = DTYPE_NODROP;
@@ -694,6 +679,27 @@ blue_state_alloc(blue_queue_t *rqp, int *error, struct ifnet *ifp)
 	qlimit(rqp->rq_q) = BLUE_LIMIT;
 
 	return *error;
+}
+
+void
+enqueue_on_empty(blue_t *rp)
+{
+	struct timeval now;
+	int t;
+	rp->blue_idle = 0;
+	microtime(&now);
+	t = (now.tv_sec - rp->blue_last.tv_sec);
+	if ( t > 1) {
+		rp->blue_pmark = 1;
+		microtime(&rp->blue_last);
+	} else {
+		t = t * 1000000 + (now.tv_usec - rp->blue_last.tv_usec);
+		if (t > rp->blue_hold_time) {
+			rp->blue_pmark--;
+			if (rp->blue_pmark < 0) rp->blue_pmark = 0;
+			microtime(&rp->blue_last);
+		}
+	}
 }
 
 #ifdef KLD_MODULE
