@@ -119,12 +119,17 @@ static int mark_ecn(struct mbuf *, struct altq_pktattr *, int);
 static int blue_detach(blue_queue_t *);
 static int blue_request(struct ifaltq *, int, void *);
 
-int blue_enable(struct blue_interface *, int *, void *, blue_queue_t *);
-int blue_disable(struct blue_interface *, int *, void *, blue_queue_t *);
-int blue_if_detach(struct blue_interface * , int *, void *, blue_queue_t *);
+/* blueioclt helper functions */
+int blue_enable(struct blue_interface **, int *, void *, blue_queue_t **);
+int blue_disable(struct blue_interface **, int *, void *, blue_queue_t **);
+int blue_if_detach(struct blue_interface ** , int *, void *, blue_queue_t **);
 int blue_state_alloc(blue_queue_t *, int *, struct ifnet *);
+int blue_config(blue_queue_t **, int *, void *);
+int blue_getstat(blue_queue_t **, int *, void *);
+
+/* blueaddq helper functions*/
 void enqueue_on_empty(blue_t *);
-void forced_drop(blue_t *, class_queue_t *, struct mbuf *);
+void forced_drop(blue_t *, class_queue_t *, struct mbuf **);
 
 /*
  * blue device interface
@@ -180,11 +185,11 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	switch (cmd) {
 
 	case BLUE_ENABLE:
-		error = blue_enable(ifacep, &error, addr, rqp);
+		error = blue_enable(&ifacep, &error, addr, &rqp);
 		break;
 
 	case BLUE_DISABLE:
-		error = blue_disable(ifacep, &error, addr, rqp);
+		error = blue_disable(&ifacep, &error, addr, &rqp);
 		break;
 
 	case BLUE_IF_ATTACH:
@@ -226,64 +231,15 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		break;
 
 	case BLUE_IF_DETACH:
-		error = blue_if_detach(ifacep, &error, addr, rqp);
+		error = blue_if_detach(&ifacep, &error, addr, &rqp);
 		break;
 
 	case BLUE_GETSTATS:
-			do {
-				struct blue_stats *q_stats;
-				blue_t *rp;
-
-				q_stats = (struct blue_stats *)addr;
-				if ((rqp = altq_lookup(q_stats->iface.blue_ifname,
-								ALTQT_BLUE)) == NULL) {
-					error = EBADF;
-					break;
-				}
-
-				q_stats->q_len 	   = qlen(rqp->rq_q);
-				q_stats->q_limit   = qlimit(rqp->rq_q);
-
-				rp = rqp->rq_blue;
-				q_stats->q_pmark = rp->blue_pmark;
-				q_stats->xmit_packets  = rp->blue_stats.xmit_packets;
-				q_stats->xmit_bytes    = rp->blue_stats.xmit_bytes;
-				q_stats->drop_packets  = rp->blue_stats.drop_packets;
-				q_stats->drop_bytes    = rp->blue_stats.drop_bytes;
-				q_stats->drop_forced   = rp->blue_stats.drop_forced;
-				q_stats->drop_unforced = rp->blue_stats.drop_unforced;
-				q_stats->marked_packets = rp->blue_stats.marked_packets;
-
-			} while (/*CONSTCOND*/ 0);
-			break;
+		error = blue_getstat(&rqp, &error, addr);
+		break;
 
 	case BLUE_CONFIG:
-			do {
-				struct blue_conf *fc;
-				int limit;
-
-				fc = (struct blue_conf *)addr;
-				if ((rqp = altq_lookup(fc->iface.blue_ifname,
-							ALTQT_BLUE)) == NULL) {
-					error = EBADF;
-					break;
-				}
-				limit = fc->blue_limit;
-				qlimit(rqp->rq_q) = limit;
-				fc->blue_limit = limit;	/* write back the new value */
-				if (fc->blue_pkttime > 0)
-					rqp->rq_blue->blue_pkttime = fc->blue_pkttime;
-				if (fc->blue_max_pmark > 0)
-					rqp->rq_blue->blue_max_pmark = fc->blue_max_pmark;
-				if (fc->blue_hold_time > 0)
-					rqp->rq_blue->blue_hold_time = fc->blue_hold_time;
-				rqp->rq_blue->blue_flags = fc->blue_flags;
-
-				blue_init(rqp->rq_blue, rqp->rq_blue->blue_flags,
-					rqp->rq_blue->blue_pkttime,
-					rqp->rq_blue->blue_max_pmark,
-					rqp->rq_blue->blue_hold_time);
-			} while (/*CONSTCOND*/ 0);
+		error = blue_config(&rqp, &error, addr);
 			break;
 
 	default:
@@ -428,7 +384,7 @@ blue_addq(blue_t *rp, class_queue_t *q, struct mbuf *m,
 #endif
 		} else {
 			/* forced drop*/
-			forced_drop(rp, q, m);
+			forced_drop(rp, q, &m);
 		}
 #ifdef BLUE_STATS
 		rp->blue_stats.drop_packets++;
@@ -601,43 +557,40 @@ blue_request(struct ifaltq *ifq, int req, void *arg)
 	return 0;
 }
 
-/*
- * IOCTL function definitions
- */
 int
-blue_enable(struct blue_interface * ifacep, int *error, void *addr, blue_queue_t *rqp)
+blue_enable(struct blue_interface **ifacep, int *error, void *addr, blue_queue_t **rqp)
 {
-	ifacep = (struct blue_interface *)addr;
-	if ((rqp = altq_lookup(ifacep->blue_ifname, ALTQT_BLUE)) == NULL) {
+	*ifacep = (struct blue_interface *)addr;
+	if ((*rqp = altq_lookup((*ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
 		*error = EBADF;
 		return *error;
 	}
-	*error = altq_enable(rqp->rq_ifq);
+	*error = altq_enable((*rqp)->rq_ifq);
 	return *error;
 }
 
 int
-blue_disable(struct blue_interface * ifacep, int *error, void *addr, blue_queue_t *rqp)
+blue_disable(struct blue_interface **ifacep, int *error, void *addr, blue_queue_t **rqp)
 {
-	ifacep = (struct blue_interface *)addr;
-	if ((rqp = altq_lookup(ifacep->blue_ifname, ALTQT_BLUE)) == NULL) {
+	*ifacep = (struct blue_interface *)addr;
+	if ((*rqp = altq_lookup((*ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
 		*error = EBADF;
 		return *error;
 	}
-	*error = altq_disable(rqp->rq_ifq);
+	*error = altq_disable((*rqp)->rq_ifq);
 	return *error;
 }
 
 
 int
-blue_if_detach(struct blue_interface * ifacep, int *error, void *addr, blue_queue_t *rqp)
+blue_if_detach(struct blue_interface **ifacep, int *error, void *addr, blue_queue_t **rqp)
 {
-	ifacep = (struct blue_interface *)addr;
-	if ((rqp = altq_lookup(ifacep->blue_ifname, ALTQT_BLUE)) == NULL) {
+	*ifacep = (struct blue_interface *)addr;
+	if ((*rqp = altq_lookup((*ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
 		*error = EBADF;
 		return *error;
 	}
-	*error = blue_detach(rqp);
+	*error = blue_detach(*rqp);
 	return *error;
 }
 
@@ -668,6 +621,69 @@ blue_state_alloc(blue_queue_t *rqp, int *error, struct ifnet *ifp)
 	return *error;
 }
 
+int
+blue_getstat(blue_queue_t **rqp, int *error, void *addr)
+{
+	do {
+		struct blue_stats *q_stats;
+		blue_t *rp;
+
+		q_stats = (struct blue_stats *)addr;
+		if ((*rqp = altq_lookup(q_stats->iface.blue_ifname,
+						ALTQT_BLUE)) == NULL) {
+			*error = EBADF;
+			return *error;
+		}
+
+		q_stats->q_len 	   = qlen((*rqp)->rq_q);
+		q_stats->q_limit   = qlimit((*rqp)->rq_q);
+
+		rp = (*rqp)->rq_blue;
+		q_stats->q_pmark = rp->blue_pmark;
+		q_stats->xmit_packets  = rp->blue_stats.xmit_packets;
+		q_stats->xmit_bytes    = rp->blue_stats.xmit_bytes;
+		q_stats->drop_packets  = rp->blue_stats.drop_packets;
+		q_stats->drop_bytes    = rp->blue_stats.drop_bytes;
+		q_stats->drop_forced   = rp->blue_stats.drop_forced;
+		q_stats->drop_unforced = rp->blue_stats.drop_unforced;
+		q_stats->marked_packets = rp->blue_stats.marked_packets;
+
+	} while (/*CONSTCOND*/ 0);
+	return *error;
+}
+
+int
+blue_config(blue_queue_t **rqp, int *error, void *addr)
+{
+	do {
+		struct blue_conf *fc;
+		int limit;
+
+		fc = (struct blue_conf *)addr;
+		if ((*rqp = altq_lookup(fc->iface.blue_ifname,
+					ALTQT_BLUE)) == NULL) {
+			*error = EBADF;
+			return *error;
+		}
+		limit = fc->blue_limit;
+		qlimit((*rqp)->rq_q) = limit;
+		fc->blue_limit = limit;	/* write back the new value */
+		if (fc->blue_pkttime > 0)
+			(*rqp)->rq_blue->blue_pkttime = fc->blue_pkttime;
+		if (fc->blue_max_pmark > 0)
+			(*rqp)->rq_blue->blue_max_pmark = fc->blue_max_pmark;
+		if (fc->blue_hold_time > 0)
+			(*rqp)->rq_blue->blue_hold_time = fc->blue_hold_time;
+		(*rqp)->rq_blue->blue_flags = fc->blue_flags;
+
+		blue_init((*rqp)->rq_blue, (*rqp)->rq_blue->blue_flags,
+			(*rqp)->rq_blue->blue_pkttime,
+			(*rqp)->rq_blue->blue_max_pmark,
+			(*rqp)->rq_blue->blue_hold_time);
+	} while (/*CONSTCOND*/ 0);
+	return *error;
+}
+
 void
 enqueue_on_empty(blue_t *rp)
 {
@@ -689,13 +705,14 @@ enqueue_on_empty(blue_t *rp)
 	}
 }
 
+/* pass mbuf by reference to accomdate change to random packet*/
 void
-forced_drop(blue_t *rp, class_queue_t * q, struct mbuf *m)
+forced_drop(blue_t *rp, class_queue_t *q, struct mbuf **m)
 {
 	struct timeval now;
 	int t;
 	/* select a victim packet in the queue. */
-	m = _getq_random(q);
+	*m = _getq_random(q);
 	microtime(&now);
 	t = (now.tv_sec - rp->blue_last.tv_sec);
 	t = t * 1000000 + (now.tv_usec - rp->blue_last.tv_usec);
@@ -709,6 +726,7 @@ forced_drop(blue_t *rp, class_queue_t * q, struct mbuf *m)
 			rp->blue_stats.drop_forced++;
 #endif
 }
+
 #ifdef KLD_MODULE
 
 static struct altqsw blue_sw =

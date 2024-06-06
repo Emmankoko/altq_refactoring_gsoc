@@ -104,11 +104,11 @@ afm_alloc(struct ifnet *ifp)
  * the address family on the current network interface is located
  */
 void
-if_afm_locate(struct afm_head *head, struct ifnet *ifp)
+if_afm_locate(struct afm_head **head, struct ifnet *ifp)
 {
-	for (head = afhead_chain.lh_first; head != NULL;
-		head = head->afh_chain.le_next)
-	if (head->afh_ifp == ifp)
+	for (*head = afhead_chain.lh_first; *head != NULL;
+		*head = head->afh_chain.le_next)
+	if ((*head)->afh_ifp == ifp)
 		break;
 }
 
@@ -117,7 +117,7 @@ afm_dealloc(struct ifnet *ifp)
 {
 	struct afm_head *head;
 
-	if_afm_locate(head, ifp);
+	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return -1;
@@ -135,7 +135,7 @@ afm_top(struct ifnet *ifp)
 {
 	struct afm_head *head;
 
-	if_afm_locate(head, ifp);
+	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return NULL;
@@ -149,7 +149,7 @@ afm_add(struct ifnet *ifp, struct atm_flowmap *flowmap)
 	struct afm_head *head;
 	struct afm *afm;
 
-	if_afm_locate(head, ifp);
+	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return -1;
@@ -192,7 +192,7 @@ afm_removeall(struct ifnet *ifp)
 	struct afm_head *head;
 	struct afm *afm;
 
-	if_afm_locate(head, ifp);
+	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return -1;
@@ -208,7 +208,7 @@ afm_lookup(struct ifnet *ifp, int vpi, int vci)
 	struct afm_head *head;
 	struct afm *afm;
 
-	if_afm_locate(head, ifp);
+	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return NULL;
@@ -293,7 +293,7 @@ afm_match(struct ifnet *ifp, struct flowinfo *flow)
 {
 	struct afm_head *head;
 
-	if_afm_locate(head, ifp);
+	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return NULL;
