@@ -124,6 +124,7 @@ int blue_disable(struct blue_interface *, int *, void *, blue_queue_t *);
 int blue_if_detach(struct blue_interface * , int *, void *, blue_queue_t *);
 int blue_state_alloc(blue_queue_t *, int *, struct ifnet *);
 void enqueue_on_empty(blue_t *);
+void forced_drop(blue_t *, class_queue_t *, struct mbuf *);
 
 /*
  * blue device interface
@@ -426,22 +427,8 @@ blue_addq(blue_t *rp, class_queue_t *q, struct mbuf *m,
 			rp->blue_stats.drop_unforced++;
 #endif
 		} else {
-			struct timeval now;
-			int t;
-			/* forced drop, select a victim packet in the queue. */
-			m = _getq_random(q);
-			microtime(&now);
-			t = (now.tv_sec - rp->blue_last.tv_sec);
-			t = t * 1000000 + (now.tv_usec - rp->blue_last.tv_usec);
-			if (t > rp->blue_hold_time) {
-				rp->blue_pmark += rp->blue_max_pmark >> 3;
-				if (rp->blue_pmark > rp->blue_max_pmark)
-					rp->blue_pmark = rp->blue_max_pmark;
-				microtime(&rp->blue_last);
-			}
-#ifdef BLUE_STATS
-			rp->blue_stats.drop_forced++;
-#endif
+			/* forced drop*/
+			forced_drop(rp, q, m);
 		}
 #ifdef BLUE_STATS
 		rp->blue_stats.drop_packets++;
@@ -702,6 +689,26 @@ enqueue_on_empty(blue_t *rp)
 	}
 }
 
+void
+forced_drop(blue_t *rp, class_queue_t * q, struct mbuf *m)
+{
+	struct timeval now;
+	int t;
+	/* select a victim packet in the queue. */
+	m = _getq_random(q);
+	microtime(&now);
+	t = (now.tv_sec - rp->blue_last.tv_sec);
+	t = t * 1000000 + (now.tv_usec - rp->blue_last.tv_usec);
+	if (t > rp->blue_hold_time) {
+		rp->blue_pmark += rp->blue_max_pmark >> 3;
+		if (rp->blue_pmark > rp->blue_max_pmark)
+			rp->blue_pmark = rp->blue_max_pmark;
+		microtime(&rp->blue_last);
+	}
+#ifdef BLUE_STATS
+			rp->blue_stats.drop_forced++;
+#endif
+}
 #ifdef KLD_MODULE
 
 static struct altqsw blue_sw =
