@@ -119,7 +119,7 @@ static int mark_ecn(struct mbuf *, struct altq_pktattr *, int);
 static int blue_detach(blue_queue_t *);
 static int blue_request(struct ifaltq *, int, void *);
 
-/* blueioclt helper functions */
+/* blueioctl helper functions */
 int blue_enable(struct blue_interface **, int *, void *, blue_queue_t **);
 int blue_disable(struct blue_interface **, int *, void *, blue_queue_t **);
 int blue_if_detach(struct blue_interface ** , int *, void *, blue_queue_t **);
@@ -131,6 +131,9 @@ int blue_getstat(blue_queue_t **, int *, void *);
 void enqueue_on_empty(blue_t *);
 void forced_drop(blue_t *, class_queue_t *, struct mbuf **);
 
+/* maek_ecn helper functions for different address family */
+static int af_inet_mark(struct ip **, struct altq_pktattr *);
+static int af_inet6_mark(struct ip6_hdr **, struct altq_pktattr *);
 /*
  * blue device interface
  */
@@ -439,56 +442,15 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 	switch (pktattr->pattr_af) {
 	case AF_INET:
 		if (flags & BLUEF_ECN4) {
-			struct ip *ip = (struct ip *)pktattr->pattr_hdr;
-			u_int8_t otos;
-			int sum;
-
-			if (ip->ip_v != 4)
-				return 0;	/* version mismatch! */
-			if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
-				return 0;	/* not-ECT */
-			if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
-				return 1;	/* already marked */
-
-			/*
-			 * ecn-capable but not marked,
-			 * mark CE and update checksum
-			 */
-			otos = ip->ip_tos;
-			ip->ip_tos |= IPTOS_ECN_CE;
-			/*
-			 * update checksum (from RFC1624)
-			 *	   HC' = ~(~HC + ~m + m')
-			 */
-			sum = ~ntohs(ip->ip_sum) & 0xffff;
-			sum += (~otos & 0xffff) + ip->ip_tos;
-			sum = (sum >> 16) + (sum & 0xffff);
-			sum += (sum >> 16);  /* add carry */
-			ip->ip_sum = htons(~sum & 0xffff);
-			return 1;
+			struct ip *ip;
+			af_inet_mark(&ip, pktattr);
 		}
 		break;
 #ifdef INET6
 	case AF_INET6:
 		if (flags & BLUEF_ECN6) {
-			struct ip6_hdr *ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
-			u_int32_t flowlabel;
-
-			flowlabel = ntohl(ip6->ip6_flow);
-			if ((flowlabel >> 28) != 6)
-				return 0;	/* version mismatch! */
-			if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
-			    (IPTOS_ECN_NOTECT << 20))
-				return 0;	/* not-ECT */
-			if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
-			    (IPTOS_ECN_CE << 20))
-				return 1;	/* already marked */
-			/*
-			 * ecn-capable but not marked,  mark CE
-			 */
-			flowlabel |= (IPTOS_ECN_CE << 20);
-			ip6->ip6_flow = htonl(flowlabel);
-			return 1;
+			struct ip6_hdr *ip6;
+			af_inet6_mark(&ip6, pktattr);
 		}
 		break;
 #endif  /* INET6 */
@@ -725,6 +687,62 @@ forced_drop(blue_t *rp, class_queue_t *q, struct mbuf **m)
 #ifdef BLUE_STATS
 			rp->blue_stats.drop_forced++;
 #endif
+}
+
+/* ipv4 nark */
+static int
+af_inet_mark(struct ip **ip, struct altq_pktattr *pktattr)
+{
+	*ip = (struct ip *)pktattr->pattr_hdr;
+	u_int8_t otos;
+	int sum;
+
+	if ((*ip)->ip_v != 4)
+		return 0;	/* version mismatch! */
+	if (((*ip)->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
+		return 0;	/* not-ECT */
+	if (((*ip)->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
+		return 1;	/* already marked */
+
+	/*
+		* ecn-capable but not marked,
+		* mark CE and update checksum
+		*/
+	otos = (*ip)->ip_tos;
+	(*ip)->ip_tos |= IPTOS_ECN_CE;
+	/*
+		* update checksum (from RFC1624)
+		*	   HC' = ~(~HC + ~m + m')
+		*/
+	sum = ~ntohs((*ip)->ip_sum) & 0xffff;
+	sum += (~otos & 0xffff) + (*ip)->ip_tos;
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);  /* add carry */
+	(*ip)->ip_sum = htons(~sum & 0xffff);
+	return 1;
+}
+/* ipv6 mark */
+static int
+af_inet6_mark(struct ip6_hdr **ip6, struct altq_pktattr * pktattr)
+{
+	*ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
+	u_int32_t flowlabel;
+
+	flowlabel = ntohl((*ip6)->ip6_flow);
+	if ((flowlabel >> 28) != 6)
+		return 0;	/* version mismatch! */
+	if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
+		(IPTOS_ECN_NOTECT << 20))
+		return 0;	/* not-ECT */
+	if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
+		(IPTOS_ECN_CE << 20))
+		return 1;	/* already marked */
+	/*
+		* ecn-capable but not marked,  mark CE
+		*/
+	flowlabel |= (IPTOS_ECN_CE << 20);
+	(*ip6)->ip6_flow = htonl(flowlabel);
+	return 1;
 }
 
 #ifdef KLD_MODULE
