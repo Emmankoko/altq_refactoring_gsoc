@@ -1026,7 +1026,6 @@ tslist_remove(enum remove_position position, struct jobs_class *cl)
 		TAILQ_REMOVE(cl->arv_tm, popped, ts_list);
 		free(popped, M_DEVBUF);
 	}
-	return;
 }
 
 /*
