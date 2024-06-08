@@ -126,9 +126,10 @@ static u_long clp_to_clh(struct jobs_class *);
 static TSLIST *tslist_alloc(void);
 static void tslist_destroy(struct jobs_class *);
 static int tslist_enqueue(struct jobs_class *, u_int64_t);
-static void tslist_remove(enum remove_position, struct jobs_class *);
 static void tslist_dequeue(struct jobs_class *);
 static void tslist_drop(struct jobs_class *);
+/* helper for dequeue and drop */
+static void tslist_remove(enum remove_position, struct jobs_class *);
 
 static int enforce_wc(struct jobs_if *);
 static int64_t* adjust_rates_rdc(struct jobs_if *);
@@ -995,13 +996,13 @@ tslist_enqueue(struct jobs_class *cl, u_int64_t arv)
 static void
 tslist_dequeue(struct jobs_class *cl)
 {
-	tslist_remove(FRONT, &cl);
+	tslist_remove(FRONT, cl);
 }
 
 static void
 tslist_drop(struct jobs_class *cl)
 {
-	tslist_remove(REAR, &cl);
+	tslist_remove(REAR, cl);
 }
 
 /*
@@ -1009,20 +1010,20 @@ tslist_drop(struct jobs_class *cl)
  * and dropping which is from the rear position
  */
 static void
-tslist_remove(enum remove_position position, struct jobs_class **cl)
+tslist_remove(enum remove_position position, struct jobs_class *cl)
 {
 	TSENTRY *popped;
 	switch (position)
 	{
 		case FRONT:
-			popped = tslist_first((*cl)->arv_tm);
+			popped = tslist_first(cl->arv_tm);
 		case REAR:
-			popped = tslist_last((*cl)->arv_tm);
+			popped = tslist_last(cl->arv_tm);
 		default:
 			return;
 	}
 	if (popped != NULL){
-		TAILQ_REMOVE((*cl)->arv_tm, popped, ts_list);
+		TAILQ_REMOVE(cl->arv_tm, popped, ts_list);
 		free(popped, M_DEVBUF);
 	}
 	return;
