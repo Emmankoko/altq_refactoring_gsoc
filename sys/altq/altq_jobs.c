@@ -1017,8 +1017,10 @@ tslist_remove(enum remove_position position, struct jobs_class *cl)
 	{
 		case FRONT:
 			popped = tslist_first(cl->arv_tm);
+			break;
 		case REAR:
 			popped = tslist_last(cl->arv_tm);
+			break;
 		default:
 			return;
 	}
