@@ -549,7 +549,7 @@ blue_if_attach(void *addr)
 		free(rqp->rq_blue, M_DEVBUF);
 		free(rqp->rq_q, M_DEVBUF);
 		free(rqp, M_DEVBUF);
-		break;
+		return error;
 	}
 
 	/* add this state to the blue list */
