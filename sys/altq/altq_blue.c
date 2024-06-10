@@ -120,20 +120,20 @@ static int blue_detach(blue_queue_t *);
 static int blue_request(struct ifaltq *, int, void *);
 
 /* blueioctl helper functions */
-int blue_enable(struct blue_interface **, int *, void *, blue_queue_t **);
-int blue_disable(struct blue_interface **, int *, void *, blue_queue_t **);
-int blue_if_detach(struct blue_interface ** , int *, void *, blue_queue_t **);
-int blue_state_alloc(blue_queue_t *, int *, struct ifnet *);
-int blue_config(blue_queue_t **, int *, void *);
-int blue_getstat(blue_queue_t **, int *, void *);
+int blue_enable(void *);
+int blue_disable(void *);
+int blue_if_detach(void *);
+int blue_state_alloc(blue_queue_t *, struct ifnet *);
+int blue_config(void *);
+int blue_getstat(void *);
 
 /* blueaddq helper functions*/
 void enqueue_on_empty(blue_t *);
 void forced_drop(blue_t *, class_queue_t *, struct mbuf **);
 
 /* maek_ecn helper functions for different address family */
-static int af_inet_mark(struct ip **, struct altq_pktattr *);
-static int af_inet6_mark(struct ip6_hdr **, struct altq_pktattr *);
+static int af_inet_mark(struct altq_pktattr *);
+static int af_inet6_mark(struct altq_pktattr *);
 /*
  * blue device interface
  */
@@ -169,7 +169,6 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
     struct lwp *l)
 {
 	blue_queue_t *rqp;
-	struct blue_interface *ifacep;
 	struct ifnet *ifp;
 	int	error = 0;
 
@@ -188,11 +187,11 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	switch (cmd) {
 
 	case BLUE_ENABLE:
-		error = blue_enable(&ifacep, &error, addr, &rqp);
+		error = blue_enable(addr);
 		break;
 
 	case BLUE_DISABLE:
-		error = blue_disable(&ifacep, &error, addr, &rqp);
+		error = blue_disable(addr);
 		break;
 
 	case BLUE_IF_ATTACH:
@@ -208,7 +207,7 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		}
 
 		/* allocate and initialize blue_state_t fields */
-		error = blue_state_alloc(rqp, &error, ifp);
+		error = blue_state_alloc(rqp, ifp);
 		if (error == ENOMEM)
 			break;
 
@@ -234,15 +233,15 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		break;
 
 	case BLUE_IF_DETACH:
-		error = blue_if_detach(&ifacep, &error, addr, &rqp);
+		error = blue_if_detach(addr);
 		break;
 
 	case BLUE_GETSTATS:
-		error = blue_getstat(&rqp, &error, addr);
+		error = blue_getstat(addr);
 		break;
 
 	case BLUE_CONFIG:
-		error = blue_config(&rqp, &error, addr);
+		error = blue_config(addr);
 			break;
 
 	default:
@@ -442,15 +441,13 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 	switch (pktattr->pattr_af) {
 	case AF_INET:
 		if (flags & BLUEF_ECN4) {
-			struct ip *ip;
-			af_inet_mark(&ip, pktattr);
+			af_inet_mark(pktattr);
 		}
 		break;
 #ifdef INET6
 	case AF_INET6:
 		if (flags & BLUEF_ECN6) {
-			struct ip6_hdr *ip6;
-			af_inet6_mark(&ip6, pktattr);
+			af_inet6_mark(pktattr);
 		}
 		break;
 #endif  /* INET6 */
@@ -520,59 +517,71 @@ blue_request(struct ifaltq *ifq, int req, void *arg)
 }
 
 int
-blue_enable(struct blue_interface **ifacep, int *error, void *addr, blue_queue_t **rqp)
+blue_enable(void *addr)
 {
-	*ifacep = (struct blue_interface *)addr;
-	if ((*rqp = altq_lookup((*ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
-		*error = EBADF;
-		return *error;
+	struct blue_interface *ifacep;
+	blue_queue_t *rqp;
+	int error;
+
+	ifacep = (struct blue_interface *)addr;
+	if ((rqp = altq_lookup((ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
+		error = EBADF;
+		return error;
 	}
-	*error = altq_enable((*rqp)->rq_ifq);
-	return *error;
+	error = altq_enable((rqp)->rq_ifq);
+	return error;
 }
 
 int
-blue_disable(struct blue_interface **ifacep, int *error, void *addr, blue_queue_t **rqp)
+blue_disable(void *addr)
 {
-	*ifacep = (struct blue_interface *)addr;
-	if ((*rqp = altq_lookup((*ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
-		*error = EBADF;
-		return *error;
+	struct blue_interface *ifacep;
+	int error;
+	blue_queue_t *rqp;
+
+	ifacep = (struct blue_interface *)addr;
+	if ((rqp = altq_lookup((ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
+		error = EBADF;
+		return error;
 	}
-	*error = altq_disable((*rqp)->rq_ifq);
-	return *error;
+	error = altq_disable((rqp)->rq_ifq);
+	return error;
 }
 
 
 int
-blue_if_detach(struct blue_interface **ifacep, int *error, void *addr, blue_queue_t **rqp)
+blue_if_detach(void *addr)
 {
-	*ifacep = (struct blue_interface *)addr;
-	if ((*rqp = altq_lookup((*ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
-		*error = EBADF;
-		return *error;
+	struct blue_interface *ifacep;
+	blue_queue_t *rqp;
+	int error;
+	ifacep = (struct blue_interface *)addr;
+	if ((rqp = altq_lookup((ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
+		error = EBADF;
+		return error;
 	}
-	*error = blue_detach(*rqp);
-	return *error;
+	error = blue_detach(rqp);
+	return error;
 }
 
 int
-blue_state_alloc(blue_queue_t *rqp, int *error, struct ifnet *ifp)
+blue_state_alloc(blue_queue_t *rqp, struct ifnet *ifp)
 {
+	int error;
 	/* allocate and initialize class queue of blue stats */
 	if ((rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
 		M_WAITOK|M_ZERO)) == NULL){
 		free(rqp, M_DEVBUF);
-		*error = ENOMEM;
-		return *error;
+		error = ENOMEM;
+		return error;
 	}
 	/* allocate and initialize blue queue of blue state*/
 	if ((rqp->rq_blue = malloc(sizeof(blue_t), M_DEVBUF,
 		M_WAITOK|M_ZERO)) == NULL){
 		free(rqp->rq_q, M_DEVBUF);
 		free(rqp, M_DEVBUF);
-		*error = ENOMEM;
-		return *error;
+		error = ENOMEM;
+		return error;
 	}
 	/* allocate and initialize ifaltq of blue state */
 	rqp->rq_ifq = &ifp->if_snd;
@@ -580,27 +589,29 @@ blue_state_alloc(blue_queue_t *rqp, int *error, struct ifnet *ifp)
 	qlen(rqp->rq_q) = 0;
 	qlimit(rqp->rq_q) = BLUE_LIMIT;
 
-	return *error;
+	return error;
 }
 
 int
-blue_getstat(blue_queue_t **rqp, int *error, void *addr)
+blue_getstat(void *addr)
 {
+	int error;
 	do {
 		struct blue_stats *q_stats;
 		blue_t *rp;
+		blue_queue_t *rqp;
 
 		q_stats = (struct blue_stats *)addr;
-		if ((*rqp = altq_lookup(q_stats->iface.blue_ifname,
+		if ((rqp = altq_lookup(q_stats->iface.blue_ifname,
 						ALTQT_BLUE)) == NULL) {
-			*error = EBADF;
-			return *error;
+			error = EBADF;
+			return error;
 		}
 
-		q_stats->q_len 	   = qlen((*rqp)->rq_q);
-		q_stats->q_limit   = qlimit((*rqp)->rq_q);
+		q_stats->q_len 	   = qlen(rqp->rq_q);
+		q_stats->q_limit   = qlimit(rqp->rq_q);
 
-		rp = (*rqp)->rq_blue;
+		rp = rqp->rq_blue;
 		q_stats->q_pmark = rp->blue_pmark;
 		q_stats->xmit_packets  = rp->blue_stats.xmit_packets;
 		q_stats->xmit_bytes    = rp->blue_stats.xmit_bytes;
@@ -611,39 +622,41 @@ blue_getstat(blue_queue_t **rqp, int *error, void *addr)
 		q_stats->marked_packets = rp->blue_stats.marked_packets;
 
 	} while (/*CONSTCOND*/ 0);
-	return *error;
+	return error;
 }
 
 int
-blue_config(blue_queue_t **rqp, int *error, void *addr)
+blue_config(void *addr)
 {
+	int error;
 	do {
 		struct blue_conf *fc;
 		int limit;
+		blue_queue_t *rqp;
 
 		fc = (struct blue_conf *)addr;
-		if ((*rqp = altq_lookup(fc->iface.blue_ifname,
+		if ((rqp = altq_lookup(fc->iface.blue_ifname,
 					ALTQT_BLUE)) == NULL) {
-			*error = EBADF;
-			return *error;
+			error = EBADF;
+			return error;
 		}
 		limit = fc->blue_limit;
-		qlimit((*rqp)->rq_q) = limit;
+		qlimit(rqp->rq_q) = limit;
 		fc->blue_limit = limit;	/* write back the new value */
 		if (fc->blue_pkttime > 0)
-			(*rqp)->rq_blue->blue_pkttime = fc->blue_pkttime;
+			rqp->rq_blue->blue_pkttime = fc->blue_pkttime;
 		if (fc->blue_max_pmark > 0)
-			(*rqp)->rq_blue->blue_max_pmark = fc->blue_max_pmark;
+			rqp->rq_blue->blue_max_pmark = fc->blue_max_pmark;
 		if (fc->blue_hold_time > 0)
-			(*rqp)->rq_blue->blue_hold_time = fc->blue_hold_time;
-		(*rqp)->rq_blue->blue_flags = fc->blue_flags;
+			rqp->rq_blue->blue_hold_time = fc->blue_hold_time;
+		rqp->rq_blue->blue_flags = fc->blue_flags;
 
-		blue_init((*rqp)->rq_blue, (*rqp)->rq_blue->blue_flags,
-			(*rqp)->rq_blue->blue_pkttime,
-			(*rqp)->rq_blue->blue_max_pmark,
-			(*rqp)->rq_blue->blue_hold_time);
+		blue_init(rqp->rq_blue, rqp->rq_blue->blue_flags,
+			rqp->rq_blue->blue_pkttime,
+			rqp->rq_blue->blue_max_pmark,
+			rqp->rq_blue->blue_hold_time);
 	} while (/*CONSTCOND*/ 0);
-	return *error;
+	return error;
 }
 
 void
@@ -691,44 +704,44 @@ forced_drop(blue_t *rp, class_queue_t *q, struct mbuf **m)
 
 /* ipv4 nark */
 static int
-af_inet_mark(struct ip **ip, struct altq_pktattr *pktattr)
+af_inet_mark(struct altq_pktattr *pktattr)
 {
-	*ip = (struct ip *)pktattr->pattr_hdr;
+	struct ip *ip = (struct ip *)pktattr->pattr_hdr;
 	u_int8_t otos;
 	int sum;
 
-	if ((*ip)->ip_v != 4)
+	if (ip->ip_v != 4)
 		return 0;	/* version mismatch! */
-	if (((*ip)->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
+	if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
 		return 0;	/* not-ECT */
-	if (((*ip)->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
+	if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
 		return 1;	/* already marked */
 
 	/*
 		* ecn-capable but not marked,
 		* mark CE and update checksum
 		*/
-	otos = (*ip)->ip_tos;
-	(*ip)->ip_tos |= IPTOS_ECN_CE;
+	otos = ip->ip_tos;
+	ip->ip_tos |= IPTOS_ECN_CE;
 	/*
 		* update checksum (from RFC1624)
 		*	   HC' = ~(~HC + ~m + m')
 		*/
-	sum = ~ntohs((*ip)->ip_sum) & 0xffff;
-	sum += (~otos & 0xffff) + (*ip)->ip_tos;
+	sum = ~ntohs(ip->ip_sum) & 0xffff;
+	sum += (~otos & 0xffff) + ip->ip_tos;
 	sum = (sum >> 16) + (sum & 0xffff);
 	sum += (sum >> 16);  /* add carry */
-	(*ip)->ip_sum = htons(~sum & 0xffff);
+	ip->ip_sum = htons(~sum & 0xffff);
 	return 1;
 }
 /* ipv6 mark */
 static int
-af_inet6_mark(struct ip6_hdr **ip6, struct altq_pktattr * pktattr)
+af_inet6_mark(struct altq_pktattr * pktattr)
 {
-	*ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
+	struct ip6_hdr *ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
 	u_int32_t flowlabel;
 
-	flowlabel = ntohl((*ip6)->ip6_flow);
+	flowlabel = ntohl(ip6->ip6_flow);
 	if ((flowlabel >> 28) != 6)
 		return 0;	/* version mismatch! */
 	if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
@@ -741,7 +754,7 @@ af_inet6_mark(struct ip6_hdr **ip6, struct altq_pktattr * pktattr)
 		* ecn-capable but not marked,  mark CE
 		*/
 	flowlabel |= (IPTOS_ECN_CE << 20);
-	(*ip6)->ip6_flow = htonl(flowlabel);
+	ip6->ip6_flow = htonl(flowlabel);
 	return 1;
 }
 

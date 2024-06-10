@@ -103,21 +103,21 @@ afm_alloc(struct ifnet *ifp)
  * iterate through the list of address family nodes till
  * the address family on the current network interface is located
  */
-void
-if_afm_locate(struct afm_head **head, struct ifnet *ifp)
+struct afm_head *
+if_afm_lookup(struct ifnet *ifp)
 {
-	for (*head = afhead_chain.lh_first; *head != NULL;
-		*head = head->afh_chain.le_next)
-	if ((*head)->afh_ifp == ifp)
-		break;
+	struct afm_head *head;
+	for (head = afhead_chain.lh_first; head != NULL;
+		head = head->afh_chain.le_next)
+		if (head->afh_ifp == ifp)
+		return head;
+	return NULL;
 }
 
 int
 afm_dealloc(struct ifnet *ifp)
 {
-	struct afm_head *head;
-
-	if_afm_locate(&head, ifp);
+	struct afm_head *head = if_afm_lookup(ifp);
 
 	if (head == NULL)
 		return -1;
@@ -133,9 +133,7 @@ afm_dealloc(struct ifnet *ifp)
 struct afm *
 afm_top(struct ifnet *ifp)
 {
-	struct afm_head *head;
-
-	if_afm_locate(&head, ifp);
+	struct afm_head *head = if_afm_lookup(ifp);
 
 	if (head == NULL)
 		return NULL;
@@ -149,7 +147,7 @@ afm_add(struct ifnet *ifp, struct atm_flowmap *flowmap)
 	struct afm_head *head;
 	struct afm *afm;
 
-	if_afm_locate(&head, ifp);
+	if_afm_lookup(ifp);
 
 	if (head == NULL)
 		return -1;
@@ -189,10 +187,8 @@ afm_remove(struct afm *afm)
 int
 afm_removeall(struct ifnet *ifp)
 {
-	struct afm_head *head;
+	struct afm_head *head = if_afm_lookup(ifp);
 	struct afm *afm;
-
-	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return -1;
@@ -205,10 +201,8 @@ afm_removeall(struct ifnet *ifp)
 struct afm *
 afm_lookup(struct ifnet *ifp, int vpi, int vci)
 {
-	struct afm_head *head;
+	struct afm_head *head = if_afm_lookup(ifp);
 	struct afm *afm;
-
-	if_afm_locate(&head, ifp);
 
 	if (head == NULL)
 		return NULL;
@@ -291,9 +285,7 @@ afm_match6(struct afm_head *head, struct flowinfo_in6 *fp)
 struct afm *
 afm_match(struct ifnet *ifp, struct flowinfo *flow)
 {
-	struct afm_head *head;
-
-	if_afm_locate(&head, ifp);
+	struct afm_head *head = if_afm_lookup(ifp);
 
 	if (head == NULL)
 		return NULL;
