@@ -73,12 +73,11 @@ int altqioctl(dev_t, u_long, void *, int, struct proc *);
 #endif
 
 enum device_routine; /* device routine types */
-enum tbr; /* tbr manipulation list. mainly get and set*/
+enum TBR; /* tbr manipulation list. mainly get and set*/
 
 int altq_routine(enum device_routine, dev_t, int, int, struct lwp *);
-int get_queue_type(struct ifnet *, struct altqreq *, void *);
-int set_tbr(struct ifnet *, struct tbrreq *, void *);
-int get_tbr(struct ifnet *, struct tbrreq *, void *);
+int get_queue_type(void *addr);
+int tbr(void *, enum TBR);
 bool altq_auth(int *, struct lwp *);
 
 /*
