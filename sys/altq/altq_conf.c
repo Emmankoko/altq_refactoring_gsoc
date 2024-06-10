@@ -205,20 +205,17 @@ altqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag, struct lwp *l)
 	int unit = minor(dev);
 
 	if (unit == 0) {
-		struct ifnet *ifp;
-		struct altqreq *typereq;
-		struct tbrreq *tbrreq;
 		int error;
 
 		switch (cmd) {
 		case ALTQGTYPE:
-			return get_queue_type(ifp, typereq, addr);
+			return get_queue_type(addr);
 		case ALTQTBRSET:
 			if (!altq_auth(&error, l))
 				return error;
-			return set_tbr(ifp, tbrreq, addr);
+			return set_tbr(addr);
 		case ALTQTBRGET:
-			return get_tbr(ifp, tbrreq, addr);
+			return get_tbr(addr);
 		default:
 			if (!altq_auth(&error, l))
 				return error;
@@ -261,8 +258,11 @@ altq_routine(enum device_routine routine, dev_t dev, int flag,
  * ioclt routines for altq device
  */
 int
-get_queue_type(struct ifnet *ifp, struct altqreq *typereq, void *addr)
+get_queue_type(void *addr)
 {
+	struct ifnet *ifp;
+	struct altqreq *typereq;
+
 	typereq = (struct altqreq *)addr;
 	if ((ifp = ifunit(typereq->ifname)) == NULL)
 		return EINVAL;
@@ -271,8 +271,11 @@ get_queue_type(struct ifnet *ifp, struct altqreq *typereq, void *addr)
 }
 
 int
-set_tbr(struct ifnet *ifp, struct tbrreq *tbrreq, void *addr)
+tbr(void *addr)
 {
+	struct ifnet *ifp;
+	struct tbrreq *tbrreq;
+
 	tbrreq = (struct tbrreq *)addr;
 	if ((ifp = ifunit(tbrreq->ifname)) == NULL)
 		return EINVAL;
@@ -280,8 +283,11 @@ set_tbr(struct ifnet *ifp, struct tbrreq *tbrreq, void *addr)
 }
 
 int
-get_tbr(struct ifnet *ifp, struct tbrreq *tbrreq, void *addr)
+get_tbr(void *addr)
 {
+	struct ifnet *ifp;
+	struct tbrreq *tbrreq;
+
 	tbrreq = (struct tbrreq *)addr;
 	if ((ifp = ifunit(tbrreq->ifname)) == NULL)
 		return EINVAL;
