@@ -122,6 +122,7 @@ static int blue_request(struct ifaltq *, int, void *);
 /* blueioctl helper functions */
 int blue_enable(void *);
 int blue_disable(void *);
+int blue_if_attach(void *);
 int blue_if_detach(void *);
 int blue_state_alloc(blue_queue_t *, struct ifnet *);
 int blue_config(void *);
@@ -168,8 +169,6 @@ int
 blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
     struct lwp *l)
 {
-	blue_queue_t *rqp;
-	struct ifnet *ifp;
 	int	error = 0;
 
 	/* check super-user privilege */
@@ -195,41 +194,7 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		break;
 
 	case BLUE_IF_ATTACH:
-		if ((ifp = ifunit(((struct blue_interface *)addr)->blue_ifname)) == NULL){
-			error = ENXIO;
-			break;
-		}
-
-		/* allocate and initialize blue_state_t */
-		if ((rqp = malloc(sizeof(blue_queue_t), M_DEVBUF, M_WAITOK|M_ZERO)) == NULL){
-			error = ENOMEM;
-			return error;
-		}
-
-		/* allocate and initialize blue_state_t fields */
-		error = blue_state_alloc(rqp, ifp);
-		if (error == ENOMEM)
-			break;
-
-		/* default packet time: 1000 bytes / 10Mbps * 8 * 1000000 */
-		blue_init(rqp->rq_blue, 0, 800, 1000, 50000);
-
-		/*
-		 * set BLUE to this ifnet structure.
-		 */
-		error = altq_attach(rqp->rq_ifq, ALTQT_BLUE, rqp,
-				    blue_enqueue, blue_dequeue, blue_request,
-				    NULL, NULL);
-		if (error) {
-			free(rqp->rq_blue, M_DEVBUF);
-			free(rqp->rq_q, M_DEVBUF);
-			free(rqp, M_DEVBUF);
-			break;
-		}
-
-		/* add this state to the blue list */
-		rqp->rq_next = blue_list;
-		blue_list = rqp;
+		error = blue_if_attach(addr);
 		break;
 
 	case BLUE_IF_DETACH:
@@ -521,7 +486,7 @@ blue_enable(void *addr)
 {
 	struct blue_interface *ifacep;
 	blue_queue_t *rqp;
-	int error;
+	int error = 0;
 
 	ifacep = (struct blue_interface *)addr;
 	if ((rqp = altq_lookup((ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
@@ -536,7 +501,7 @@ int
 blue_disable(void *addr)
 {
 	struct blue_interface *ifacep;
-	int error;
+	int error = 0;
 	blue_queue_t *rqp;
 
 	ifacep = (struct blue_interface *)addr;
@@ -548,13 +513,57 @@ blue_disable(void *addr)
 	return error;
 }
 
+int
+blue_if_attach(void *addr)
+{
+	blue_queue_t *rqp;
+	struct ifnet *ifp;
+	int error = 0;
+
+	if ((ifp = ifunit(((struct blue_interface *)addr)->blue_ifname)) == NULL){
+		error = ENXIO;
+		return error;
+	}
+
+	/* allocate and initialize blue_state_t */
+	if ((rqp = malloc(sizeof(blue_queue_t), M_DEVBUF, M_WAITOK|M_ZERO)) == NULL){
+		error = ENOMEM;
+		return error;
+	}
+
+	/* allocate and initialize blue_state_t fields */
+	error = blue_state_alloc(rqp, ifp);
+	if (error == ENOMEM)
+		return error;
+
+	/* default packet time: 1000 bytes / 10Mbps * 8 * 1000000 */
+	blue_init(rqp->rq_blue, 0, 800, 1000, 50000);
+
+	/*
+		* set BLUE to this ifnet structure.
+		*/
+	error = altq_attach(rqp->rq_ifq, ALTQT_BLUE, rqp,
+				blue_enqueue, blue_dequeue, blue_request,
+				NULL, NULL);
+	if (error) {
+		free(rqp->rq_blue, M_DEVBUF);
+		free(rqp->rq_q, M_DEVBUF);
+		free(rqp, M_DEVBUF);
+		break;
+	}
+
+	/* add this state to the blue list */
+	rqp->rq_next = blue_list;
+	blue_list = rqp;
+	return error;
+}
 
 int
 blue_if_detach(void *addr)
 {
 	struct blue_interface *ifacep;
 	blue_queue_t *rqp;
-	int error;
+	int error = 0;
 	ifacep = (struct blue_interface *)addr;
 	if ((rqp = altq_lookup((ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
 		error = EBADF;
@@ -567,7 +576,7 @@ blue_if_detach(void *addr)
 int
 blue_state_alloc(blue_queue_t *rqp, struct ifnet *ifp)
 {
-	int error;
+	int error = 0;
 	/* allocate and initialize class queue of blue stats */
 	if ((rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
 		M_WAITOK|M_ZERO)) == NULL){
@@ -595,7 +604,7 @@ blue_state_alloc(blue_queue_t *rqp, struct ifnet *ifp)
 int
 blue_getstat(void *addr)
 {
-	int error;
+	int error = 0;
 	do {
 		struct blue_stats *q_stats;
 		blue_t *rp;
@@ -628,7 +637,7 @@ blue_getstat(void *addr)
 int
 blue_config(void *addr)
 {
-	int error;
+	int error = 0;
 	do {
 		struct blue_conf *fc;
 		int limit;
