@@ -73,6 +73,7 @@ int altqioctl(dev_t, u_long, void *, int, struct proc *);
 #endif
 
 enum device_routine; /* device routine types */
+enum tbr; /* tbr manipulation list. mainly get and set*/
 
 int altq_routine(enum device_routine, dev_t, int, int, struct lwp *);
 int get_queue_type(struct ifnet *, struct altqreq *, void *);

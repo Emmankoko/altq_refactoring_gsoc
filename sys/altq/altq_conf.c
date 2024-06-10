@@ -187,6 +187,11 @@ enum device_routine {
 	CLOSE
 };
 
+enum TBR {
+	GET,
+	SET
+};
+
 int
 altqopen(dev_t dev, int flag, int fmt, struct lwp *l)
 {
@@ -213,9 +218,9 @@ altqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag, struct lwp *l)
 		case ALTQTBRSET:
 			if (!altq_auth(&error, l))
 				return error;
-			return set_tbr(addr);
+			return tbr(addr, SET);
 		case ALTQTBRGET:
-			return get_tbr(addr);
+			return tbr(addr, GET);
 		default:
 			if (!altq_auth(&error, l))
 				return error;
@@ -271,7 +276,7 @@ get_queue_type(void *addr)
 }
 
 int
-tbr(void *addr)
+tbr(void *addr, enum TBR action)
 {
 	struct ifnet *ifp;
 	struct tbrreq *tbrreq;
@@ -279,19 +284,15 @@ tbr(void *addr)
 	tbrreq = (struct tbrreq *)addr;
 	if ((ifp = ifunit(tbrreq->ifname)) == NULL)
 		return EINVAL;
-	return tbr_set(&ifp->if_snd, &tbrreq->tb_prof);
-}
-
-int
-get_tbr(void *addr)
-{
-	struct ifnet *ifp;
-	struct tbrreq *tbrreq;
-
-	tbrreq = (struct tbrreq *)addr;
-	if ((ifp = ifunit(tbrreq->ifname)) == NULL)
-		return EINVAL;
-	return tbr_get(&ifp->if_snd, &tbrreq->tb_prof);
+	switch (action)
+	{
+		case GET:
+			return tbr_get(&ifp->if_snd, &tbrreq->tb_prof);
+		case SET:
+			return tbr_set(&ifp->if_snd, &tbrreq->tb_prof);
+		default:
+			return EINVAL;
+	}
 }
 
 /*
