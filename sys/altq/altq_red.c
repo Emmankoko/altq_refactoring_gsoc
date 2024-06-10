@@ -208,6 +208,17 @@ static struct mbuf *red_dequeue(struct ifaltq *, int);
 static int red_request(struct ifaltq *, int, void *);
 static void red_purgeq(red_queue_t *);
 static int red_detach(red_queue_t *);
+
+/* redioctl helper functions */
+int red_enable(void *);
+int red_disable(void *);
+int red_if_detach(void *);
+int red_if_attach(void *);
+int red_state_alloc(red_queue_t *, struct ifnet *);
+int red_config(void *);
+int red_getstat(void *);
+int red_set_default(void *);
+
 #ifdef ALTQ_FLOWVALVE
 static inline struct fve *flowlist_lookup(struct flowvalve *,
 			 struct altq_pktattr *, struct timeval *);
@@ -754,9 +765,6 @@ int
 redioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
     struct lwp *l)
 {
-	red_queue_t *rqp;
-	struct red_interface *ifacep;
-	struct ifnet *ifp;
 	int	error = 0;
 
 	/* check super-user privilege */
@@ -774,190 +782,31 @@ redioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	switch (cmd) {
 
 	case RED_ENABLE:
-		ifacep = (struct red_interface *)addr;
-		if ((rqp = altq_lookup(ifacep->red_ifname, ALTQT_RED)) == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = altq_enable(rqp->rq_ifq);
+		error = red_enable(addr);
 		break;
 
 	case RED_DISABLE:
-		ifacep = (struct red_interface *)addr;
-		if ((rqp = altq_lookup(ifacep->red_ifname, ALTQT_RED)) == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = altq_disable(rqp->rq_ifq);
+		error = red_disable(addr);
 		break;
 
 	case RED_IF_ATTACH:
-		ifp = ifunit(((struct red_interface *)addr)->red_ifname);
-		if (ifp == NULL) {
-			error = ENXIO;
-			break;
-		}
-
-		/* allocate and initialize red_queue_t */
-		rqp = malloc(sizeof(red_queue_t), M_DEVBUF, M_WAITOK|M_ZERO);
-		if (rqp == NULL) {
-			error = ENOMEM;
-			break;
-		}
-
-		rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
-		    M_WAITOK|M_ZERO);
-		if (rqp->rq_q == NULL) {
-			free(rqp, M_DEVBUF);
-			error = ENOMEM;
-			break;
-		}
-
-		rqp->rq_red = red_alloc(0, 0, 0, 0, 0, 0);
-		if (rqp->rq_red == NULL) {
-			free(rqp->rq_q, M_DEVBUF);
-			free(rqp, M_DEVBUF);
-			error = ENOMEM;
-			break;
-		}
-
-		rqp->rq_ifq = &ifp->if_snd;
-		qtail(rqp->rq_q) = NULL;
-		qlen(rqp->rq_q) = 0;
-		qlimit(rqp->rq_q) = RED_LIMIT;
-		qtype(rqp->rq_q) = Q_RED;
-
-		/*
-		 * set RED to this ifnet structure.
-		 */
-		error = altq_attach(rqp->rq_ifq, ALTQT_RED, rqp,
-				    red_enqueue, red_dequeue, red_request,
-				    NULL, NULL);
-		if (error) {
-			red_destroy(rqp->rq_red);
-			free(rqp->rq_q, M_DEVBUF);
-			free(rqp, M_DEVBUF);
-			break;
-		}
-
-		/* add this state to the red list */
-		rqp->rq_next = red_list;
-		red_list = rqp;
+		error = red_if_attach(addr);
 		break;
 
 	case RED_IF_DETACH:
-		ifacep = (struct red_interface *)addr;
-		if ((rqp = altq_lookup(ifacep->red_ifname, ALTQT_RED)) == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = red_detach(rqp);
+		error = red_if_detach(addr);
 		break;
 
 	case RED_GETSTATS:
-		do {
-			struct red_stats *q_stats;
-			red_t *rp;
-
-			q_stats = (struct red_stats *)addr;
-			if ((rqp = altq_lookup(q_stats->iface.red_ifname,
-					     ALTQT_RED)) == NULL) {
-				error = EBADF;
-				break;
-			}
-
-			q_stats->q_len 	   = qlen(rqp->rq_q);
-			q_stats->q_limit   = qlimit(rqp->rq_q);
-
-			rp = rqp->rq_red;
-			q_stats->q_avg 	   = rp->red_avg >> rp->red_wshift;
-			q_stats->xmit_cnt  = rp->red_stats.xmit_cnt;
-			q_stats->drop_cnt  = rp->red_stats.drop_cnt;
-			q_stats->drop_forced   = rp->red_stats.drop_forced;
-			q_stats->drop_unforced = rp->red_stats.drop_unforced;
-			q_stats->marked_packets = rp->red_stats.marked_packets;
-
-			q_stats->weight		= rp->red_weight;
-			q_stats->inv_pmax	= rp->red_inv_pmax;
-			q_stats->th_min		= rp->red_thmin;
-			q_stats->th_max		= rp->red_thmax;
-
-#ifdef ALTQ_FLOWVALVE
-			if (rp->red_flowvalve != NULL) {
-				struct flowvalve *fv = rp->red_flowvalve;
-				q_stats->fv_flows    = fv->fv_flows;
-				q_stats->fv_pass     = fv->fv_stats.pass;
-				q_stats->fv_predrop  = fv->fv_stats.predrop;
-				q_stats->fv_alloc    = fv->fv_stats.alloc;
-				q_stats->fv_escape   = fv->fv_stats.escape;
-			} else {
-#endif /* ALTQ_FLOWVALVE */
-				q_stats->fv_flows    = 0;
-				q_stats->fv_pass     = 0;
-				q_stats->fv_predrop  = 0;
-				q_stats->fv_alloc    = 0;
-				q_stats->fv_escape   = 0;
-#ifdef ALTQ_FLOWVALVE
-			}
-#endif /* ALTQ_FLOWVALVE */
-		} while (/*CONSTCOND*/ 0);
+		error = red_getstat(addr);
 		break;
 
 	case RED_CONFIG:
-		do {
-			struct red_conf *fc;
-			red_t *new;
-			int s, limit;
-
-			fc = (struct red_conf *)addr;
-			if ((rqp = altq_lookup(fc->iface.red_ifname,
-					       ALTQT_RED)) == NULL) {
-				error = EBADF;
-				break;
-			}
-			new = red_alloc(fc->red_weight,
-					fc->red_inv_pmax,
-					fc->red_thmin,
-					fc->red_thmax,
-					fc->red_flags,
-					fc->red_pkttime);
-			if (new == NULL) {
-				error = ENOMEM;
-				break;
-			}
-
-			s = splnet();
-			red_purgeq(rqp);
-			limit = fc->red_limit;
-			if (limit < fc->red_thmax)
-				limit = fc->red_thmax;
-			qlimit(rqp->rq_q) = limit;
-			fc->red_limit = limit;	/* write back the new value */
-
-			red_destroy(rqp->rq_red);
-			rqp->rq_red = new;
-
-			splx(s);
-
-			/* write back new values */
-			fc->red_limit = limit;
-			fc->red_inv_pmax = rqp->rq_red->red_inv_pmax;
-			fc->red_thmin = rqp->rq_red->red_thmin;
-			fc->red_thmax = rqp->rq_red->red_thmax;
-
-		} while (/*CONSTCOND*/ 0);
+		error = red_config(addr);
 		break;
 
 	case RED_SETDEFAULTS:
-		do {
-			struct redparams *rp;
-
-			rp = (struct redparams *)addr;
-
-			default_th_min = rp->th_min;
-			default_th_max = rp->th_max;
-			default_inv_pmax = rp->inv_pmax;
-		} while (/*CONSTCOND*/ 0);
+		error = red_set_default(addr);
 		break;
 
 	default:
@@ -1062,6 +911,247 @@ red_purgeq(red_queue_t *rqp)
 	_flushq(rqp->rq_q);
 	if (ALTQ_IS_ENABLED(rqp->rq_ifq))
 		rqp->rq_ifq->ifq_len = 0;
+}
+
+int
+red_enable(void *addr)
+{
+	red_queue_t *rqp;
+	struct red_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct red_interface *)addr;
+	if ((rqp = altq_lookup(ifacep->red_ifname, ALTQT_RED)) == NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = altq_enable(rqp->rq_ifq);
+	return error;
+}
+
+int
+red_disable(void *addr)
+{
+	red_queue_t *rqp;
+	struct red_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct red_interface *)addr;
+	if ((rqp = altq_lookup(ifacep->red_ifname, ALTQT_RED)) == NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = altq_disable(rqp->rq_ifq);
+	return error;
+}
+
+int
+red_if_attach(void *addr)
+{
+	struct ifnet *ifp;
+	red_queue_t *rqp;
+	int error = 0;
+
+	ifp = ifunit(((struct red_interface *)addr)->red_ifname);
+	if (ifp == NULL) {
+		error = ENXIO;
+		return error;
+	}
+
+	rqp = malloc(sizeof(red_queue_t), M_DEVBUF, M_WAITOK|M_ZERO);
+	if (rqp == NULL) {
+		error = ENOMEM;
+		return error;
+	}
+
+	/* allocate and initialize red_queue_t */
+	error = red_state_alloc(rqp, ifp);
+	if (error == ENOMEM)
+		return error;
+
+	/*
+		* set RED to this ifnet structure.
+		*/
+	error = altq_attach(rqp->rq_ifq, ALTQT_RED, rqp,
+				red_enqueue, red_dequeue, red_request,
+				NULL, NULL);
+	if (error) {
+		red_destroy(rqp->rq_red);
+		free(rqp->rq_q, M_DEVBUF);
+		free(rqp, M_DEVBUF);
+		return error;
+	}
+
+	/* add this state to the red list */
+	rqp->rq_next = red_list;
+	red_list = rqp;
+	return error;
+}
+
+int
+red_if_detach(void *addr)
+{
+	red_queue_t *rqp;
+	struct red_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct red_interface *)addr;
+	if ((rqp = altq_lookup(ifacep->red_ifname, ALTQT_RED)) == NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = red_detach(rqp);
+	return error;
+}
+
+/* pass rqp by reference, rqp address changes after allocation and we need to keep track*/
+int
+red_state_alloc(red_queue_t *rqp, struct ifnet *ifp)
+{
+	int error = 0;
+
+	rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
+		    M_WAITOK|M_ZERO);
+	if (rqp->rq_q == NULL) {
+		free(rqp, M_DEVBUF);
+		error = ENOMEM;
+		return error;
+	}
+
+	rqp->rq_red = red_alloc(0, 0, 0, 0, 0, 0);
+	if (rqp->rq_red == NULL) {
+		free(rqp->rq_q, M_DEVBUF);
+		free(rqp, M_DEVBUF);
+		error = ENOMEM;
+		return error;
+	}
+
+	rqp->rq_ifq = &ifp->if_snd;
+	qtail(rqp->rq_q) = NULL;
+	qlen(rqp->rq_q) = 0;
+	qlimit(rqp->rq_q) = RED_LIMIT;
+	qtype(rqp->rq_q) = Q_RED;
+	return error;
+}
+
+int
+red_config(void *addr)
+{
+	int error = 0;
+	do {
+		struct red_conf *fc;
+		red_t *new;
+		int s, limit;
+		red_queue_t *rqp;
+
+		fc = (struct red_conf *)addr;
+		if ((rqp = altq_lookup(fc->iface.red_ifname,
+						ALTQT_RED)) == NULL) {
+			error = EBADF;
+			return error;
+		}
+		new = red_alloc(fc->red_weight,
+				fc->red_inv_pmax,
+				fc->red_thmin,
+				fc->red_thmax,
+				fc->red_flags,
+				fc->red_pkttime);
+		if (new == NULL) {
+			error = ENOMEM;
+			return error;
+		}
+
+		s = splnet();
+		red_purgeq(rqp);
+		limit = fc->red_limit;
+		if (limit < fc->red_thmax)
+			limit = fc->red_thmax;
+		qlimit(rqp->rq_q) = limit;
+		fc->red_limit = limit;	/* write back the new value */
+
+		red_destroy(rqp->rq_red);
+		rqp->rq_red = new;
+
+		splx(s);
+
+		/* write back new values */
+		fc->red_limit = limit;
+		fc->red_inv_pmax = rqp->rq_red->red_inv_pmax;
+		fc->red_thmin = rqp->rq_red->red_thmin;
+		fc->red_thmax = rqp->rq_red->red_thmax;
+
+	} while (/*CONSTCOND*/ 0);
+	return error;
+}
+
+int
+red_getstat(void *addr)
+{
+	int error = 0;
+	do {
+		struct red_stats *q_stats;
+		red_t *rp;
+		red_queue_t *rqp;
+
+		q_stats = (struct red_stats *)addr;
+		if ((rqp = altq_lookup(q_stats->iface.red_ifname,
+						ALTQT_RED)) == NULL) {
+			error = EBADF;
+			return error;
+		}
+
+		q_stats->q_len 	   = qlen(rqp->rq_q);
+		q_stats->q_limit   = qlimit(rqp->rq_q);
+
+		rp = rqp->rq_red;
+		q_stats->q_avg 	   = rp->red_avg >> rp->red_wshift;
+		q_stats->xmit_cnt  = rp->red_stats.xmit_cnt;
+		q_stats->drop_cnt  = rp->red_stats.drop_cnt;
+		q_stats->drop_forced   = rp->red_stats.drop_forced;
+		q_stats->drop_unforced = rp->red_stats.drop_unforced;
+		q_stats->marked_packets = rp->red_stats.marked_packets;
+
+		q_stats->weight		= rp->red_weight;
+		q_stats->inv_pmax	= rp->red_inv_pmax;
+		q_stats->th_min		= rp->red_thmin;
+		q_stats->th_max		= rp->red_thmax;
+
+#ifdef ALTQ_FLOWVALVE
+		if (rp->red_flowvalve != NULL) {
+			struct flowvalve *fv = rp->red_flowvalve;
+			q_stats->fv_flows    = fv->fv_flows;
+			q_stats->fv_pass     = fv->fv_stats.pass;
+			q_stats->fv_predrop  = fv->fv_stats.predrop;
+			q_stats->fv_alloc    = fv->fv_stats.alloc;
+			q_stats->fv_escape   = fv->fv_stats.escape;
+		} else {
+#endif /* ALTQ_FLOWVALVE */
+			q_stats->fv_flows    = 0;
+			q_stats->fv_pass     = 0;
+			q_stats->fv_predrop  = 0;
+			q_stats->fv_alloc    = 0;
+			q_stats->fv_escape   = 0;
+#ifdef ALTQ_FLOWVALVE
+		}
+#endif /* ALTQ_FLOWVALVE */
+	} while (/*CONSTCOND*/ 0);
+	return error;
+}
+
+int
+red_set_default(void *addr)
+{
+	int error = 0;
+	do {
+		struct redparams *rp;
+
+		rp = (struct redparams *)addr;
+
+		default_th_min = rp->th_min;
+		default_th_max = rp->th_max;
+		default_inv_pmax = rp->inv_pmax;
+	} while (/*CONSTCOND*/ 0);
+	return error;
 }
 
 #ifdef ALTQ_FLOWVALVE
