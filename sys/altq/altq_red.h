@@ -194,6 +194,7 @@ extern struct wtab	*wtab_alloc(int);
 extern int		 wtab_destroy(struct wtab *);
 extern int32_t		 pow_w(struct wtab *, int);
 
+enum red_cmd_enable;
 #endif /* _KERNEL */
 
 #endif /* _ALTQ_ALTQ_RED_H_ */
