@@ -962,7 +962,6 @@ red_if_detach(void *addr)
 	return error;
 }
 
-/* pass rqp by reference, rqp address changes after allocation and we need to keep track*/
 int
 red_state_alloc(red_queue_t *rqp, struct ifnet *ifp)
 {
