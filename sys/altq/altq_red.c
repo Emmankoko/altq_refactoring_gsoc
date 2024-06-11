@@ -219,6 +219,10 @@ int red_config(void *);
 int red_getstat(void *);
 int red_set_default(void *);
 
+/* mark_ecn helper functions*/
+int af_inet_mark(void *);
+int af_inet6_mark(void *);
+
 #ifdef ALTQ_FLOWVALVE
 static inline struct fve *flowlist_lookup(struct flowvalve *,
 			 struct altq_pktattr *, struct timeval *);
@@ -566,59 +570,13 @@ mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 
 	switch (af) {
 	case AF_INET:
-		if (flags & REDF_ECN4) {
-			struct ip *ip = hdr;
-			u_int8_t otos;
-			int sum;
-
-			if (ip->ip_v != 4)
-				return 0;	/* version mismatch! */
-
-			if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
-				return 0;	/* not-ECT */
-			if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
-				return 1;	/* already marked */
-
-			/*
-			 * ecn-capable but not marked,
-			 * mark CE and update checksum
-			 */
-			otos = ip->ip_tos;
-			ip->ip_tos |= IPTOS_ECN_CE;
-			/*
-			 * update checksum (from RFC1624)
-			 *	   HC' = ~(~HC + ~m + m')
-			 */
-			sum = ~ntohs(ip->ip_sum) & 0xffff;
-			sum += (~otos & 0xffff) + ip->ip_tos;
-			sum = (sum >> 16) + (sum & 0xffff);
-			sum += (sum >> 16);  /* add carry */
-			ip->ip_sum = htons(~sum & 0xffff);
-			return 1;
-		}
+		if (flags & REDF_ECN4)
+			af_inet_mark(hdr);
 		break;
 #ifdef INET6
 	case AF_INET6:
-		if (flags & REDF_ECN6) {
-			struct ip6_hdr *ip6 = hdr;
-			u_int32_t flowlabel;
-
-			flowlabel = ntohl(ip6->ip6_flow);
-			if ((flowlabel >> 28) != 6)
-				return 0;	/* version mismatch! */
-			if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
-			    (IPTOS_ECN_NOTECT << 20))
-				return 0;	/* not-ECT */
-			if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
-			    (IPTOS_ECN_CE << 20))
-				return 1;	/* already marked */
-			/*
-			 * ecn-capable but not marked,  mark CE
-			 */
-			flowlabel |= (IPTOS_ECN_CE << 20);
-			ip6->ip6_flow = htonl(flowlabel);
-			return 1;
-		}
+		if (flags & REDF_ECN6)
+			af_inet6_mark(hdr);
 		break;
 #endif  /* INET6 */
 	}
@@ -1152,6 +1110,62 @@ red_set_default(void *addr)
 		default_inv_pmax = rp->inv_pmax;
 	} while (/*CONSTCOND*/ 0);
 	return error;
+}
+
+int
+af_inet_mark(void *hdr)
+{
+	struct ip *ip = hdr;
+	u_int8_t otos;
+	int sum;
+
+	if (ip->ip_v != 4)
+		return 0;	/* version mismatch! */
+
+	if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
+		return 0;	/* not-ECT */
+	if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
+		return 1;	/* already marked */
+
+	/*
+		* ecn-capable but not marked,
+		* mark CE and update checksum
+		*/
+	otos = ip->ip_tos;
+	ip->ip_tos |= IPTOS_ECN_CE;
+	/*
+		* update checksum (from RFC1624)
+		*	   HC' = ~(~HC + ~m + m')
+		*/
+	sum = ~ntohs(ip->ip_sum) & 0xffff;
+	sum += (~otos & 0xffff) + ip->ip_tos;
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);  /* add carry */
+	ip->ip_sum = htons(~sum & 0xffff);
+	return 1;
+}
+
+int
+af_inet6_mark(void *hdr)
+{
+	struct ip6_hdr *ip6 = hdr;
+	u_int32_t flowlabel;
+
+	flowlabel = ntohl(ip6->ip6_flow);
+	if ((flowlabel >> 28) != 6)
+		return 0;	/* version mismatch! */
+	if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
+		(IPTOS_ECN_NOTECT << 20))
+		return 0;	/* not-ECT */
+	if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
+		(IPTOS_ECN_CE << 20))
+		return 1;	/* already marked */
+	/*
+		* ecn-capable but not marked,  mark CE
+		*/
+	flowlabel |= (IPTOS_ECN_CE << 20);
+	ip6->ip6_flow = htonl(flowlabel);
+	return 1;
 }
 
 #ifdef ALTQ_FLOWVALVE
