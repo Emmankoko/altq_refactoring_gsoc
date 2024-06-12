@@ -210,7 +210,8 @@ static void red_purgeq(red_queue_t *);
 static int red_detach(red_queue_t *);
 
 /* redioctl helper functions */
-int red_enable(void *, enum red_cmd_enable);
+int red_enable(void *);
+int red_disable(void *);
 int red_if_detach(void *);
 int red_if_attach(void *);
 int red_state_alloc(red_queue_t *, struct ifnet *);
@@ -237,11 +238,6 @@ static void fv_dropbyred(struct flowvalve *fv, struct altq_pktattr *,
 			 struct fve *);
 #endif
 #endif /* ALTQ3_COMPAT */
-
-enum red_cmd_enable{
-	ENABLE,
-	DISABLE
-};
 
 /*
  * red support routines
@@ -744,11 +740,11 @@ redioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	switch (cmd) {
 
 	case RED_ENABLE:
-		error = red_enable(addr, ENABLE);
+		error = red_enable(addr);
 		break;
 
 	case RED_DISABLE:
-		error = red_enable(addr, DISABLE);
+		error = red_disable(addr);
 		break;
 
 	case RED_IF_ATTACH:
@@ -876,7 +872,7 @@ red_purgeq(red_queue_t *rqp)
 }
 
 int
-red_enable(void *addr, enum red_cmd_enable action)
+red_enable(void *addr)
 {
 	red_queue_t *rqp;
 	struct red_interface *ifacep;
@@ -887,17 +883,24 @@ red_enable(void *addr, enum red_cmd_enable action)
 		error = EBADF;
 		return error;
 	}
-	switch (action)
-	{
-		case ENABLE:
-			error = altq_enable(rqp->rq_ifq);
-			return error;
-		case DISABLE:
-			error = altq_disable(rqp->rq_ifq);
-			return error;
-		case default:
-			return EINVAL;
+	error = altq_enable(rqp->rq_ifq);
+	return error;
+}
+
+int
+red_disable(void *addr)
+{
+	red_queue_t *rqp;
+	struct red_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct red_interface *)addr;
+	if ((rqp = altq_lookup(ifacep->red_ifname, ALTQT_RED)) == NULL) {
+		error = EBADF;
+		return error;
 	}
+	error = altq_disable(rqp->rq_ifq);
+	return error;
 }
 
 int
