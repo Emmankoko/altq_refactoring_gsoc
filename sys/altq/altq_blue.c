@@ -120,7 +120,8 @@ static int blue_detach(blue_queue_t *);
 static int blue_request(struct ifaltq *, int, void *);
 
 /* blueioctl helper functions */
-int blue_enable(void *, enum blue_cmd_enable);
+int blue_enable(void *);
+int blue_disable(void *);
 int blue_if_attach(void *);
 int blue_if_detach(void *);
 int blue_state_alloc(blue_queue_t *, struct ifnet *);
@@ -138,11 +139,6 @@ static int af_inet6_mark(struct altq_pktattr *);
  * blue device interface
  */
 altqdev_decl(blue);
-
-enum blue_cmd_enable{
-	ENABLE,
-	DISABLE
-};
 
 int
 blueopen(dev_t dev, int flag, int fmt,
@@ -190,11 +186,11 @@ blueioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	switch (cmd) {
 
 	case BLUE_ENABLE:
-		error = blue_enable(addr, ENABLE);
+		error = blue_enable(addr);
 		break;
 
 	case BLUE_DISABLE:
-		error = blue_enable(addr, DISABLE);
+		error = blue_disable(addr);
 		break;
 
 	case BLUE_IF_ATTACH:
@@ -486,7 +482,7 @@ blue_request(struct ifaltq *ifq, int req, void *arg)
 }
 
 int
-blue_enable(void *addr, enum blue_cmd_enable action)
+blue_enable(void *addr)
 {
 	struct blue_interface *ifacep;
 	blue_queue_t *rqp;
@@ -497,17 +493,24 @@ blue_enable(void *addr, enum blue_cmd_enable action)
 		error = EBADF;
 		return error;
 	}
-	switch (action)
-	{
-		case ENABLE:
-			error = altq_enable((rqp)->rq_ifq);
-			return error;
-		case DISABLE:
-			error = altq_disable((rqp)->rq_ifq);
-			return error;
-		default:
-			return EINVAL;
+	error = altq_enable((rqp)->rq_ifq);
+	return error;
+}
+
+int
+blue_disable(void *addr)
+{
+	struct blue_interface *ifacep;
+	int error = 0;
+	blue_queue_t *rqp;
+
+	ifacep = (struct blue_interface *)addr;
+	if ((rqp = altq_lookup((ifacep)->blue_ifname, ALTQT_BLUE)) == NULL) {
+		error = EBADF;
+		return error;
 	}
+	error = altq_disable((rqp)->rq_ifq);
+	return error;
 }
 
 int

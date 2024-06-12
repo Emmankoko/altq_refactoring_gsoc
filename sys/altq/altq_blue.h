@@ -113,7 +113,6 @@ extern int blue_init(blue_t *, int, int, int, int);
 extern int blue_addq(blue_t *, class_queue_t *, struct mbuf *,
 		     struct altq_pktattr *);
 extern struct mbuf *blue_getq(blue_t *, class_queue_t *);
-enum blue_cmd_enable;
 
 #endif /* _KERNEL */
 
