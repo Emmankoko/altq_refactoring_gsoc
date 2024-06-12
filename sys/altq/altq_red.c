@@ -236,6 +236,12 @@ static int fv_checkflow(struct flowvalve *, struct altq_pktattr *,
 			struct fve **);
 static void fv_dropbyred(struct flowvalve *fv, struct altq_pktattr *,
 			 struct fve *);
+
+/* helper function for flowlist_lookup */
+static inline struct fve * af_inet_flowlist_search(struct flowvalve *,
+			struct altq_pktattr *, int *, struct timeval);
+static inline struct fve * af_inet6_flowlist_search(struct flowvalve *,
+			struct altq_pktattr *, int *, struct timeval);
 #endif
 #endif /* ALTQ3_COMPAT */
 
@@ -1228,10 +1234,6 @@ flowlist_lookup(struct flowvalve *fv, struct altq_pktattr *pktattr,
 {
 	struct fve *fve;
 	int flows;
-	struct ip *ip;
-#ifdef INET6
-	struct ip6_hdr *ip6;
-#endif
 	struct timeval tthresh;
 
 	if (pktattr == NULL)
@@ -1244,41 +1246,13 @@ flowlist_lookup(struct flowvalve *fv, struct altq_pktattr *pktattr,
 	 */
 	switch (pktattr->pattr_af) {
 	case AF_INET:
-		ip = (struct ip *)pktattr->pattr_hdr;
-		TAILQ_FOREACH(fve, &fv->fv_flowlist, fve_lru){
-			if (fve->fve_lastdrop.tv_sec == 0)
-				break;
-			if (fve->fve_lastdrop.tv_sec < tthresh.tv_sec) {
-				fve->fve_lastdrop.tv_sec = 0;
-				break;
-			}
-			if (fve->fve_flow.flow_af == AF_INET &&
-			    fve->fve_flow.flow_ip.ip_src.s_addr ==
-			    ip->ip_src.s_addr &&
-			    fve->fve_flow.flow_ip.ip_dst.s_addr ==
-			    ip->ip_dst.s_addr)
-				return fve;
-			flows++;
-		}
+		if ((fve = af_inet_flowlist_search(fv, pktattr, &flows, tthresh)) != NULL)
+			return fve;
 		break;
 #ifdef INET6
 	case AF_INET6:
-		ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
-		TAILQ_FOREACH(fve, &fv->fv_flowlist, fve_lru){
-			if (fve->fve_lastdrop.tv_sec == 0)
-				break;
-			if (fve->fve_lastdrop.tv_sec < tthresh.tv_sec) {
-				fve->fve_lastdrop.tv_sec = 0;
-				break;
-			}
-			if (fve->fve_flow.flow_af == AF_INET6 &&
-			    IN6_ARE_ADDR_EQUAL(&fve->fve_flow.flow_ip6.ip6_src,
-					       &ip6->ip6_src) &&
-			    IN6_ARE_ADDR_EQUAL(&fve->fve_flow.flow_ip6.ip6_dst,
-					       &ip6->ip6_dst))
-				return fve;
-			flows++;
-		}
+		if ((fve = af_inet6_flowlist_search(fv, pktattr, &flows, tthresh)) != NULL)
+			return fve;
 		break;
 #endif /* INET6 */
 
@@ -1288,6 +1262,59 @@ flowlist_lookup(struct flowvalve *fv, struct altq_pktattr *pktattr,
 	}
 	fv->fv_flows = flows;	/* save the number of active fve's */
 	return NULL;
+}
+
+/* pass flows by ref because flows is increased by the function */
+static inline struct fve *
+af_inet_flowlist_search(struct flowvalve *fv, struct altq_pktattr *pktattr,
+			 int *flows, struct timeval tthresh)
+{
+	struct ip *ip;
+	struct fve *fve;
+
+	ip = (struct ip *)pktattr->pattr_hdr;
+	TAILQ_FOREACH(fve, &fv->fv_flowlist, fve_lru){
+		if (fve->fve_lastdrop.tv_sec == 0)
+			break;
+		if (fve->fve_lastdrop.tv_sec < tthresh.tv_sec) {
+			fve->fve_lastdrop.tv_sec = 0;
+			break;
+		}
+		if (fve->fve_flow.flow_af == AF_INET &&
+			fve->fve_flow.flow_ip.ip_src.s_addr ==
+			ip->ip_src.s_addr &&
+			fve->fve_flow.flow_ip.ip_dst.s_addr ==
+			ip->ip_dst.s_addr)
+			return fve;
+		(*flows)++;  /* counting number of active fve */
+	}
+	return NULL; /* NULL returning on successive fve count */
+}
+
+static inline struct fve *
+af_inet6_flowlist_search(struct flowvalve *fv, struct altq_pktattr *pktattr,
+			 int *flows, struct timeval tthresh)
+{
+	struct ip6_hdr *ip6;
+	struct fve *fve;
+
+	ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
+	TAILQ_FOREACH(fve, &fv->fv_flowlist, fve_lru){
+		if (fve->fve_lastdrop.tv_sec == 0)
+			break;
+		if (fve->fve_lastdrop.tv_sec < tthresh.tv_sec) {
+			fve->fve_lastdrop.tv_sec = 0;
+			break;
+		}
+		if (fve->fve_flow.flow_af == AF_INET6 &&
+			IN6_ARE_ADDR_EQUAL(&fve->fve_flow.flow_ip6.ip6_src,
+						&ip6->ip6_src) &&
+			IN6_ARE_ADDR_EQUAL(&fve->fve_flow.flow_ip6.ip6_dst,
+						&ip6->ip6_dst))
+			return fve;
+		(*flows)++;
+	}
+	return NULL; /* NULL returning on successive fve count */
 }
 
 static inline struct fve *
