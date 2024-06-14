@@ -78,6 +78,13 @@ int (*altq_input)(struct mbuf *, int) = NULL;
 static int tbr_timer = 0;	/* token bucket regulator timer */
 static struct callout tbr_callout;
 
+int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
+u_int32_t);
+#ifdef INET6
+int inet6_altq_extractflow(struct mbuf *, struct flowinfo *,
+u_int32_t);
+#endif /* INET6 */
+
 #ifdef ALTQ3_CLFIER_COMPAT
 static int 	extract_ports4(struct mbuf *, struct ip *, struct flowinfo_in *);
 #ifdef INET6
@@ -796,70 +803,15 @@ altq_extractflow(struct mbuf *m, int af, struct flowinfo *flow,
 
 	switch (af) {
 	case PF_INET: {
-		struct flowinfo_in *fin;
-		struct ip *ip;
-
-		ip = mtod(m, struct ip *);
-
-		if (ip->ip_v != 4)
-			break;
-
-		fin = (struct flowinfo_in *)flow;
-		fin->fi_len = sizeof(struct flowinfo_in);
-		fin->fi_family = AF_INET;
-
-		fin->fi_proto = ip->ip_p;
-		fin->fi_tos = ip->ip_tos;
-
-		fin->fi_src.s_addr = ip->ip_src.s_addr;
-		fin->fi_dst.s_addr = ip->ip_dst.s_addr;
-
-		if (filt_bmask & FIMB4_PORTS)
-			/* if port info is required, extract port numbers */
-			extract_ports4(m, ip, fin);
-		else {
-			fin->fi_sport = 0;
-			fin->fi_dport = 0;
-			fin->fi_gpi = 0;
-		}
-		return 1;
+		int error;
+		if ((error = inet_altq_extractflow(m, flow, filt_bmask)) == -1)
+			break; // break on failure
+		return error;
 	}
-
 #ifdef INET6
-	case PF_INET6: {
-		struct flowinfo_in6 *fin6;
-		struct ip6_hdr *ip6;
+	case PF_INET6:
+		return inet6_altq_extractflow(m, flow, filt_bmask);
 
-		ip6 = mtod(m, struct ip6_hdr *);
-		/* should we check the ip version? */
-
-		fin6 = (struct flowinfo_in6 *)flow;
-		fin6->fi6_len = sizeof(struct flowinfo_in6);
-		fin6->fi6_family = AF_INET6;
-
-		fin6->fi6_proto = ip6->ip6_nxt;
-		fin6->fi6_tclass   = (ntohl(ip6->ip6_flow) >> 20) & 0xff;
-
-		fin6->fi6_flowlabel = ip6->ip6_flow & htonl(0x000fffff);
-		fin6->fi6_src = ip6->ip6_src;
-		fin6->fi6_dst = ip6->ip6_dst;
-
-		if ((filt_bmask & FIMB6_PORTS) ||
-		    ((filt_bmask & FIMB6_PROTO)
-		     && ip6->ip6_nxt > IPPROTO_IPV6))
-			/*
-			 * if port info is required, or proto is required
-			 * but there are option headers, extract port
-			 * and protocol numbers.
-			 */
-			extract_ports6(m, ip6, fin6);
-		else {
-			fin6->fi6_sport = 0;
-			fin6->fi6_dport = 0;
-			fin6->fi6_gpi = 0;
-		}
-		return 1;
-	}
 #endif /* INET6 */
 
 	default:
@@ -870,6 +822,80 @@ altq_extractflow(struct mbuf *m, int af, struct flowinfo *flow,
 	flow->fi_len = sizeof(struct flowinfo);
 	flow->fi_family = AF_UNSPEC;
 	return 0;
+}
+
+/*
+ * extract flow for ipv4 and ipv6 address family
+ */
+int
+inet_altq_extractflow(struct mbuf *m, struct flowinfo *flow,
+u_int32_t filt_bmask)
+{
+	struct flowinfo_in *fin;
+	struct ip *ip;
+
+	ip = mtod(m, struct ip *);
+
+	if (ip->ip_v != 4)
+		return -1;
+
+	fin = (struct flowinfo_in *)flow;
+	fin->fi_len = sizeof(struct flowinfo_in);
+	fin->fi_family = AF_INET;
+
+	fin->fi_proto = ip->ip_p;
+	fin->fi_tos = ip->ip_tos;
+
+	fin->fi_src.s_addr = ip->ip_src.s_addr;
+	fin->fi_dst.s_addr = ip->ip_dst.s_addr;
+
+	if (filt_bmask & FIMB4_PORTS)
+		/* if port info is required, extract port numbers */
+		extract_ports4(m, ip, fin);
+	else {
+		fin->fi_sport = 0;
+		fin->fi_dport = 0;
+		fin->fi_gpi = 0;
+	}
+	return 1;
+}
+
+int
+inet6_altq_extractflow(struct mbuf *m, struct flowinfo *flow,
+u_int32_t filt_bmask)
+{
+	struct flowinfo_in6 *fin6;
+	struct ip6_hdr *ip6;
+
+	ip6 = mtod(m, struct ip6_hdr *);
+	/* should we check the ip version? */
+
+	fin6 = (struct flowinfo_in6 *)flow;
+	fin6->fi6_len = sizeof(struct flowinfo_in6);
+	fin6->fi6_family = AF_INET6;
+
+	fin6->fi6_proto = ip6->ip6_nxt;
+	fin6->fi6_tclass   = (ntohl(ip6->ip6_flow) >> 20) & 0xff;
+
+	fin6->fi6_flowlabel = ip6->ip6_flow & htonl(0x000fffff);
+	fin6->fi6_src = ip6->ip6_src;
+	fin6->fi6_dst = ip6->ip6_dst;
+
+	if ((filt_bmask & FIMB6_PORTS) ||
+		((filt_bmask & FIMB6_PROTO)
+			&& ip6->ip6_nxt > IPPROTO_IPV6))
+		/*
+			* if port info is required, or proto is required
+			* but there are option headers, extract port
+			* and protocol numbers.
+			*/
+		extract_ports6(m, ip6, fin6);
+	else {
+		fin6->fi6_sport = 0;
+		fin6->fi6_dport = 0;
+		fin6->fi6_gpi = 0;
+	}
+	return 1;
 }
 
 /*
