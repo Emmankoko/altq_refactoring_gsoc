@@ -146,8 +146,7 @@ static struct jobs_if *jif_list = NULL;
 
 typedef unsigned long long ull;
 
-/* removal positions for timestamp list */
-enum remove_postion{
+enum remove_position {
 	FRONT,
 	REAR
 };
