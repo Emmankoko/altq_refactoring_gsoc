@@ -78,31 +78,26 @@ int (*altq_input)(struct mbuf *, int) = NULL;
 static int tbr_timer = 0;	/* token bucket regulator timer */
 static struct callout tbr_callout;
 
-int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
-u_int32_t);
-#ifdef INET6
-int inet6_altq_extractflow(struct mbuf *, struct flowinfo *,
-u_int32_t);
-#endif /* INET6 */
-
 #ifdef ALTQ3_CLFIER_COMPAT
-void * af_inet_acc_classify(struct acc_classifier *, struct flowinfo);
+
 #ifdef INET6
 void * af_inet6_acc_classify(struct acc_classifier *, struct flowinfo);
-#endif /* INET6*/
-static int 	extract_ports4(struct mbuf *, struct ip *, struct flowinfo_in *);
-#ifdef INET6
+int inet6_altq_extractflow(struct mbuf *, struct flowinfo *,
+u_int32_t);
 static int 	extract_ports6(struct mbuf *, struct ip6_hdr *,
 			       struct flowinfo_in6 *);
-#endif
+static int	apply_filter6(u_int32_t, struct flow_filter6 *,
+			      struct flowinfo_in6 *);
+#endif /* INET6*/
+
+int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
+u_int32_t);
+void * af_inet_acc_classify(struct acc_classifier *, struct flowinfo);
+static int 	extract_ports4(struct mbuf *, struct ip *, struct flowinfo_in *);
 static int	apply_filter4(u_int32_t, struct flow_filter *,
 			      struct flowinfo_in *);
 static int	apply_ppfilter4(u_int32_t, struct flow_filter *,
 				struct flowinfo_in *);
-#ifdef INET6
-static int	apply_filter6(u_int32_t, struct flow_filter6 *,
-			      struct flowinfo_in6 *);
-#endif
 static int	apply_tosfilter4(u_int32_t, struct flow_filter *,
 				 struct flowinfo_in *);
 static u_long	get_filt_handle(struct acc_classifier *, int);
