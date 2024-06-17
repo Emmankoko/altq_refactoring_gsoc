@@ -86,6 +86,10 @@ u_int32_t);
 #endif /* INET6 */
 
 #ifdef ALTQ3_CLFIER_COMPAT
+void * af_inet_acc_classify(struct acc_classifier *, struct flowinfo);
+#ifdef INET6
+void * af_inet6_acc_classify(struct acc_classifier *, struct flowinfo);
+#endif /* INET6*/
 static int 	extract_ports4(struct mbuf *, struct ip *, struct flowinfo_in *);
 #ifdef INET6
 static int 	extract_ports6(struct mbuf *, struct ip6_hdr *,
@@ -1278,94 +1282,109 @@ acc_classify(void *clfier, struct mbuf *m, int af)
 {
 	struct acc_classifier *classifier;
 	struct flowinfo flow;
-	struct acc_filter *afp;
-	int	i;
 
 	classifier = (struct acc_classifier *)clfier;
 	altq_extractflow(m, af, &flow, classifier->acc_fbmask);
 
-	if (flow.fi_family == AF_INET) {
-		struct flowinfo_in *fp = (struct flowinfo_in *)&flow;
+	if (flow.fi_family == AF_INET)
+		return af_inet_acc_classify(classifier, flow);
 
-		if ((classifier->acc_fbmask & FIMB4_ALL) == FIMB4_TOS) {
-			/* only tos is used */
-			LIST_FOREACH(afp,
-				 &classifier->acc_filters[ACC_WILDCARD_INDEX],
-				 f_chain)
-				if (apply_tosfilter4(afp->f_fbmask,
-						     &afp->f_filter, fp))
-					/* filter matched */
-					return afp->f_class;
-		} else if ((classifier->acc_fbmask &
-			(~(FIMB4_PROTO|FIMB4_SPORT|FIMB4_DPORT) & FIMB4_ALL))
-		    == 0) {
-			/* only proto and ports are used */
-			LIST_FOREACH(afp,
-				 &classifier->acc_filters[ACC_WILDCARD_INDEX],
-				 f_chain)
-				if (apply_ppfilter4(afp->f_fbmask,
-						    &afp->f_filter, fp))
-					/* filter matched */
-					return afp->f_class;
-		} else {
-			/* get the filter hash entry from its dest address */
-			i = ACC_GET_HASH_INDEX(fp->fi_dst.s_addr);
-			do {
-				/*
-				 * go through this loop twice.  first for dst
-				 * hash, second for wildcards.
-				 */
-				LIST_FOREACH(afp, &classifier->acc_filters[i],
-					     f_chain)
-					if (apply_filter4(afp->f_fbmask,
-							  &afp->f_filter, fp))
-						/* filter matched */
-						return afp->f_class;
-
-				/*
-				 * check again for filters with a dst addr
-				 * wildcard.
-				 * (daddr == 0 || dmask != 0xffffffff).
-				 */
-				if (i != ACC_WILDCARD_INDEX)
-					i = ACC_WILDCARD_INDEX;
-				else
-					break;
-			} while (1);
-		}
-	}
 #ifdef INET6
-	else if (flow.fi_family == AF_INET6) {
-		struct flowinfo_in6 *fp6 = (struct flowinfo_in6 *)&flow;
+	else if (flow.fi_family == AF_INET6)
+		return af_inet6_acc_classify(classifier, flow);
+#endif /* INET6 */
+	return NULL;
+}
 
-		/* get the filter hash entry from its flow ID */
-		if (fp6->fi6_flowlabel != 0)
-			i = ACC_GET_HASH_INDEX(fp6->fi6_flowlabel);
-		else
-			/* flowlable can be zero */
-			i = ACC_WILDCARD_INDEX;
+void *
+af_inet_acc_classify(struct acc_classifier * classifier, struct flowinfo flow)
+{
+	struct acc_filter *afp;
+	struct flowinfo_in *fp = (struct flowinfo_in *)&flow;
+	int i;
 
-		/* go through this loop twice.  first for flow hash, second
-		   for wildcards. */
+	if ((classifier->acc_fbmask & FIMB4_ALL) == FIMB4_TOS) {
+		/* only tos is used */
+		LIST_FOREACH(afp,
+				&classifier->acc_filters[ACC_WILDCARD_INDEX],
+				f_chain)
+			if (apply_tosfilter4(afp->f_fbmask,
+							&afp->f_filter, fp))
+				/* filter matched */
+				return afp->f_class;
+	} else if ((classifier->acc_fbmask &
+		(~(FIMB4_PROTO|FIMB4_SPORT|FIMB4_DPORT) & FIMB4_ALL))
+		== 0) {
+		/* only proto and ports are used */
+		LIST_FOREACH(afp,
+				&classifier->acc_filters[ACC_WILDCARD_INDEX],
+				f_chain)
+			if (apply_ppfilter4(afp->f_fbmask,
+						&afp->f_filter, fp))
+				/* filter matched */
+				return afp->f_class;
+	} else {
+		/* get the filter hash entry from its dest address */
+		i = ACC_GET_HASH_INDEX(fp->fi_dst.s_addr);
 		do {
-			LIST_FOREACH(afp, &classifier->acc_filters[i], f_chain)
-				if (apply_filter6(afp->f_fbmask,
-					(struct flow_filter6 *)&afp->f_filter,
-					fp6))
+			/*
+				* go through this loop twice.  first for dst
+				* hash, second for wildcards.
+				*/
+			LIST_FOREACH(afp, &classifier->acc_filters[i],
+						f_chain)
+				if (apply_filter4(afp->f_fbmask,
+							&afp->f_filter, fp))
 					/* filter matched */
 					return afp->f_class;
 
 			/*
-			 * check again for filters with a wildcard.
-			 */
+				* check again for filters with a dst addr
+				* wildcard.
+				* (daddr == 0 || dmask != 0xffffffff).
+				*/
 			if (i != ACC_WILDCARD_INDEX)
 				i = ACC_WILDCARD_INDEX;
 			else
 				break;
 		} while (1);
 	}
-#endif /* INET6 */
+	/* no filter matched */
+	return NULL;
+}
 
+void *
+af_inet6_acc_classify(struct acc_classifier *classifier, struct flowinfo flow)
+{
+	int i;
+	struct acc_filter *afp;
+	struct flowinfo_in6 *fp6 = (struct flowinfo_in6 *)&flow;
+
+	/* get the filter hash entry from its flow ID */
+	if (fp6->fi6_flowlabel != 0)
+		i = ACC_GET_HASH_INDEX(fp6->fi6_flowlabel);
+	else
+		/* flowlable can be zero */
+		i = ACC_WILDCARD_INDEX;
+
+	/* go through this loop twice.  first for flow hash, second
+		for wildcards. */
+	do {
+		LIST_FOREACH(afp, &classifier->acc_filters[i], f_chain)
+			if (apply_filter6(afp->f_fbmask,
+				(struct flow_filter6 *)&afp->f_filter,
+				fp6))
+				/* filter matched */
+				return afp->f_class;
+
+		/*
+			* check again for filters with a wildcard.
+			*/
+		if (i != ACC_WILDCARD_INDEX)
+			i = ACC_WILDCARD_INDEX;
+		else
+			break;
+	} while (1);
 	/* no filter matched */
 	return NULL;
 }
