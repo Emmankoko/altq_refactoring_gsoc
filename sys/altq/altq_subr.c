@@ -82,6 +82,7 @@ static struct callout tbr_callout;
 
 #ifdef INET6
 void * af_inet6_acc_classify(struct acc_classifier *, struct flowinfo);
+static u_int32_t af_inet6_filt2fibmask(struct flow_filter *);
 int inet6_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
 static int 	extract_ports6(struct mbuf *, struct ip6_hdr *,
@@ -93,6 +94,7 @@ static int	apply_filter6(u_int32_t, struct flow_filter6 *,
 int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
 void * af_inet_acc_classify(struct acc_classifier *, struct flowinfo);
+static u_int32_t af_inet_filt2fibmask(struct flow_filter *);
 static int 	extract_ports4(struct mbuf *, struct ip *, struct flowinfo_in *);
 static int	apply_filter4(u_int32_t, struct flow_filter *,
 			      struct flowinfo_in *);
@@ -1348,6 +1350,7 @@ af_inet_acc_classify(struct acc_classifier * classifier, struct flowinfo flow)
 	return NULL;
 }
 
+#ifdef INET6
 void *
 af_inet6_acc_classify(struct acc_classifier *classifier, struct flowinfo flow)
 {
@@ -1383,7 +1386,7 @@ af_inet6_acc_classify(struct acc_classifier *classifier, struct flowinfo flow)
 	/* no filter matched */
 	return NULL;
 }
-
+#endif /* INET6 */
 static int
 apply_filter4(u_int32_t fbmask, struct flow_filter *filt,
     struct flowinfo_in *pkt)
@@ -1546,53 +1549,66 @@ static u_int32_t
 filt2fibmask(struct flow_filter *filt)
 {
 	u_int32_t mask = 0;
-#ifdef INET6
-	struct flow_filter6 *filt6;
-#endif
-
 	switch (filt->ff_flow.fi_family) {
 	case AF_INET:
-		if (filt->ff_flow.fi_proto != 0)
-			mask |= FIMB4_PROTO;
-		if (filt->ff_flow.fi_tos != 0)
-			mask |= FIMB4_TOS;
-		if (filt->ff_flow.fi_dst.s_addr != 0)
-			mask |= FIMB4_DADDR;
-		if (filt->ff_flow.fi_src.s_addr != 0)
-			mask |= FIMB4_SADDR;
-		if (filt->ff_flow.fi_sport != 0)
-			mask |= FIMB4_SPORT;
-		if (filt->ff_flow.fi_dport != 0)
-			mask |= FIMB4_DPORT;
-		if (filt->ff_flow.fi_gpi != 0)
-			mask |= FIMB4_GPI;
+		mask = af_inet_filt2fibmask(filt);
 		break;
 #ifdef INET6
 	case AF_INET6:
-		filt6 = (struct flow_filter6 *)filt;
-
-		if (filt6->ff_flow6.fi6_proto != 0)
-			mask |= FIMB6_PROTO;
-		if (filt6->ff_flow6.fi6_tclass != 0)
-			mask |= FIMB6_TCLASS;
-		if (!IN6_IS_ADDR_UNSPECIFIED(&filt6->ff_flow6.fi6_dst))
-			mask |= FIMB6_DADDR;
-		if (!IN6_IS_ADDR_UNSPECIFIED(&filt6->ff_flow6.fi6_src))
-			mask |= FIMB6_SADDR;
-		if (filt6->ff_flow6.fi6_sport != 0)
-			mask |= FIMB6_SPORT;
-		if (filt6->ff_flow6.fi6_dport != 0)
-			mask |= FIMB6_DPORT;
-		if (filt6->ff_flow6.fi6_gpi != 0)
-			mask |= FIMB6_GPI;
-		if (filt6->ff_flow6.fi6_flowlabel != 0)
-			mask |= FIMB6_FLABEL;
+		mask= af_inet6_filt2fibmask(filt);
 		break;
 #endif /* INET6 */
 	}
 	return mask;
 }
 
+static u_int32_t
+af_inet_filt2fibmask(struct flow_filter *filt)
+{
+	u_int32_t mask = 0;
+	if (filt->ff_flow.fi_proto != 0)
+		mask |= FIMB4_PROTO;
+	if (filt->ff_flow.fi_tos != 0)
+		mask |= FIMB4_TOS;
+	if (filt->ff_flow.fi_dst.s_addr != 0)
+		mask |= FIMB4_DADDR;
+	if (filt->ff_flow.fi_src.s_addr != 0)
+		mask |= FIMB4_SADDR;
+	if (filt->ff_flow.fi_sport != 0)
+		mask |= FIMB4_SPORT;
+	if (filt->ff_flow.fi_dport != 0)
+		mask |= FIMB4_DPORT;
+	if (filt->ff_flow.fi_gpi != 0)
+		mask |= FIMB4_GPI;
+	return mask;
+}
+#ifdef INET6
+static u_int32_t
+af_inet6_filt2fibmask(struct flow_filter *filt)
+{
+	u_int32_t mask = 0;
+	struct flow_filter6 *filt6;
+	filt6 = (struct flow_filter6 *)filt;
+
+	if (filt6->ff_flow6.fi6_proto != 0)
+		mask |= FIMB6_PROTO;
+	if (filt6->ff_flow6.fi6_tclass != 0)
+		mask |= FIMB6_TCLASS;
+	if (!IN6_IS_ADDR_UNSPECIFIED(&filt6->ff_flow6.fi6_dst))
+		mask |= FIMB6_DADDR;
+	if (!IN6_IS_ADDR_UNSPECIFIED(&filt6->ff_flow6.fi6_src))
+		mask |= FIMB6_SADDR;
+	if (filt6->ff_flow6.fi6_sport != 0)
+		mask |= FIMB6_SPORT;
+	if (filt6->ff_flow6.fi6_dport != 0)
+		mask |= FIMB6_DPORT;
+	if (filt6->ff_flow6.fi6_gpi != 0)
+		mask |= FIMB6_GPI;
+	if (filt6->ff_flow6.fi6_flowlabel != 0)
+		mask |= FIMB6_FLABEL;
+	return mask;
+}
+#endif /* INET6 */
 
 /*
  * helper functions to handle IPv4 fragments.
