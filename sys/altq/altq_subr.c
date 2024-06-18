@@ -82,6 +82,7 @@ static struct callout tbr_callout;
 
 #ifdef INET6
 void * af_inet6_acc_classify(struct acc_classifier *, struct flowinfo);
+u_int8_t af_inet6_read_dsfield(struct altq_pktattr *);
 static u_int32_t af_inet6_filt2fibmask(struct flow_filter *);
 int inet6_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
@@ -93,6 +94,7 @@ static int	apply_filter6(u_int32_t, struct flow_filter6 *,
 
 int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
+u_int8_t af_inet_read_dsfield(struct altq_pktattr *);
 void * af_inet_acc_classify(struct acc_classifier *, struct flowinfo);
 static u_int32_t af_inet_filt2fibmask(struct flow_filter *);
 static int 	extract_ports4(struct mbuf *, struct ip *, struct flowinfo_in *);
@@ -665,26 +667,43 @@ read_dsfield(struct mbuf *m, struct altq_pktattr *pktattr)
 		return (u_int8_t)0;
 	}
 
-	if (pktattr->pattr_af == AF_INET) {
-		struct ip *ip = (struct ip *)pktattr->pattr_hdr;
-
-		if (ip->ip_v != 4)
-			return (u_int8_t)0;	/* version mismatch! */
-		ds_field = ip->ip_tos;
-	}
+	if (pktattr->pattr_af == AF_INET)
+		ds_field = af_inet_read_dsfield(pktattr);
 #ifdef INET6
-	else if (pktattr->pattr_af == AF_INET6) {
-		struct ip6_hdr *ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
-		u_int32_t flowlabel;
-
-		flowlabel = ntohl(ip6->ip6_flow);
-		if ((flowlabel >> 28) != 6)
-			return (u_int8_t)0;	/* version mismatch! */
-		ds_field = (flowlabel >> 20) & 0xff;
-	}
+	else if (pktattr->pattr_af == AF_INET6)
+		ds_field = af_inet6_read_dsfield(pktattr);
 #endif
+
 	return ds_field;
 }
+
+u_int8_t
+af_inet_read_dsfield(struct altq_pktattr *pktattr)
+{
+	u_int8_t ds_field = 0;
+	struct ip *ip = (struct ip *)pktattr->pattr_hdr;
+
+	if (ip->ip_v != 4)
+		return (u_int8_t)0;	/* version mismatch! */
+	ds_field = ip->ip_tos;
+	return ds_field;
+}
+
+#ifdef INET6
+u_int8_t
+af_inet6_read_dsfield(struct altq_pktattr *pktattr)
+{
+	u_int8_t ds_field = 0;
+	struct ip6_hdr *ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
+	u_int32_t flowlabel;
+
+	flowlabel = ntohl(ip6->ip6_flow);
+	if ((flowlabel >> 28) != 6)
+		return (u_int8_t)0;	/* version mismatch! */
+	ds_field = (flowlabel >> 20) & 0xff;
+	return ds_field;
+}
+#endif /* INET6 */
 
 void
 write_dsfield(struct mbuf *m, struct altq_pktattr *pktattr, u_int8_t dsfield)
