@@ -93,6 +93,7 @@ static int	apply_filter6(u_int32_t, struct flow_filter6 *,
 			      struct flowinfo_in6 *);
 #endif /* INET6*/
 
+int assert_pktattr(struct mbuf *, struct altq_pktattr *, const char *);
 int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
 u_int8_t af_inet_read_dsfield(struct altq_pktattr *);
@@ -648,26 +649,11 @@ altq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 u_int8_t
 read_dsfield(struct mbuf *m, struct altq_pktattr *pktattr)
 {
-	struct mbuf *m0;
 	u_int8_t ds_field = 0;
+	int error;
 
-	if (pktattr == NULL ||
-	    (pktattr->pattr_af != AF_INET && pktattr->pattr_af != AF_INET6))
-		return (u_int8_t)0;
-
-	/* verify that pattr_hdr is within the mbuf data */
-	for (m0 = m; m0 != NULL; m0 = m0->m_next)
-		if (((char *)pktattr->pattr_hdr >= m0->m_data) &&
-		    ((char *)pktattr->pattr_hdr < m0->m_data + m0->m_len))
-			break;
-	if (m0 == NULL) {
-		/* ick, pattr_hdr is stale */
-		pktattr->pattr_af = AF_UNSPEC;
-#ifdef ALTQ_DEBUG
-		printf("read_dsfield: can't locate header!\n");
-#endif
-		return (u_int8_t)0;
-	}
+	if ((error = assert_pktattr(m, pktattr, __func__)) == 0)
+		return (u_int8_t)0; /* packet attr and header invalid */
 
 	if (pktattr->pattr_af == AF_INET)
 		ds_field = af_inet_read_dsfield(pktattr);
@@ -710,25 +696,9 @@ af_inet6_read_dsfield(struct altq_pktattr *pktattr)
 void
 write_dsfield(struct mbuf *m, struct altq_pktattr *pktattr, u_int8_t dsfield)
 {
-	struct mbuf *m0;
-
-	if (pktattr == NULL ||
-	    (pktattr->pattr_af != AF_INET && pktattr->pattr_af != AF_INET6))
-		return;
-
-	/* verify that pattr_hdr is within the mbuf data */
-	for (m0 = m; m0 != NULL; m0 = m0->m_next)
-		if (((char *)pktattr->pattr_hdr >= m0->m_data) &&
-		    ((char *)pktattr->pattr_hdr < m0->m_data + m0->m_len))
-			break;
-	if (m0 == NULL) {
-		/* ick, pattr_hdr is stale */
-		pktattr->pattr_af = AF_UNSPEC;
-#ifdef ALTQ_DEBUG
-		printf("write_dsfield: can't locate header!\n");
-#endif
-		return;
-	}
+	int error;
+	if ((error = assert_pktattr(m, pktattr, __func__)) == 0)
+		return; /* packet attr and header invalid */
 
 	if (pktattr->pattr_af == AF_INET)
 		af_inet_writedsfield(dsfield, pktattr);
@@ -736,7 +706,33 @@ write_dsfield(struct mbuf *m, struct altq_pktattr *pktattr, u_int8_t dsfield)
 	else if (pktattr->pattr_af == AF_INET6)
 		af_inet6_writedsfield(dsfield, pktattr);
 #endif
-	return;
+}
+
+/*
+ * assert the non-nullity of packet and validity of packet headers for use
+ */
+int
+assert_pktattr(struct mbuf *m, struct altq_pktattr *pktattr, const char *operation)
+{
+	struct mbuf *m0;
+	if (pktattr == NULL ||
+		(pktattr->pattr_af != AF_INET && pktattr->pattr_af != AF_INET6))
+		return 0;
+
+	/* verify that pattr_hdr is within the mbuf data */
+	for (m0 = m; m0 != NULL; m0 = m0->m_next)
+		if (((char *)pktattr->pattr_hdr >= m0->m_data) &&
+			((char *)pktattr->pattr_hdr < m0->m_data + m0->m_len))
+			break;
+	if (m0 == NULL) {
+		/* ick, pattr_hdr is stale */
+		pktattr->pattr_af = AF_UNSPEC;
+	#ifdef ALTQ_DEBUG
+		printf("%s: can't locate header!\n", operation);
+	#endif
+		return 0;
+	}
+	return 1; /* packet attr and header valid for use */
 }
 
 void
