@@ -83,6 +83,7 @@ static struct callout tbr_callout;
 #ifdef INET6
 void * af_inet6_acc_classify(struct acc_classifier *, struct flowinfo);
 u_int8_t af_inet6_read_dsfield(struct altq_pktattr *);
+void af_inet6_writedsfield(u_int8_t, struct altq_pktattr *);
 static u_int32_t af_inet6_filt2fibmask(struct flow_filter *);
 int inet6_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
@@ -95,6 +96,7 @@ static int	apply_filter6(u_int32_t, struct flow_filter6 *,
 int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
 u_int8_t af_inet_read_dsfield(struct altq_pktattr *);
+void af_inet_writedsfield(u_int8_t, struct altq_pktattr *);
 void * af_inet_acc_classify(struct acc_classifier *, struct flowinfo);
 static u_int32_t af_inet_filt2fibmask(struct flow_filter *);
 static int 	extract_ports4(struct mbuf *, struct ip *, struct flowinfo_in *);
@@ -728,43 +730,55 @@ write_dsfield(struct mbuf *m, struct altq_pktattr *pktattr, u_int8_t dsfield)
 		return;
 	}
 
-	if (pktattr->pattr_af == AF_INET) {
-		struct ip *ip = (struct ip *)pktattr->pattr_hdr;
-		u_int8_t old;
-		int32_t sum;
-
-		if (ip->ip_v != 4)
-			return;		/* version mismatch! */
-		old = ip->ip_tos;
-		dsfield |= old & 3;	/* leave CU bits */
-		if (old == dsfield)
-			return;
-		ip->ip_tos = dsfield;
-		/*
-		 * update checksum (from RFC1624)
-		 *	   HC' = ~(~HC + ~m + m')
-		 */
-		sum = ~ntohs(ip->ip_sum) & 0xffff;
-		sum += 0xff00 + (~old & 0xff) + dsfield;
-		sum = (sum >> 16) + (sum & 0xffff);
-		sum += (sum >> 16);  /* add carry */
-
-		ip->ip_sum = htons(~sum & 0xffff);
-	}
+	if (pktattr->pattr_af == AF_INET)
+		af_inet_writedsfield(dsfield, pktattr);
 #ifdef INET6
-	else if (pktattr->pattr_af == AF_INET6) {
-		struct ip6_hdr *ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
-		u_int32_t flowlabel;
-
-		flowlabel = ntohl(ip6->ip6_flow);
-		if ((flowlabel >> 28) != 6)
-			return;		/* version mismatch! */
-		flowlabel = (flowlabel & 0xf03fffff) | (dsfield << 20);
-		ip6->ip6_flow = htonl(flowlabel);
-	}
+	else if (pktattr->pattr_af == AF_INET6)
+		af_inet6_writedsfield(dsfield, pktattr);
 #endif
 	return;
 }
+
+void
+af_inet_writedsfield(u_int8_t dsfield, struct altq_pktattr *pktattr)
+{
+	struct ip *ip = (struct ip *)pktattr->pattr_hdr;
+	u_int8_t old;
+	int32_t sum;
+
+	if (ip->ip_v != 4)
+		return;		/* version mismatch! */
+	old = ip->ip_tos;
+	dsfield |= old & 3;	/* leave CU bits */
+	if (old == dsfield)
+		return;
+	ip->ip_tos = dsfield;
+	/*
+		* update checksum (from RFC1624)
+		*	   HC' = ~(~HC + ~m + m')
+		*/
+	sum = ~ntohs(ip->ip_sum) & 0xffff;
+	sum += 0xff00 + (~old & 0xff) + dsfield;
+	sum = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);  /* add carry */
+
+	ip->ip_sum = htons(~sum & 0xffff);
+}
+
+#ifdef INET6
+void
+af_inet6_writedsfield(u_int8_t dsfield, struct altq_pktattr *pktattr)
+{
+	struct ip6_hdr *ip6 = (struct ip6_hdr *)pktattr->pattr_hdr;
+	u_int32_t flowlabel;
+
+	flowlabel = ntohl(ip6->ip6_flow);
+	if ((flowlabel >> 28) != 6)
+		return;		/* version mismatch! */
+	flowlabel = (flowlabel & 0xf03fffff) | (dsfield << 20);
+	ip6->ip6_flow = htonl(flowlabel);
+}
+#endif
 
 #define BINTIME_SHIFT	2
 
