@@ -87,6 +87,7 @@ void af_inet6_writedsfield(u_int8_t, struct altq_pktattr *);
 static u_int32_t af_inet6_filt2fibmask(struct flow_filter *);
 int inet6_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
+int inet6_add_filter(struct acc_filter *);
 static int 	extract_ports6(struct mbuf *, struct ip6_hdr *,
 			       struct flowinfo_in6 *);
 static int	apply_filter6(u_int32_t, struct flow_filter6 *,
@@ -96,6 +97,7 @@ static int	apply_filter6(u_int32_t, struct flow_filter6 *,
 int assert_pktattr(struct mbuf *, struct altq_pktattr *, const char *);
 int inet_altq_extractflow(struct mbuf *, struct flowinfo *,
 u_int32_t);
+int inet_add_filter(struct acc_filter *);
 u_int8_t af_inet_read_dsfield(struct altq_pktattr *);
 void af_inet_writedsfield(u_int8_t, struct altq_pktattr *);
 void * af_inet_acc_classify(struct acc_classifier *, struct flowinfo);
@@ -1159,70 +1161,12 @@ acc_add_filter(struct acc_classifier *classifier, struct flow_filter *filter,
 	afp->f_class = class;
 
 	i = ACC_WILDCARD_INDEX;
-	if (filter->ff_flow.fi_family == AF_INET) {
-		struct flow_filter *filter4 = &afp->f_filter;
+	if (filter->ff_flow.fi_family == AF_INET)
+		i = inet_add_filter(afp);
 
-		/*
-		 * if address is 0, it's a wildcard.  if address mask
-		 * isn't set, use full mask.
-		 */
-		if (filter4->ff_flow.fi_dst.s_addr == 0)
-			filter4->ff_mask.mask_dst.s_addr = 0;
-		else if (filter4->ff_mask.mask_dst.s_addr == 0)
-			filter4->ff_mask.mask_dst.s_addr = 0xffffffff;
-		if (filter4->ff_flow.fi_src.s_addr == 0)
-			filter4->ff_mask.mask_src.s_addr = 0;
-		else if (filter4->ff_mask.mask_src.s_addr == 0)
-			filter4->ff_mask.mask_src.s_addr = 0xffffffff;
-
-		/* clear extra bits in addresses  */
-		   filter4->ff_flow.fi_dst.s_addr &=
-		       filter4->ff_mask.mask_dst.s_addr;
-		   filter4->ff_flow.fi_src.s_addr &=
-		       filter4->ff_mask.mask_src.s_addr;
-
-		/*
-		 * if dst address is a wildcard, use hash-entry
-		 * ACC_WILDCARD_INDEX.
-		 */
-		if (filter4->ff_mask.mask_dst.s_addr != 0xffffffff)
-			i = ACC_WILDCARD_INDEX;
-		else
-			i = ACC_GET_HASH_INDEX(filter4->ff_flow.fi_dst.s_addr);
-	}
 #ifdef INET6
-	else if (filter->ff_flow.fi_family == AF_INET6) {
-		struct flow_filter6 *filter6 =
-			(struct flow_filter6 *)&afp->f_filter;
-#ifndef IN6MASK0 /* taken from kame ipv6 */
-#define	IN6MASK0	{{{ 0, 0, 0, 0 }}}
-#define	IN6MASK128	{{{ 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff }}}
-		const struct in6_addr in6mask0 = IN6MASK0;
-		const struct in6_addr in6mask128 = IN6MASK128;
-#endif
-
-		if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_flow6.fi6_dst))
-			filter6->ff_mask6.mask6_dst = in6mask0;
-		else if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_mask6.mask6_dst))
-			filter6->ff_mask6.mask6_dst = in6mask128;
-		if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_flow6.fi6_src))
-			filter6->ff_mask6.mask6_src = in6mask0;
-		else if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_mask6.mask6_src))
-			filter6->ff_mask6.mask6_src = in6mask128;
-
-		/* clear extra bits in addresses  */
-		for (i = 0; i < 16; i++)
-			filter6->ff_flow6.fi6_dst.s6_addr[i] &=
-			    filter6->ff_mask6.mask6_dst.s6_addr[i];
-		for (i = 0; i < 16; i++)
-			filter6->ff_flow6.fi6_src.s6_addr[i] &=
-			    filter6->ff_mask6.mask6_src.s6_addr[i];
-
-		if (filter6->ff_flow6.fi6_flowlabel == 0)
-			i = ACC_WILDCARD_INDEX;
-		else
-			i = ACC_GET_HASH_INDEX(filter6->ff_flow6.fi6_flowlabel);
-	}
+	else if (filter->ff_flow.fi_family == AF_INET6)
+		i = inet6_add_filter(afp);
 #endif /* INET6 */
 
 	afp->f_handle = get_filt_handle(classifier, i);
@@ -1252,6 +1196,81 @@ acc_add_filter(struct acc_classifier *classifier, struct flow_filter *filter,
 	*phandle = afp->f_handle;
 	return 0;
 }
+
+int
+inet_add_filter(struct acc_filter *afp)
+{
+	int i;
+	struct flow_filter *filter4 = &afp->f_filter;
+
+	/*
+		* if address is 0, it's a wildcard.  if address mask
+		* isn't set, use full mask.
+		*/
+	if (filter4->ff_flow.fi_dst.s_addr == 0)
+		filter4->ff_mask.mask_dst.s_addr = 0;
+	else if (filter4->ff_mask.mask_dst.s_addr == 0)
+		filter4->ff_mask.mask_dst.s_addr = 0xffffffff;
+	if (filter4->ff_flow.fi_src.s_addr == 0)
+		filter4->ff_mask.mask_src.s_addr = 0;
+	else if (filter4->ff_mask.mask_src.s_addr == 0)
+		filter4->ff_mask.mask_src.s_addr = 0xffffffff;
+
+	/* clear extra bits in addresses  */
+		filter4->ff_flow.fi_dst.s_addr &=
+			filter4->ff_mask.mask_dst.s_addr;
+		filter4->ff_flow.fi_src.s_addr &=
+			filter4->ff_mask.mask_src.s_addr;
+
+	/*
+		* if dst address is a wildcard, use hash-entry
+		* ACC_WILDCARD_INDEX.
+		*/
+	if (filter4->ff_mask.mask_dst.s_addr != 0xffffffff)
+		i = ACC_WILDCARD_INDEX;
+	else
+		i = ACC_GET_HASH_INDEX(filter4->ff_flow.fi_dst.s_addr);
+	return i;
+}
+
+#ifdef INET6
+int
+inet6_add_filter(struct acc_filter *afp)
+{
+	int i;
+	struct flow_filter6 *filter6 =
+		(struct flow_filter6 *)&afp->f_filter;
+#ifndef IN6MASK0 /* taken from kame ipv6 */
+#define	IN6MASK0	{{{ 0, 0, 0, 0 }}}
+#define	IN6MASK128	{{{ 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff }}}
+	const struct in6_addr in6mask0 = IN6MASK0;
+	const struct in6_addr in6mask128 = IN6MASK128;
+#endif
+
+	if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_flow6.fi6_dst))
+		filter6->ff_mask6.mask6_dst = in6mask0;
+	else if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_mask6.mask6_dst))
+		filter6->ff_mask6.mask6_dst = in6mask128;
+	if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_flow6.fi6_src))
+		filter6->ff_mask6.mask6_src = in6mask0;
+	else if (IN6_IS_ADDR_UNSPECIFIED(&filter6->ff_mask6.mask6_src))
+		filter6->ff_mask6.mask6_src = in6mask128;
+
+	/* clear extra bits in addresses  */
+	for (i = 0; i < 16; i++)
+		filter6->ff_flow6.fi6_dst.s6_addr[i] &=
+			filter6->ff_mask6.mask6_dst.s6_addr[i];
+	for (i = 0; i < 16; i++)
+		filter6->ff_flow6.fi6_src.s6_addr[i] &=
+			filter6->ff_mask6.mask6_src.s6_addr[i];
+
+	if (filter6->ff_flow6.fi6_flowlabel == 0)
+		i = ACC_WILDCARD_INDEX;
+	else
+		i = ACC_GET_HASH_INDEX(filter6->ff_flow6.fi6_flowlabel);
+	return i;
+}
+#endif /* INET6 */
 
 int
 acc_delete_filter(struct acc_classifier *classifier, u_long handle)
