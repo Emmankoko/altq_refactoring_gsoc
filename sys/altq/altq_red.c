@@ -1560,16 +1560,6 @@ fv_dropbyred(struct flowvalve *fv, struct altq_pktattr *pktattr,
 }
 
 #endif /* ALTQ_FLOWVALVE */
-
-#ifdef KLD_MODULE
-
-static struct altqsw red_sw =
-	{"red", redopen, redclose, redioctl};
-
-ALTQ_MODULE(altq_red, ALTQT_RED, &red_sw);
-MODULE_VERSION(altq_red, 1);
-
-#endif /* KLD_MODULE */
 #endif /* ALTQ3_COMPAT */
 
 #endif /* ALTQ_RED */

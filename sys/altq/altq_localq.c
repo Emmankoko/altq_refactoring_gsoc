@@ -57,14 +57,5 @@ localqioctl(dev_t dev, ioctlcmd_t cmd, void *addr,
 	return error;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw localq_sw =
-	{"localq", localqopen, localqclose, localqioctl};
-
-ALTQ_MODULE(altq_localq, ALTQT_LOCALQ, &localq_sw);
-
-#endif /* KLD_MODULE */
-
 #endif /* ALTQ3_COMPAT */
 #endif /* ALTQ_LOCALQ */

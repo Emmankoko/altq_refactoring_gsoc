@@ -2197,14 +2197,5 @@ clp_to_clh(struct jobs_class *cl)
 	return cl->cl_handle;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw jobs_sw =
-	{"jobs", jobsopen, jobsclose, jobsioctl};
-
-ALTQ_MODULE(altq_jobs, ALTQT_JOBS, &jobs_sw);
-
-#endif /* KLD_MODULE */
-
 #endif /* ALTQ3_COMPAT */
 #endif /* ALTQ_JOBS */

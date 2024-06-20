@@ -785,16 +785,6 @@ rio_dequeue(struct ifaltq *ifq, int op)
 	return m;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw rio_sw =
-	{"rio", rioopen, rioclose, rioioctl};
-
-ALTQ_MODULE(altq_rio, ALTQT_RIO, &rio_sw);
-MODULE_VERSION(altq_rio, 1);
-MODULE_DEPEND(altq_rio, altq_red, 1, 1, 1);
-
-#endif /* KLD_MODULE */
 #endif /* ALTQ3_COMPAT */
 
 #endif /* ALTQ_RIO */

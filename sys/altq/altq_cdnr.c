@@ -1297,14 +1297,5 @@ cdnrioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	return error;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw cdnr_sw =
-	{"cdnr", cdnropen, cdnrclose, cdnrioctl};
-
-ALTQ_MODULE(altq_cdnr, ALTQT_CDNR, &cdnr_sw);
-
-#endif /* KLD_MODULE */
-
 #endif /* ALTQ3_COMPAT */
 #endif /* ALTQ_CDNR */

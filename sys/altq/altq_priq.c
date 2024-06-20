@@ -963,16 +963,5 @@ priqcmd_class_stats(struct priq_class_stats *ap)
 	return 0;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw priq_sw =
-	{"priq", priqopen, priqclose, priqioctl};
-
-ALTQ_MODULE(altq_priq, ALTQT_PRIQ, &priq_sw);
-MODULE_DEPEND(altq_priq, altq_red, 1, 1, 1);
-MODULE_DEPEND(altq_priq, altq_rio, 1, 1, 1);
-
-#endif /* KLD_MODULE */
-
 #endif /* ALTQ3_COMPAT */
 #endif /* ALTQ_PRIQ */

@@ -729,14 +729,5 @@ wfqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	return error;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw wfq_sw =
-	{"wfq", wfqopen, wfqclose, wfqioctl};
-
-ALTQ_MODULE(altq_wfq, ALTQT_WFQ, &wfq_sw);
-
-#endif /* KLD_MODULE */
-
 #endif /* ALTQ3_COMPAT */
 #endif /* ALTQ_WFQ */

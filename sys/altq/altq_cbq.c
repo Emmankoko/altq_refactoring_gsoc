@@ -1115,16 +1115,5 @@ cbq_class_dump(int i)
 }
 #endif /* 0 */
 
-#ifdef KLD_MODULE
-
-static struct altqsw cbq_sw =
-	{"cbq", cbqopen, cbqclose, cbqioctl};
-
-ALTQ_MODULE(altq_cbq, ALTQT_CBQ, &cbq_sw);
-MODULE_DEPEND(altq_cbq, altq_red, 1, 1, 1);
-MODULE_DEPEND(altq_cbq, altq_rio, 1, 1, 1);
-
-#endif /* KLD_MODULE */
 #endif /* ALTQ3_COMPAT */
-
 #endif /* ALTQ_CBQ */

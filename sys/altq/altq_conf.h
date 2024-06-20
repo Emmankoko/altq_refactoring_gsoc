@@ -36,14 +36,6 @@
 #include <sys/conf.h>
 #include <sys/kernel.h>
 
-#if (__FreeBSD_version > 300000)
-#define	ALTQ_KLD
-#endif
-
-#ifdef ALTQ_KLD
-#include <sys/module.h>
-#endif
-
 #ifndef dev_decl
 #ifdef __STDC__
 #define	dev_decl(n,t)	d_ ## t ## _t n ## t
@@ -92,30 +84,6 @@ struct altqsw {
 
 #define	altqdev_decl(n) \
 	dev_decl(n,open); dev_decl(n,close); dev_decl(n,ioctl)
-
-#ifdef ALTQ_KLD
-
-struct altq_module_data {
-	int	type;		/* discipline type */
-	int	ref;		/* reference count */
-	struct	altqsw *altqsw; /* discipline functions */
-};
-
-#define	ALTQ_MODULE(name, type, devsw)					\
-static struct altq_module_data name##_moddata = { type, 0, devsw };	\
-									\
-moduledata_t name##_mod = {						\
-    #name,								\
-    altq_module_handler,						\
-    &name##_moddata							\
-};									\
-DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE+96)
-
-void altq_module_incref(int);
-void altq_module_declref(int);
-int altq_module_handler(module_t, int, void *);
-
-#endif /* ALTQ_KLD */
 
 #endif /* _KERNEL */
 #endif /* ALTQ3_COMPAT */

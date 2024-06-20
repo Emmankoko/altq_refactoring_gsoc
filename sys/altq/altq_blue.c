@@ -767,14 +767,5 @@ af_inet6_mark(struct altq_pktattr * pktattr)
 	return 1;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw blue_sw =
-	{"blue", blueopen, blueclose, blueioctl};
-
-ALTQ_MODULE(altq_blue, ALTQT_BLUE, &blue_sw);
-
-#endif /* KLD_MODULE */
-
 #endif /* ALTQ3_COMPAT */
 #endif /* ALTQ_BLUE */

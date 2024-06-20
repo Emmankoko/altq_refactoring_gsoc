@@ -388,14 +388,5 @@ fifoq_purge(fifoq_state_t *q)
 		q->q_ifq->ifq_len = 0;
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw fifoq_sw =
-	{"fifoq", fifoqopen, fifoqclose, fifoqioctl};
-
-ALTQ_MODULE(altq_fifoq, ALTQT_FIFOQ, &fifoq_sw);
-
-#endif /* KLD_MODULE */
-
 #endif /* ALTQ3_COMPAT */
 #endif /* ALTQ_FIFOQ */

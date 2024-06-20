@@ -168,11 +168,6 @@ altq_attach(struct ifaltq *ifq, int type, void *discipline,
 	ifq->altq_clfier   = clfier;
 	ifq->altq_classify = classify;
 	ifq->altq_flags &= (ALTQF_CANTCHANGE|ALTQF_ENABLED);
-#ifdef ALTQ3_COMPAT
-#ifdef ALTQ_KLD
-	altq_module_incref(type);
-#endif
-#endif
 	return 0;
 }
 
@@ -185,11 +180,6 @@ altq_detach(struct ifaltq *ifq)
 		return EBUSY;
 	if (!ALTQ_IS_ATTACHED(ifq))
 		return 0;
-#ifdef ALTQ3_COMPAT
-#ifdef ALTQ_KLD
-	altq_module_declref(ifq->altq_type);
-#endif
-#endif
 
 	ifq->altq_type     = ALTQT_NONE;
 	ifq->altq_disc     = NULL;

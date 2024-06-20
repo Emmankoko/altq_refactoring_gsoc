@@ -2190,16 +2190,6 @@ hfsccmd_class_stats(struct hfsc_class_stats *ap)
 	return (0);
 }
 
-#ifdef KLD_MODULE
-
-static struct altqsw hfsc_sw =
-	{"hfsc", hfscopen, hfscclose, hfscioctl};
-
-ALTQ_MODULE(altq_hfsc, ALTQT_HFSC, &hfsc_sw);
-MODULE_DEPEND(altq_hfsc, altq_red, 1, 1, 1);
-MODULE_DEPEND(altq_hfsc, altq_rio, 1, 1, 1);
-
-#endif /* KLD_MODULE */
 #endif /* ALTQ3_COMPAT */
 
 #endif /* ALTQ_HFSC */
