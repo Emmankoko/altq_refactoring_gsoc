@@ -309,35 +309,6 @@ bool altq_auth(int *error, struct lwp *l)
 }
 
 
-#ifdef __FreeBSD__
-static int altq_devsw_installed = 0;
-#endif
-
-#ifdef __FreeBSD__
-static void
-altq_drvinit(void *unused)
-{
-	int unit;
-
-#if 0
-	mtx_init(&altq_mtx, "altq global lock", MTX_DEF);
-#endif
-	altq_devsw_installed = 1;
-	printf("altq: attached. Major number assigned automatically.\n");
-
-	/* create minor devices */
-	for (unit = 0; unit < naltqsw; unit++) {
-		if (unit == 0 || altqsw[unit].d_open != NULL)
-			altqsw[unit].dev = make_dev(&altq_cdevsw, unit,
-			    UID_ROOT, GID_WHEEL, 0644, "altq/%s",
-			    altqsw[unit].d_name);
-	}
-}
-
-SYSINIT(altqdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE+CDEV_MAJOR,altq_drvinit,NULL)
-
-#endif /* FreeBSD */
-
 #ifdef ALTQ_KLD
 /*
  * KLD support
@@ -346,11 +317,8 @@ static int altq_module_register(struct altq_module_data *);
 static int altq_module_deregister(struct altq_module_data *);
 
 static struct altq_module_data *altq_modules[ALTQT_MAX];
-#if __FreeBSD_version < 502103
-static struct altqsw noqdisc = {"noq", noopen, noclose, noioctl};
-#else
+
 static struct altqsw noqdisc = {"noq"};
-#endif
 
 void altq_module_incref(int type)
 {
@@ -375,21 +343,16 @@ altq_module_register(struct altq_module_data *mdata)
 
 	if (type < 0 || type >= ALTQT_MAX)
 		return EINVAL;
-#if (__FreeBSD_version < 502103)
-	if (altqsw[type].d_open != noopen)
-#else
+
 	if (altqsw[type].d_open != NULL)
-#endif
 		return EBUSY;
+
 	altqsw[type] = *mdata->altqsw;	/* set discipline functions */
 	altq_modules[type] = mdata;	/* save module data pointer */
-#if (__FreeBSD_version < 502103)
-	make_dev(&altq_cdevsw, type, UID_ROOT, GID_WHEEL, 0644,
-		 "altq/%s", altqsw[type].d_name);
-#else
+
 	altqsw[type].dev = make_dev(&altq_cdevsw, type, UID_ROOT, GID_WHEEL,
 	    0644, "altq/%s", altqsw[type].d_name);
-#endif
+
 	return 0;
 }
 
@@ -404,11 +367,9 @@ altq_module_deregister(struct altq_module_data *mdata)
 		return EINVAL;
 	if (altq_modules[type]->ref > 0)
 		return EBUSY;
-#if (__FreeBSD_version < 502103)
-	destroy_dev(makedev(CDEV_MAJOR, type));
-#else
+
 	destroy_dev(altqsw[type].dev);
-#endif
+
 	altqsw[type] = noqdisc;
 	altq_modules[type] = NULL;
 	return 0;

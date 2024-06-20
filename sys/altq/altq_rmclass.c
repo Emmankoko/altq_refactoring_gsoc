@@ -1455,21 +1455,6 @@ rmc_dropall(struct rm_class *cl)
 	}
 }
 
-#if (__FreeBSD_version > 300000)
-static int tvhzto(struct timeval *);
-
-static int
-tvhzto(struct timeval *tv)
-{
-	struct timeval t2;
-
-	getmicrotime(&t2);
-	t2.tv_sec = tv->tv_sec - t2.tv_sec;
-	t2.tv_usec = tv->tv_usec - t2.tv_usec;
-	return (tvtohz(&t2));
-}
-#endif /* __FreeBSD_version > 300000 */
-
 /*
  * void
  * rmc_delay_action(struct rm_class *cl) - This function is the generic CBQ
@@ -1533,13 +1518,8 @@ rmc_delay_action(struct rm_class *cl, struct rm_class *borrow)
 		 * a 'backstop' to restart this class.
 		 */
 		if (NSEC_TO_USEC(ndelay) > tick * 2) {
-#ifdef __FreeBSD__
-			/* FreeBSD rounds up the tick */
-			t = tvhzto(&cl->undertime_);
-#else
-			/* other BSDs round down the tick */
+			/* NetBSD rounds down the tick */
 			t = tshzto(&cl->undertime_) + 1;
-#endif
 		} else
 			t = 2;
 		CALLOUT_RESET(&cl->callout_, t,

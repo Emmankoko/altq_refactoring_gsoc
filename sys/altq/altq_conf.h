@@ -88,9 +88,6 @@ struct altqsw {
 	d_open_t	*d_open;
 	d_close_t	*d_close;
 	d_ioctl_t	*d_ioctl;
-#ifdef __FreeBSD__
-	dev_t		 dev;	/* make_dev result for later destroy_dev */
-#endif
 };
 
 #define	altqdev_decl(n) \

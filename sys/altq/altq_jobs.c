@@ -80,10 +80,6 @@ __KERNEL_RCSID(0, "$NetBSD: altq_jobs.c,v 1.12 2021/09/21 14:30:15 christos Exp 
 #include <sys/queue.h>
 #include <sys/kauth.h>
 
-#ifdef __FreeBSD__
-#include <sys/limits.h>
-#endif
-
 #include <net/if.h>
 #include <net/if_types.h>
 
