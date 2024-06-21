@@ -118,3 +118,14 @@ struct pfioc_altq {
 #endif /* !__NetBSD__ */
 	}
 #endif /* ALTQ */
+
+
+/*
+ * pf_altqqueue 
+ */
+
+struct pf_altqqueue	 pf_altqs[2];
+struct pf_palist	 pf_pabuf;
+struct pf_altqqueue	*pf_altqs_active;
+struct pf_altqqueue	*pf_altqs_inactive;
+struct pf_status	 pf_status;
