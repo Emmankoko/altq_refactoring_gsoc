@@ -89,3 +89,32 @@ struct pfioc_altq {
 #define DIOCCHANGEALTQ	_IOWR('D', 49, struct pfioc_altq)
 
 #define PF_RULESET_ALTQ		(PF_RULESET_MAX)
+
+
+/*
+ * routine used by PF to mark packet with classification tag so it joins the due queue based on the tag
+ * used when sending on tcp and icmp protocols 
+ */
+
+#ifdef ALTQ
+	if (r != NULL && r->qid) {
+#ifdef __NetBSD__
+		struct m_tag	*mtag;
+		struct altq_tag	*atag;
+
+		mtag = m_tag_get(PACKET_TAG_ALTQ_QID, sizeof(*atag), M_NOWAIT);
+		if (mtag != NULL) {
+			atag = (struct altq_tag *)(mtag + 1);
+			atag->qid = r->qid;
+			/* add hints for ecn */
+			atag->af = af;
+			atag->hdr = mtod(m, struct ip *);
+			m_tag_prepend(m, mtag);
+		}
+#else
+		m->m_pkthdr.pf.qid = r->qid;
+		/* add hints for ecn */
+		m->m_pkthdr.pf.hdr = mtod(m, struct ip *);
+#endif /* !__NetBSD__ */
+	}
+#endif /* ALTQ */
