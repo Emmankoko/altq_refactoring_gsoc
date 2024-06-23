@@ -250,6 +250,7 @@ options 	PPP_FILTER	# Active filter support for PPP (requires bpf)
 #options 	ALTQ_RED	# Random Early Detection
 #options 	ALTQ_RIO	# RED with IN/OUT
 #options 	ALTQ_WFQ	# Weighted Fair Queueing
+#options    ALTQ_JOBS   # Joint Buffer Queuing
 
 # These options enable verbose messages for several subsystems.
 # Warning, these may compile large string tables into the kernel!
