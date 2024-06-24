@@ -799,7 +799,7 @@ jobs_addq(struct jobs_class *cl, struct mbuf *m, struct jobs_if *jif)
 		cl->current_loss += (len << SCALE_LOSS)
 		    /cl->cl_arrival.bytes;
 		m_freem(m);
-		return (-1);
+		return -1;
 
 	} else if (!jif->jif_separate
 		   && jif->jif_ifq->ifq_len >= jif->jif_qlimit) {
@@ -817,7 +817,7 @@ jobs_addq(struct jobs_class *cl, struct mbuf *m, struct jobs_if *jif)
 				PKTCNTR_SUB(&cl->st_rin, (int)len);
 				cl->current_loss += (len << SCALE_LOSS)/cl->cl_arrival.bytes;
 				m_freem(m);
-				return (-1);
+				return -1;
 			} else {
 				/*
 				 * no RLC, but an ALC:
@@ -832,7 +832,7 @@ jobs_addq(struct jobs_class *cl, struct mbuf *m, struct jobs_if *jif)
 					PKTCNTR_SUB(&cl->st_rin, (int)len);
 					cl->current_loss += (len << SCALE_LOSS)/cl->cl_arrival.bytes;
 					m_freem(m);
-					return (-1);
+					return -1;
 				} else {
 					/*
 					 * the ALC would be violated:
@@ -1837,7 +1837,7 @@ jobsopen(dev_t dev, int flag, int fmt,
 
 	if (machclk_freq == 0) {
 		printf("jobs: no CPU clock available!\n");
-		return (ENXIO);
+		return ENXIO;
 	}
 	/* everything will be done when the queueing scheme is attached. */
 	return 0;
@@ -1882,7 +1882,7 @@ jobsioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		if ((error = kauth_authorize_network(l->l_cred,
 		    KAUTH_NETWORK_ALTQ, KAUTH_REQ_NETWORK_ALTQ_JOBS, NULL,
 		    NULL, NULL)) != 0)
-			return (error);
+			return error;
 		break;
 	}
 
@@ -2059,7 +2059,7 @@ jobscmd_modify_class(struct jobs_modify_class *ap)
 	 */
 	if (jif->jif_classes[ap->pri] != cl) {
 		if (jif->jif_classes[ap->pri] != NULL)
-			return (EEXIST);
+			return EEXIST;
 		jif->jif_classes[cl->cl_pri] = NULL;
 		jif->jif_classes[ap->pri] = cl;
 		cl->cl_pri = ap->pri;

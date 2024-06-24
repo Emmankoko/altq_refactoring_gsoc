@@ -134,7 +134,7 @@ fifoqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		if ((error = kauth_authorize_network(l->l_cred,
 		    KAUTH_NETWORK_ALTQ, KAUTH_REQ_NETWORK_ALTQ_FIFOQ, NULL,
 		    NULL, NULL)) != 0)
-			return (error);
+			return error;
 		break;
 	}
 
@@ -270,7 +270,7 @@ fifoq_enqueue(struct ifaltq *ifq, struct mbuf *m)
 		PKTCNTR_ADD(&q->q_stats.drop_cnt, m_pktlen(m));
 #endif
 		m_freem(m);
-		return (ENOBUFS);
+		return ENOBUFS;
 	}
 
 	/* enqueue the packet at the taile of the queue */
@@ -307,10 +307,10 @@ fifoq_dequeue(struct ifaltq *ifq, int op)
 	struct mbuf *m = NULL;
 
 	if (op == ALTDQ_POLL)
-		return (q->q_head);
+		return q->q_head;
 
 	if ((m = q->q_head) == NULL)
-		return (NULL);
+		return NULL;
 
 	if ((q->q_head = m->m_nextpkt) == NULL)
 		q->q_tail = NULL;
@@ -322,7 +322,7 @@ fifoq_dequeue(struct ifaltq *ifq, int op)
 	if (q->q_len == 0)
 		q->q_stats.period++;
 #endif
-	return (m);
+	return m;
 }
 
 static int
@@ -335,7 +335,7 @@ fifoq_request(struct ifaltq *ifq, int req, void *arg)
 		fifoq_purge(q);
 		break;
 	}
-	return (0);
+	return 0;
 }
 
 
@@ -351,7 +351,7 @@ fifoq_detach(fifoq_state_t *q)
 	fifoq_purge(q);
 
 	if ((error = altq_detach(q->q_ifq)))
-		return (error);
+		return error;
 
 	if (fifoq_list == q)
 		fifoq_list = q->q_next;
@@ -366,7 +366,7 @@ fifoq_detach(fifoq_state_t *q)
 	}
 
 	free(q, M_DEVBUF);
-	return (error);
+	return error;
 }
 
 /*
