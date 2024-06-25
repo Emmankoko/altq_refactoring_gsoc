@@ -985,18 +985,22 @@ cbqclose(dev_t dev, int flag, int fmt,
 {
 	struct ifnet *ifp;
 	struct cbq_interface iface;
-	int err, error = 0;
+	int error;
 
 	while (cbq_list) {
 		ifp = cbq_list->ifnp.ifq_->altq_ifp;
 		snprintf(iface.cbq_ifacename, sizeof(iface.cbq_ifacename),
 		    "%s", ifp->if_xname);
-		err = cbq_ifdetach(&iface);
-		if (err != 0 && error == 0)
-			error = err;
+		error = cbq_ifdetach(&iface);
+		switch (error)
+		{
+			case 0:
+				break;
+			case default:
+				return error;
+		}
 	}
-
-	return error;
+	return 0;
 }
 
 int
