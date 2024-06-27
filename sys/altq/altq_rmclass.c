@@ -223,8 +223,7 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, uint64_t psecPerByte,
 	}
 #endif
 
-	cl = malloc(sizeof(struct rm_class), M_DEVBUF, M_WAITOK|M_ZERO);
-	if (cl == NULL)
+	if ((cl = malloc(sizeof(struct rm_class), M_DEVBUF, M_WAITOK|M_ZERO)) == NULL)
 		return NULL;
 	CALLOUT_INIT(&cl->callout_);
 
