@@ -167,7 +167,7 @@ altq_cdnr_input(struct mbuf *m, int af)
 	if (tca == NULL)
 		tca = &top->tc_block.cb_action;
 
-	while 1 {
+	while (1) {
 		PKTCNTR_ADD(&top->tc_cnts[tca->tca_code], pktinfo.pkt_len);
 
 		switch (tca->tca_code) {
