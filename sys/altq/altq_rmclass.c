@@ -109,6 +109,7 @@ static void	rmc_root_overlimit(struct rm_class *, struct rm_class *);
 void cbq_class_state_init(struct rm_class *, struct rm_class *, struct rm_class *,
 						struct rm_ifdat *, int, int, uint64_t, int, u_int, u_int,
 						void (*action)(rm_class_t *, rm_class_t *), int, int);
+void insert_class_into_tree(struct rm_ifdat *, struct rm_class *, struct rm_class *, int);
 
 #define	BORROW_OFFTIME
 /*
@@ -205,7 +206,6 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, uint64_t psecPerByte,
     int minidle, u_int offtime, int pktsize, int flags)
 {
 	struct rm_class	*cl;
-	struct rm_class	*peer;
 	int		 s;
 
 	if (pri >= RM_MAXPRIO)
@@ -247,22 +247,7 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, uint64_t psecPerByte,
 	 * put the class into the class tree
 	 */
 	s = splnet();
-	if ((peer = ifd->active_[pri]) != NULL) {
-		/* find the last class at this pri */
-		cl->peer_ = peer;
-		while (peer->peer_ != ifd->active_[pri])
-			peer = peer->peer_;
-		peer->peer_ = cl;
-	} else {
-		ifd->active_[pri] = cl;
-		cl->peer_ = cl;
-	}
-
-	if (cl->parent_) {
-		cl->next_ = parent->children_;
-		parent->children_ = cl;
-		parent->leaf_ = 0;
-	}
+	insert_class_into_tree(ifd, cl, parent, pri);
 
 	/*
 	 * Compute the depth of this class and its ancestors in the class
@@ -357,6 +342,30 @@ cbq_class_state_init(struct rm_class *cl, struct rm_class *parent, struct rm_cla
 #endif
 	}
 #endif /* ALTQ_RED */
+}
+
+void
+insert_class_into_tree(struct rm_ifdat *ifd, struct rm_class *cl,
+		struct rm_class *parent, int pri)
+{
+	struct rm_class	*peer;
+
+	if ((peer = ifd->active_[pri]) != NULL) {
+		/* find the last class at this pri */
+		cl->peer_ = peer;
+		while (peer->peer_ != ifd->active_[pri])
+			peer = peer->peer_;
+		peer->peer_ = cl;
+	} else {
+		ifd->active_[pri] = cl;
+		cl->peer_ = cl;
+	}
+
+	if (cl->parent_) {
+		cl->next_ = parent->children_;
+		parent->children_ = cl;
+		parent->leaf_ = 0;
+	}
 }
 
 int
