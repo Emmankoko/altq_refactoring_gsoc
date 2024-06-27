@@ -106,6 +106,10 @@ static void	rmc_drop_action(struct rm_class *);
 static void	rmc_restart(struct rm_class *);
 static void	rmc_root_overlimit(struct rm_class *, struct rm_class *);
 
+void cbq_class_state_init(struct rm_class *, struct rm_class *, struct rm_class *,
+						struct rm_ifdat *, int, int, uint64_t, int, u_int, u_int,
+						void (*action)(rm_class_t *, rm_class_t *), int, int);
+
 #define	BORROW_OFFTIME
 /*
  * BORROW_OFFTIME (experimental):
@@ -236,6 +240,53 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, uint64_t psecPerByte,
 	/*
 	 * Class initialization.
 	 */
+	cbq_class_state_init(cl, parent, borrow, ifd, pri, maxq, 
+					psecPerByte, minidle, maxidle, offtime, action, flags, pktsize);
+
+	/*
+	 * put the class into the class tree
+	 */
+	s = splnet();
+	if ((peer = ifd->active_[pri]) != NULL) {
+		/* find the last class at this pri */
+		cl->peer_ = peer;
+		while (peer->peer_ != ifd->active_[pri])
+			peer = peer->peer_;
+		peer->peer_ = cl;
+	} else {
+		ifd->active_[pri] = cl;
+		cl->peer_ = cl;
+	}
+
+	if (cl->parent_) {
+		cl->next_ = parent->children_;
+		parent->children_ = cl;
+		parent->leaf_ = 0;
+	}
+
+	/*
+	 * Compute the depth of this class and its ancestors in the class
+	 * hierarchy.
+	 */
+	rmc_depth_compute(cl);
+
+	/*
+	 * If CBQ's WRR is enabled, then initialize the class WRR state.
+	 */
+	if (ifd->wrr_) {
+		ifd->num_[pri]++;
+		ifd->alloc_[pri] += cl->allotment_;
+		rmc_wrr_set_weights(ifd);
+	}
+	splx(s);
+	return cl;
+}
+
+void
+cbq_class_state_init(struct rm_class *cl, struct rm_class *parent, struct rm_class *borrow,
+				struct rm_ifdat *ifd, int pri, int maxq, uint64_t psecPerByte, int minidle,
+				u_int maxidle, u_int offtime, void (*action)(rm_class_t *, rm_class_t *), int flags, int pktsize)
+{
 	cl->children_ = NULL;
 	cl->parent_ = parent;
 	cl->borrow_ = borrow;
@@ -306,44 +357,6 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, uint64_t psecPerByte,
 #endif
 	}
 #endif /* ALTQ_RED */
-
-	/*
-	 * put the class into the class tree
-	 */
-	s = splnet();
-	if ((peer = ifd->active_[pri]) != NULL) {
-		/* find the last class at this pri */
-		cl->peer_ = peer;
-		while (peer->peer_ != ifd->active_[pri])
-			peer = peer->peer_;
-		peer->peer_ = cl;
-	} else {
-		ifd->active_[pri] = cl;
-		cl->peer_ = cl;
-	}
-
-	if (cl->parent_) {
-		cl->next_ = parent->children_;
-		parent->children_ = cl;
-		parent->leaf_ = 0;
-	}
-
-	/*
-	 * Compute the depth of this class and its ancestors in the class
-	 * hierarchy.
-	 */
-	rmc_depth_compute(cl);
-
-	/*
-	 * If CBQ's WRR is enabled, then initialize the class WRR state.
-	 */
-	if (ifd->wrr_) {
-		ifd->num_[pri]++;
-		ifd->alloc_[pri] += cl->allotment_;
-		rmc_wrr_set_weights(ifd);
-	}
-	splx(s);
-	return cl;
 }
 
 int
