@@ -872,7 +872,7 @@ cbq_getstats(struct cbq_getstats *gsp)
 	for (n = 0, i = 0; n < nclasses && i < CBQ_MAX_CLASSES; n++, i++) {
 		while ((cl = cbqp->cbq_class_tbl[i]) == NULL)
 			if (++i >= CBQ_MAX_CLASSES)
-				goto out;
+				break;
 
 		memset(&stats, 0, sizeof(stats));
 		get_class_stats(&stats, cl);
@@ -883,7 +883,6 @@ cbq_getstats(struct cbq_getstats *gsp)
 			return error;
 	}
 
- out:
 	gsp->nclasses = n;
 	return error;
 }

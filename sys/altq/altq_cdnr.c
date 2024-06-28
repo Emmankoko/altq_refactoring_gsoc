@@ -123,6 +123,10 @@ static int cdnrcmd_add_tswtcm(struct cdnr_add_tswtcm *);
 static int cdnrcmd_modify_tswtcm(struct cdnr_modify_tswtcm *);
 static int cdnrcmd_get_stats(struct cdnr_get_stats *);
 
+static struct tc_action * mark_green(struct cdnr_pktinfo *, struct tswtcm *, int);
+static struct tc_action * mark_yellow(struct cdnr_pktinfo *, struct tswtcm *, int);
+static struct tc_action * mark_red(struct cdnr_pktinfo *, struct tswtcm *, int);
+
 altqdev_decl(cdnr);
 
 /*
@@ -807,26 +811,42 @@ tswtcm_input(struct cdnr_block *cb, struct cdnr_pktinfo *pktinfo)
 		if (avg_rate > tsw->peak_rate) {
 			if (randval < avg_rate - tsw->peak_rate) {
 				/* mark red */
-				pktinfo->pkt_dscp = tsw->red_dscp;
-				PKTCNTR_ADD(&tsw->red_cnt, len);
-				return (&tsw->red_action);
+				return mark_red(pktinfo, tsw, len);
 			} else if (randval < avg_rate - tsw->cmtd_rate)
-				goto mark_yellow;
+				return mark_yellow(pktinfo, tsw, len);
 		} else {
 			/* peak_rate >= avg_rate > cmtd_rate */
 			if (randval < avg_rate - tsw->cmtd_rate) {
-			mark_yellow:
-				pktinfo->pkt_dscp = tsw->yellow_dscp;
-				PKTCNTR_ADD(&tsw->yellow_cnt, len);
-				return (&tsw->yellow_action);
+				return mark_yellow(pktinfo, tsw, len);
 			}
 		}
 	}
-
 	/* mark green */
+	return mark_green(pktinfo, tsw, len);
+}
+
+static struct tc_action *
+mark_yellow(struct cdnr_pktinfo *pktinfo, struct tswtcm	*tsw, int len)
+{
+	pktinfo->pkt_dscp = tsw->yellow_dscp;
+	PKTCNTR_ADD(&tsw->yellow_cnt, len);
+	return (&tsw->yellow_action);
+}
+
+static struct tc_action *
+mark_green(struct cdnr_pktinfo *pktinfo, struct tswtcm	*tsw, int len)
+{
 	pktinfo->pkt_dscp = tsw->green_dscp;
 	PKTCNTR_ADD(&tsw->green_cnt, len);
 	return (&tsw->green_action);
+}
+
+static struct tc_action *
+mark_red(struct cdnr_pktinfo *pktinfo, struct tswtcm *tsw, int len)
+{
+	pktinfo->pkt_dscp = tsw->red_dscp;
+	PKTCNTR_ADD(&tsw->red_cnt, len);
+	return (&tsw->red_action);
 }
 
 /*
