@@ -1157,34 +1157,31 @@ _rmc_prr_dequeue_next(struct rm_ifdat *ifd, int op)
 		ifd->borrowed_[ifd->qi_] = NULL;
 	}
 #ifdef ADJUST_CUTOFF
- _again:
-#endif
-	for (cpri = RM_MAXPRIO - 1; cpri >= 0; cpri--) {
-		if (ifd->na_[cpri] == 0)
-			continue;
-		cl = ifd->active_[cpri];
-		ASSERT(cl != NULL);
-		do {
-			if (!qempty(cl->q_)) {
-				if ((cl->undertime_.tv_sec == 0) ||
-				    rmc_under_limit(cl, &now))
-					return prr_out(ifd, cl, now, op, cpri);
-				if (first == NULL && cl->borrow_ != NULL)
-					first = cl;
-			}
-			cl = cl->peer_;
-		} while (cl != ifd->active_[cpri]);
-	}
+	do {
+		for (cpri = RM_MAXPRIO - 1; cpri >= 0; cpri--) {
+			if (ifd->na_[cpri] == 0)
+				continue;
+			cl = ifd->active_[cpri];
+			ASSERT(cl != NULL);
+			do {
+				if (!qempty(cl->q_)) {
+					if ((cl->undertime_.tv_sec == 0) ||
+						rmc_under_limit(cl, &now))
+						return prr_out(ifd, cl, now, op, cpri);
+					if (first == NULL && cl->borrow_ != NULL)
+						first = cl;
+				}
+				cl = cl->peer_;
+			} while (cl != ifd->active_[cpri]);
+		}
+		/*
+		* no underlimit class found.  if cutoff is taking effect, increase
+		* cutoff and try again.
+		*/
+		if (first != NULL && ifd->cutoff_ < ifd->root_->depth_)
+			ifd->cutoff_++;
+	} while (first != NULL && ifd->cutoff_ < ifd->root_->depth_);
 
-#ifdef ADJUST_CUTOFF
-	/*
-	 * no underlimit class found.  if cutoff is taking effect, increase
-	 * cutoff and try again.
-	 */
-	if (first != NULL && ifd->cutoff_ < ifd->root_->depth_) {
-		ifd->cutoff_++;
-		goto _again;
-	}
 #endif /* ADJUST_CUTOFF */
 	/*
 	 * If LINK_EFFICIENCY is turned on, then the first overlimit
