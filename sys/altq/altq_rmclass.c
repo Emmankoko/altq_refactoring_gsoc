@@ -111,6 +111,7 @@ void cbq_class_state_init(struct rm_class *, struct rm_class *, struct rm_class 
 						void (*action)(rm_class_t *, rm_class_t *), int, int);
 void insert_class_into_tree(struct rm_ifdat *, struct rm_class *, struct rm_class *, int);
 static mbuf_t * prr_out(struct rm_ifdat *, struct rm_class *, struct timespec, int, int);
+static mbuf_t * wrr_out(struct rm_ifdat *, struct rm_class *, struct rm_class *, struct timespec, int, int);
 
 #define	BORROW_OFFTIME
 /*
@@ -983,7 +984,6 @@ _rmc_wrr_dequeue_next(struct rm_ifdat *ifd, int op)
 	struct rm_class	*cl = NULL, *first = NULL;
 	u_int		 deficit;
 	int		 cpri;
-	mbuf_t		*m;
 	struct timespec	 now;
 
 	RM_GETTIME(now);
@@ -1002,7 +1002,7 @@ _rmc_wrr_dequeue_next(struct rm_ifdat *ifd, int op)
 				first = cl;
 		}
 		ifd->pollcache_ = NULL;
-		goto _wrr_out;
+		return wrr_out(ifd, cl, first, now, op, cpri);
 	}
 	else {
 		/* mode == ALTDQ_POLL || pollcache == NULL */
@@ -1010,65 +1010,65 @@ _rmc_wrr_dequeue_next(struct rm_ifdat *ifd, int op)
 		ifd->borrowed_[ifd->qi_] = NULL;
 	}
 #ifdef ADJUST_CUTOFF
- _again:
-#endif
-	for (cpri = RM_MAXPRIO - 1; cpri >= 0; cpri--) {
-		if (ifd->na_[cpri] == 0)
-			continue;
-		deficit = 0;
-		/*
-		 * Loop through twice for a priority level, if some class
-		 * was unable to send a packet the first round because
-		 * of the weighted round-robin mechanism.
-		 * During the second loop at this level, deficit==2.
-		 * (This second loop is not needed if for every class,
-		 * "M[cl->pri_])" times "cl->allotment" is greater than
-		 * the byte size for the largest packet in the class.)
-		 */
- _wrr_loop:
-		cl = ifd->active_[cpri];
-		ASSERT(cl != NULL);
-		do {
-			if ((deficit < 2) && (cl->bytes_alloc_ <= 0))
-				cl->bytes_alloc_ += cl->w_allotment_;
-			if (!qempty(cl->q_)) {
-				if ((cl->undertime_.tv_sec == 0) ||
-				    rmc_under_limit(cl, &now)) {
-					if (cl->bytes_alloc_ > 0 || deficit > 1)
-						goto _wrr_out;
+	do {
+		for (cpri = RM_MAXPRIO - 1; cpri >= 0; cpri--) {
+			if (ifd->na_[cpri] == 0)
+				continue;
+			deficit = 0;
+			/*
+			* Loop through twice for a priority level, if some class
+			* was unable to send a packet the first round because
+			* of the weighted round-robin mechanism.
+			* During the second loop at this level, deficit==2.
+			* (This second loop is not needed if for every class,
+			* "M[cl->pri_])" times "cl->allotment" is greater than
+			* the byte size for the largest packet in the class.)
+			*/
+			int loop_count = 0;
+			do {
+				cl = ifd->active_[cpri];
+				ASSERT(cl != NULL);
+				do {
+					if ((deficit < 2) && (cl->bytes_alloc_ <= 0))
+						cl->bytes_alloc_ += cl->w_allotment_;
+					if (!qempty(cl->q_)) {
+						if ((cl->undertime_.tv_sec == 0) ||
+							rmc_under_limit(cl, &now)) {
+							if (cl->bytes_alloc_ > 0 || deficit > 1)
+								return wrr_out(ifd, cl, first, now, op, cpri);
 
-					/* underlimit but no alloc */
-					deficit = 1;
-#if 1
-					ifd->borrowed_[ifd->qi_] = NULL;
-#endif
-				}
-				else if (first == NULL && cl->borrow_ != NULL)
-					first = cl; /* borrowing candidate */
-			}
+							/* underlimit but no alloc */
+							deficit = 1;
+		#if 1
+							ifd->borrowed_[ifd->qi_] = NULL;
+		#endif
+						}
+						else if (first == NULL && cl->borrow_ != NULL)
+							first = cl; /* borrowing candidate */
+					}
 
-			cl->bytes_alloc_ = 0;
-			cl = cl->peer_;
-		} while (cl != ifd->active_[cpri]);
+					cl->bytes_alloc_ = 0;
+					cl = cl->peer_;
+				} while (cl != ifd->active_[cpri]);
 
-		if (deficit == 1) {
-			/* first loop found an underlimit class with deficit */
-			/* Loop on same priority level, with new deficit.  */
-			deficit = 2;
-			goto _wrr_loop;
+				loop_count++;
+				/* first loop found an underlimit class with deficit */
+				/* Loop on same priority level, with new deficit.  */
+				if (loop_count == 1)
+					deficit = 2;
+
+			} while (loop_count < 2);
 		}
-	}
+		/*
+		* no underlimit class found.  if cutoff is taking effect,
+		* increase cutoff and try again.
+		*/
+		if (first != NULL && ifd->cutoff_ < ifd->root_->depth_) {
+			ifd->cutoff_++;
+			CBQTRACE(_rmc_wrr_dequeue_next, 'ojda', ifd->cutoff_);
+		}
+	} while (first != NULL && ifd->cutoff_ < ifd->root_->depth_);
 
-#ifdef ADJUST_CUTOFF
-	/*
-	 * no underlimit class found.  if cutoff is taking effect,
-	 * increase cutoff and try again.
-	 */
-	if (first != NULL && ifd->cutoff_ < ifd->root_->depth_) {
-		ifd->cutoff_++;
-		CBQTRACE(_rmc_wrr_dequeue_next, 'ojda', ifd->cutoff_);
-		goto _again;
-	}
 #endif /* ADJUST_CUTOFF */
 	/*
 	 * If LINK_EFFICIENCY is turned on, then the first overlimit
@@ -1092,10 +1092,17 @@ _rmc_wrr_dequeue_next(struct rm_ifdat *ifd, int op)
 	ifd->borrowed_[ifd->qi_] = cl->borrow_;
 	ifd->cutoff_ = cl->borrow_->depth_;
 
-	/*
-	 * Deque the packet and do the book keeping...
-	 */
- _wrr_out:
+	return wrr_out(ifd, cl, first, now, op, cpri);
+}
+
+/*
+ * Deque the packet and do the book keeping...
+ */
+static mbuf_t *
+wrr_out(struct rm_ifdat *ifd, struct rm_class *cl, struct rm_class *first,
+	struct timespec now, int op, int cpri)
+{
+	mbuf_t		*m;
 	if (op == ALTDQ_REMOVE) {
 		m = _rmc_getq(cl);
 		if (m == NULL)
