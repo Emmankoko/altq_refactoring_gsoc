@@ -110,6 +110,7 @@ void cbq_class_state_init(struct rm_class *, struct rm_class *, struct rm_class 
 						struct rm_ifdat *, int, int, uint64_t, int, u_int, u_int,
 						void (*action)(rm_class_t *, rm_class_t *), int, int);
 void insert_class_into_tree(struct rm_ifdat *, struct rm_class *, struct rm_class *, int);
+static mbuf_t * prr_out(struct rm_ifdat *, struct rm_class *, struct timespec, int, int);
 
 #define	BORROW_OFFTIME
 /*
@@ -1135,13 +1136,11 @@ _rmc_wrr_dequeue_next(struct rm_ifdat *ifd, int op)
 static mbuf_t *
 _rmc_prr_dequeue_next(struct rm_ifdat *ifd, int op)
 {
-	mbuf_t		*m;
 	int		 cpri;
 	struct rm_class	*cl, *first = NULL;
-	struct timespec	 now;
+	struct timespec	now;
 
 	RM_GETTIME(now);
-
 	/*
 	 * if the driver polls the top of the queue and then removes
 	 * the polled packet, we must return the same packet.
@@ -1150,7 +1149,8 @@ _rmc_prr_dequeue_next(struct rm_ifdat *ifd, int op)
 		cl = ifd->pollcache_;
 		cpri = cl->pri_;
 		ifd->pollcache_ = NULL;
-		goto _prr_out;
+		/* Deque the packet and do the book keeping... */
+		return prr_out(ifd, cl, now, op, cpri);
 	} else {
 		/* mode == ALTDQ_POLL || pollcache == NULL */
 		ifd->pollcache_ = NULL;
@@ -1168,7 +1168,7 @@ _rmc_prr_dequeue_next(struct rm_ifdat *ifd, int op)
 			if (!qempty(cl->q_)) {
 				if ((cl->undertime_.tv_sec == 0) ||
 				    rmc_under_limit(cl, &now))
-					goto _prr_out;
+					return prr_out(ifd, cl, now, op, cpri);
 				if (first == NULL && cl->borrow_ != NULL)
 					first = cl;
 			}
@@ -1206,10 +1206,18 @@ _rmc_prr_dequeue_next(struct rm_ifdat *ifd, int op)
 	ifd->borrowed_[ifd->qi_] = cl->borrow_;
 	ifd->cutoff_ = cl->borrow_->depth_;
 
-	/*
-	 * Deque the packet and do the book keeping...
-	 */
- _prr_out:
+	return prr_out(ifd, cl, now, op, cpri);
+}
+
+/*
+ * Deque the packet and do the book keeping...
+ */
+static mbuf_t *
+prr_out(struct rm_ifdat *ifd, struct rm_class *cl,
+			struct timespec now, int op, int cpri)
+{
+	mbuf_t		*m;
+
 	if (op == ALTDQ_REMOVE) {
 		m = _rmc_getq(cl);
 		if (m == NULL)
