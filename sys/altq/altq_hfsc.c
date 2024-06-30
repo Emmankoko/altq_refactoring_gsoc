@@ -88,6 +88,7 @@ static void			 hfsc_purge(struct hfsc_if *);
 static struct hfsc_class	*hfsc_class_create(struct hfsc_if *,
     struct service_curve *, struct service_curve *, struct service_curve *,
     struct hfsc_class *, int, int, int);
+struct hfsc_class *class_create_err_ret(struct hfsc_class *);
 static int			 hfsc_class_destroy(struct hfsc_class *);
 static struct hfsc_class	*hfsc_nextclass(struct hfsc_class *);
 static int			 hfsc_enqueue(struct ifaltq *, struct mbuf *);
@@ -406,11 +407,11 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 
 	cl->cl_q = malloc(sizeof(class_queue_t), M_DEVBUF, M_WAITOK|M_ZERO);
 	if (cl->cl_q == NULL)
-		goto err_ret;
+		return class_create_err_ret(cl);
 
 	cl->cl_actc = actlist_alloc();
 	if (cl->cl_actc == NULL)
-		goto err_ret;
+		return class_create_err_ret(cl);
 
 	if (qlimit == 0)
 		qlimit = 50;  /* use default */
@@ -466,7 +467,7 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 		cl->cl_rsc = malloc(sizeof(struct internal_sc), M_DEVBUF,
 		    M_WAITOK|M_ZERO);
 		if (cl->cl_rsc == NULL)
-			goto err_ret;
+			return class_create_err_ret(cl);
 		sc2isc(rsc, cl->cl_rsc);
 		rtsc_init(&cl->cl_deadline, cl->cl_rsc, 0, 0);
 		rtsc_init(&cl->cl_eligible, cl->cl_rsc, 0, 0);
@@ -475,7 +476,7 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 		cl->cl_fsc = malloc(sizeof(struct internal_sc), M_DEVBUF,
 		    M_WAITOK|M_ZERO);
 		if (cl->cl_fsc == NULL)
-			goto err_ret;
+			return class_create_err_ret(cl);
 		sc2isc(fsc, cl->cl_fsc);
 		rtsc_init(&cl->cl_virtual, cl->cl_fsc, 0, 0);
 	}
@@ -483,7 +484,7 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 		cl->cl_usc = malloc(sizeof(struct internal_sc), M_DEVBUF,
 		    M_WAITOK|M_ZERO);
 		if (cl->cl_usc == NULL)
-			goto err_ret;
+			return class_create_err_ret(cl);
 		sc2isc(usc, cl->cl_usc);
 		rtsc_init(&cl->cl_ulimit, cl->cl_usc, 0, 0);
 	}
@@ -512,7 +513,7 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 			}
 		if (i == HFSC_MAX_CLASSES) {
 			splx(s);
-			goto err_ret;
+			return class_create_err_ret(cl);
 		}
 	}
 
@@ -535,8 +536,11 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 	splx(s);
 
 	return cl;
+}
 
- err_ret:
+struct hfsc_class *
+class_create_err_ret(struct hfsc_class *cl)
+{
 	if (cl->cl_actc != NULL)
 		actlist_destroy(cl->cl_actc);
 	if (cl->cl_red != NULL) {
