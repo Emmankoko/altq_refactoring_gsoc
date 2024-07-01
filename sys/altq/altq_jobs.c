@@ -98,6 +98,7 @@ static int jobs_request(struct ifaltq *, int, void *);
 static void jobs_purge(struct jobs_if *);
 static struct jobs_class *jobs_class_create(struct jobs_if *,
     int, int64_t, int64_t, int64_t, int64_t, int64_t, int);
+static struct jobs_class *class_create_err_ret(struct jobs_class *);
 static int jobs_class_destroy(struct jobs_class *);
 static int jobs_enqueue(struct ifaltq *, struct mbuf *);
 static struct mbuf *jobs_dequeue(struct ifaltq *, int);
@@ -283,11 +284,11 @@ jobs_class_create(struct jobs_if *jif, int pri, int64_t adc, int64_t rdc,
 		cl->cl_q = malloc(sizeof(class_queue_t), M_DEVBUF,
 		    M_WAITOK|M_ZERO);
 		if (cl->cl_q == NULL)
-			goto err_ret;
+			return class_create_err_ret(cl);
 
 		cl->arv_tm = tslist_alloc();
 		if (cl->arv_tm == NULL)
-			goto err_ret;
+			return class_create_err_ret(cl);
 	}
 
 	jif->jif_classes[pri] = cl;
@@ -444,8 +445,11 @@ jobs_class_create(struct jobs_if *jif, int pri, int64_t adc, int64_t rdc,
 	now = read_machclk();
 	cl->idletime = now;
 	return cl;
+}
 
- err_ret:
+static struct jobs_class *
+class_create_err_ret(struct jobs_class *cl)
+{
 	if (cl->cl_q != NULL)
 		free(cl->cl_q, M_DEVBUF);
 	if (cl->arv_tm != NULL)
