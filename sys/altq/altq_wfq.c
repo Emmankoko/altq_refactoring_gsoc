@@ -73,6 +73,7 @@ static int		wfq_ifenqueue(struct ifaltq *, struct mbuf *);
 static u_long		wfq_hash(struct flowinfo *, int);
 static inline u_long	wfq_hashbydstaddr(struct flowinfo *, int);
 static inline u_long	wfq_hashbysrcaddr(struct flowinfo *, int);
+static inline u_long wfq_hashbyaddr(struct flowinfo *, int, enum addr);
 static inline u_long	wfq_hashbysrcport(struct flowinfo *, int);
 static wfq		*wfq_maxqueue(wfq_state_t *);
 static struct mbuf	*wfq_ifdequeue(struct ifaltq *, int);
@@ -86,6 +87,12 @@ static void		*wfq_classify(void *, struct mbuf *, int);
 
 /* global value : pointer to wfq queue list */
 static wfq_state_t *wfq_list = NULL;
+
+/* address type list used when hasing */
+enum addr {
+	SRC,
+	DST
+};
 
 static int
 wfq_setenable(struct wfq_interface *ifacep, int flag)
@@ -342,37 +349,25 @@ wfq_hash(struct flowinfo *flow, int n)
 static inline u_long
 wfq_hashbydstaddr(struct flowinfo *flow, int n)
 {
-	u_long val = 0;
-
-	if (flow != NULL) {
-		if (flow->fi_family == AF_INET) {
-			struct flowinfo_in *fp = (struct flowinfo_in *)flow;
-
-			val = fp->fi_dst.s_addr;
-			val = val ^ (val >> 8) ^ (val >> 16) ^ (val >> 24);
-		}
-#ifdef INET6
-		else if (flow->fi_family == AF_INET6) {
-			struct flowinfo_in6 *fp6 = (struct flowinfo_in6 *)flow;
-
-			val = ntohl(fp6->fi6_flowlabel);
-		}
-#endif
-	}
-
-	return (val % n);
+	return wfq_hashbyaddr(flow, n, DST);
 }
 
 static inline u_long
 wfq_hashbysrcaddr(struct flowinfo *flow, int n)
+{
+	return wfq_hashbyaddr(flow, n, SRC);
+}
+
+static inline u_long
+wfq_hashbyaddr(struct flowinfo *flow, int n, enum addr type)
 {
 	u_long val = 0;
 
 	if (flow != NULL) {
 		if (flow->fi_family == AF_INET) {
 			struct flowinfo_in *fp = (struct flowinfo_in *)flow;
-
-			val = fp->fi_src.s_addr;
+			/* Get source or destination address */
+			val = (type == SRC) ? fp->fi_src.s_addr : fp->fi_dst.s_addr;
 			val = val ^ (val >> 8) ^ (val >> 16) ^ (val >> 24);
 		}
 #ifdef INET6
@@ -386,6 +381,7 @@ wfq_hashbysrcaddr(struct flowinfo *flow, int n)
 
 	return (val % n);
 }
+
 
 static inline u_long
 wfq_hashbysrcport(struct flowinfo *flow, int n)

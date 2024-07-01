@@ -77,6 +77,8 @@ struct wfq_conf {
 	int			qlimit;		/* queue size in bytes */
 };
 
+enum addr;
+
 #define	WFQ_HASH_DSTADDR	0	/* hash by dst address */
 #define	WFQ_HASH_SRCPORT	1	/* hash by src port */
 #define	WFQ_HASH_FULL		2	/* hash by all fields */
