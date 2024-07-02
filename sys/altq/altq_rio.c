@@ -195,6 +195,14 @@ static struct mbuf *rio_dequeue(struct ifaltq *, int);
 static int rio_request(struct ifaltq *, int, void *);
 static int rio_detach(rio_queue_t *);
 
+int rio_cmd_enable(void *);
+int rio_cmd_disable(void *);
+int rio_cmd_ifattach(void *);
+int rio_cmd_ifdetach(void *);
+int rio_cmd_getstats(void *);
+int rio_cmd_config(void *);
+int rio_cmd_setdefaults(void *);
+
 /*
  * rio device interface
  */
@@ -490,9 +498,6 @@ int
 rioioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
     struct lwp *l)
 {
-	rio_queue_t *rqp;
-	struct rio_interface *ifacep;
-	struct ifnet *ifp;
 	int	error = 0;
 
 	/* check super-user privilege */
@@ -510,176 +515,31 @@ rioioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	switch (cmd) {
 
 	case RIO_ENABLE:
-		ifacep = (struct rio_interface *)addr;
-		if ((rqp = altq_lookup(ifacep->rio_ifname, ALTQT_RIO)) == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = altq_enable(rqp->rq_ifq);
+		error = rio_cmd_enable(addr);
 		break;
 
 	case RIO_DISABLE:
-		ifacep = (struct rio_interface *)addr;
-		if ((rqp = altq_lookup(ifacep->rio_ifname, ALTQT_RIO)) == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = altq_disable(rqp->rq_ifq);
+		error = rio_cmd_disable(addr);
 		break;
 
 	case RIO_IF_ATTACH:
-		ifp = ifunit(((struct rio_interface *)addr)->rio_ifname);
-		if (ifp == NULL) {
-			error = ENXIO;
-			break;
-		}
-
-		/* allocate and initialize rio_queue_t */
-		rqp = malloc(sizeof(rio_queue_t), M_DEVBUF, M_WAITOK|M_ZERO);
-		if (rqp == NULL) {
-			error = ENOMEM;
-			break;
-		}
-
-		rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
-		    M_WAITOK|M_ZERO);
-		if (rqp->rq_q == NULL) {
-			free(rqp, M_DEVBUF);
-			error = ENOMEM;
-			break;
-		}
-
-		rqp->rq_rio = rio_alloc(0, NULL, 0, 0);
-		if (rqp->rq_rio == NULL) {
-			free(rqp->rq_q, M_DEVBUF);
-			free(rqp, M_DEVBUF);
-			error = ENOMEM;
-			break;
-		}
-
-		rqp->rq_ifq = &ifp->if_snd;
-		qtail(rqp->rq_q) = NULL;
-		qlen(rqp->rq_q) = 0;
-		qlimit(rqp->rq_q) = RIO_LIMIT;
-		qtype(rqp->rq_q) = Q_RIO;
-
-		/*
-		 * set RIO to this ifnet structure.
-		 */
-		error = altq_attach(rqp->rq_ifq, ALTQT_RIO, rqp,
-				    rio_enqueue, rio_dequeue, rio_request,
-				    NULL, NULL);
-		if (error) {
-			rio_destroy(rqp->rq_rio);
-			free(rqp->rq_q, M_DEVBUF);
-			free(rqp, M_DEVBUF);
-			break;
-		}
-
-		/* add this state to the rio list */
-		rqp->rq_next = rio_list;
-		rio_list = rqp;
+		error = rio_cmd_ifattach(addr);
 		break;
 
 	case RIO_IF_DETACH:
-		ifacep = (struct rio_interface *)addr;
-		if ((rqp = altq_lookup(ifacep->rio_ifname, ALTQT_RIO)) == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = rio_detach(rqp);
+		error = rio_cmd_ifdetach(addr);
 		break;
 
 	case RIO_GETSTATS:
-		do {
-			struct rio_stats *q_stats;
-			rio_t *rp;
-			int i;
-
-			q_stats = (struct rio_stats *)addr;
-			if ((rqp = altq_lookup(q_stats->iface.rio_ifname,
-					       ALTQT_RIO)) == NULL) {
-				error = EBADF;
-				break;
-			}
-
-			rp = rqp->rq_rio;
-
-			q_stats->q_limit = qlimit(rqp->rq_q);
-			q_stats->weight	= rp->rio_weight;
-			q_stats->flags = rp->rio_flags;
-
-			for (i = 0; i < RIO_NDROPPREC; i++) {
-				q_stats->q_len[i] = rp->rio_precstate[i].qlen;
-				memcpy(&q_stats->q_stats[i], &rp->q_stats[i],
-				      sizeof(struct redstats));
-				q_stats->q_stats[i].q_avg =
-				    rp->rio_precstate[i].avg >> rp->rio_wshift;
-
-				q_stats->q_params[i].inv_pmax
-					= rp->rio_precstate[i].inv_pmax;
-				q_stats->q_params[i].th_min
-					= rp->rio_precstate[i].th_min;
-				q_stats->q_params[i].th_max
-					= rp->rio_precstate[i].th_max;
-			}
-		} while (/*CONSTCOND*/ 0);
+		error = rio_cmd_getstats(addr);
 		break;
 
 	case RIO_CONFIG:
-		do {
-			struct rio_conf *fc;
-			rio_t	*new;
-			int s, limit, i;
-
-			fc = (struct rio_conf *)addr;
-			if ((rqp = altq_lookup(fc->iface.rio_ifname,
-					       ALTQT_RIO)) == NULL) {
-				error = EBADF;
-				break;
-			}
-
-			new = rio_alloc(fc->rio_weight, &fc->q_params[0],
-					fc->rio_flags, fc->rio_pkttime);
-			if (new == NULL) {
-				error = ENOMEM;
-				break;
-			}
-
-			s = splnet();
-			_flushq(rqp->rq_q);
-			limit = fc->rio_limit;
-			if (limit < fc->q_params[RIO_NDROPPREC-1].th_max)
-				limit = fc->q_params[RIO_NDROPPREC-1].th_max;
-			qlimit(rqp->rq_q) = limit;
-
-			rio_destroy(rqp->rq_rio);
-			rqp->rq_rio = new;
-
-			splx(s);
-
-			/* write back new values */
-			fc->rio_limit = limit;
-			for (i = 0; i < RIO_NDROPPREC; i++) {
-				fc->q_params[i].inv_pmax =
-					rqp->rq_rio->rio_precstate[i].inv_pmax;
-				fc->q_params[i].th_min =
-					rqp->rq_rio->rio_precstate[i].th_min;
-				fc->q_params[i].th_max =
-					rqp->rq_rio->rio_precstate[i].th_max;
-			}
-		} while (/*CONSTCOND*/ 0);
+		error = rio_cmd_config(addr);
 		break;
 
 	case RIO_SETDEFAULTS:
-		do {
-			struct redparams *rp;
-			int i;
-
-			rp = (struct redparams *)addr;
-			for (i = 0; i < RIO_NDROPPREC; i++)
-				default_rio_params[i] = rp[i];
-		} while (/*CONSTCOND*/ 0);
+		error = rio_cmd_setdefaults(addr);
 		break;
 
 	default:
@@ -785,6 +645,220 @@ rio_dequeue(struct ifaltq *ifq, int op)
 	return m;
 }
 
+int
+rio_cmd_enable(void *addr)
+{
+	struct rio_interface *ifacep;
+	rio_queue_t *rqp;
+	int error = 0;
+
+	ifacep = (struct rio_interface *)addr;
+	if ((rqp = altq_lookup(ifacep->rio_ifname, ALTQT_RIO)) == NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = altq_enable(rqp->rq_ifq);
+	return error;
+}
+
+int
+rio_cmd_disable(void *addr)
+{
+	rio_queue_t *rqp;
+	struct rio_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct rio_interface *)addr;
+	if ((rqp = altq_lookup(ifacep->rio_ifname, ALTQT_RIO)) == NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = altq_disable(rqp->rq_ifq);
+	return error;
+}
+
+int
+rio_cmd_ifattach(void *addr)
+{
+	rio_queue_t *rqp;
+	struct ifnet *ifp;
+	int error = 0;
+
+	ifp = ifunit(((struct rio_interface *)addr)->rio_ifname);
+	if (ifp == NULL) {
+		error = ENXIO;
+		return error;
+	}
+
+	/* allocate and initialize rio_queue_t */
+	rqp = malloc(sizeof(rio_queue_t), M_DEVBUF, M_WAITOK|M_ZERO);
+	if (rqp == NULL) {
+		error = ENOMEM;
+		return error;
+	}
+
+	rqp->rq_q = malloc(sizeof(class_queue_t), M_DEVBUF,
+		M_WAITOK|M_ZERO);
+	if (rqp->rq_q == NULL) {
+		free(rqp, M_DEVBUF);
+		error = ENOMEM;
+		return error;
+	}
+
+	rqp->rq_rio = rio_alloc(0, NULL, 0, 0);
+	if (rqp->rq_rio == NULL) {
+		free(rqp->rq_q, M_DEVBUF);
+		free(rqp, M_DEVBUF);
+		error = ENOMEM;
+		return error;
+	}
+
+	rqp->rq_ifq = &ifp->if_snd;
+	qtail(rqp->rq_q) = NULL;
+	qlen(rqp->rq_q) = 0;
+	qlimit(rqp->rq_q) = RIO_LIMIT;
+	qtype(rqp->rq_q) = Q_RIO;
+
+	/*
+		* set RIO to this ifnet structure.
+		*/
+	error = altq_attach(rqp->rq_ifq, ALTQT_RIO, rqp,
+				rio_enqueue, rio_dequeue, rio_request,
+				NULL, NULL);
+	if (error) {
+		rio_destroy(rqp->rq_rio);
+		free(rqp->rq_q, M_DEVBUF);
+		free(rqp, M_DEVBUF);
+		return error;
+	}
+
+	/* add this state to the rio list */
+	rqp->rq_next = rio_list;
+	rio_list = rqp;
+	return error;
+}
+
+int
+rio_cmd_ifdetach(void *addr)
+{
+	rio_queue_t *rqp;
+	struct rio_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct rio_interface *)addr;
+	if ((rqp = altq_lookup(ifacep->rio_ifname, ALTQT_RIO)) == NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = rio_detach(rqp);
+	return error;
+}
+
+int
+rio_cmd_getstats(void *addr)
+{
+	int error = 0;
+	do {
+		struct rio_stats *q_stats;
+		rio_queue_t *rqp;
+		rio_t *rp;
+		int i;
+
+		q_stats = (struct rio_stats *)addr;
+		if ((rqp = altq_lookup(q_stats->iface.rio_ifname,
+						ALTQT_RIO)) == NULL) {
+			error = EBADF;
+			return error;
+		}
+
+		rp = rqp->rq_rio;
+
+		q_stats->q_limit = qlimit(rqp->rq_q);
+		q_stats->weight	= rp->rio_weight;
+		q_stats->flags = rp->rio_flags;
+
+		for (i = 0; i < RIO_NDROPPREC; i++) {
+			q_stats->q_len[i] = rp->rio_precstate[i].qlen;
+			memcpy(&q_stats->q_stats[i], &rp->q_stats[i],
+					sizeof(struct redstats));
+			q_stats->q_stats[i].q_avg =
+				rp->rio_precstate[i].avg >> rp->rio_wshift;
+
+			q_stats->q_params[i].inv_pmax
+				= rp->rio_precstate[i].inv_pmax;
+			q_stats->q_params[i].th_min
+				= rp->rio_precstate[i].th_min;
+			q_stats->q_params[i].th_max
+				= rp->rio_precstate[i].th_max;
+		}
+	} while (/*CONSTCOND*/ 0);
+	return error;
+}
+
+int
+rio_cmd_config(void *addr)
+{
+	int error = 0;
+	do {
+		rio_queue_t *rqp;
+		struct rio_conf *fc;
+		rio_t	*new;
+		int s, limit, i;
+
+		fc = (struct rio_conf *)addr;
+		if ((rqp = altq_lookup(fc->iface.rio_ifname,
+						ALTQT_RIO)) == NULL) {
+			error = EBADF;
+			return error;
+		}
+
+		new = rio_alloc(fc->rio_weight, &fc->q_params[0],
+				fc->rio_flags, fc->rio_pkttime);
+		if (new == NULL) {
+			error = ENOMEM;
+			return error;
+		}
+
+		s = splnet();
+		_flushq(rqp->rq_q);
+		limit = fc->rio_limit;
+		if (limit < fc->q_params[RIO_NDROPPREC-1].th_max)
+			limit = fc->q_params[RIO_NDROPPREC-1].th_max;
+		qlimit(rqp->rq_q) = limit;
+
+		rio_destroy(rqp->rq_rio);
+		rqp->rq_rio = new;
+
+		splx(s);
+
+		/* write back new values */
+		fc->rio_limit = limit;
+		for (i = 0; i < RIO_NDROPPREC; i++) {
+			fc->q_params[i].inv_pmax =
+				rqp->rq_rio->rio_precstate[i].inv_pmax;
+			fc->q_params[i].th_min =
+				rqp->rq_rio->rio_precstate[i].th_min;
+			fc->q_params[i].th_max =
+				rqp->rq_rio->rio_precstate[i].th_max;
+		}
+	} while (/*CONSTCOND*/ 0);
+	return error;
+}
+
+int
+rio_cmd_setdefaults(void *addr)
+{
+	int error = 0;
+	do {
+		struct redparams *rp;
+		int i;
+
+		rp = (struct redparams *)addr;
+		for (i = 0; i < RIO_NDROPPREC; i++)
+			default_rio_params[i] = rp[i];
+	} while (/*CONSTCOND*/ 0);
+	return error;
+}
 #endif /* ALTQ3_COMPAT */
 
 #endif /* ALTQ_RIO */
