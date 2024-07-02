@@ -76,6 +76,13 @@ static int 		fifoq_detach(fifoq_state_t *);
 static int		fifoq_request(struct ifaltq *, int, void *);
 static void 		fifoq_purge(fifoq_state_t *);
 
+int fifoq_enable(void *);
+int fifoq_disable(void *);
+int fifoq_ifattach(void *);
+int fifoq_ifdetach(void *);
+int fifoq_getstats(void *);
+int fifoq_config(void *);
+
 /*
  * fifoq device interface
  */
@@ -121,9 +128,6 @@ int
 fifoqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
     struct lwp *l)
 {
-	fifoq_state_t *q;
-	struct fifoq_interface *ifacep;
-	struct ifnet *ifp;
 	int	error = 0;
 
 	/* check super-user privilege */
@@ -140,106 +144,27 @@ fifoqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 
 	switch (cmd) {
 	case FIFOQ_ENABLE:
-		ifacep = (struct fifoq_interface *)addr;
-		if ((q = altq_lookup(ifacep->fifoq_ifname, ALTQT_FIFOQ))
-		    == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = altq_enable(q->q_ifq);
+		error = fifoq_enable(addr);
 		break;
 
 	case FIFOQ_DISABLE:
-		ifacep = (struct fifoq_interface *)addr;
-		if ((q = altq_lookup(ifacep->fifoq_ifname, ALTQT_FIFOQ))
-		    == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = altq_disable(q->q_ifq);
+		error = fifoq_disable(addr);
 		break;
 
 	case FIFOQ_IF_ATTACH:
-		ifp = ifunit(((struct fifoq_interface *)addr)->fifoq_ifname);
-		if (ifp == NULL) {
-			error = ENXIO;
-			break;
-		}
-
-		/* allocate and initialize fifoq_state_t */
-		q = malloc(sizeof(fifoq_state_t), M_DEVBUF, M_WAITOK|M_ZERO);
-		if (q == NULL) {
-			error = ENOMEM;
-			break;
-		}
-
-		q->q_ifq = &ifp->if_snd;
-		q->q_head = q->q_tail = NULL;
-		q->q_len = 0;
-		q->q_limit = FIFOQ_LIMIT;
-
-		/*
-		 * set FIFOQ to this ifnet structure.
-		 */
-		error = altq_attach(q->q_ifq, ALTQT_FIFOQ, q,
-				    fifoq_enqueue, fifoq_dequeue, fifoq_request,
-				    NULL, NULL);
-		if (error) {
-			free(q, M_DEVBUF);
-			break;
-		}
-
-		/* add this state to the fifoq list */
-		q->q_next = fifoq_list;
-		fifoq_list = q;
+		error = fifoq_ifattach(addr);
 		break;
 
 	case FIFOQ_IF_DETACH:
-		ifacep = (struct fifoq_interface *)addr;
-		if ((q = altq_lookup(ifacep->fifoq_ifname, ALTQT_FIFOQ))
-		    == NULL) {
-			error = EBADF;
-			break;
-		}
-		error = fifoq_detach(q);
+		error = fifoq_ifdetach(addr);
 		break;
 
 	case FIFOQ_GETSTATS:
-		do {
-			struct fifoq_getstats *q_stats;
-
-			q_stats = (struct fifoq_getstats *)addr;
-			if ((q = altq_lookup(q_stats->iface.fifoq_ifname,
-					     ALTQT_FIFOQ)) == NULL) {
-				error = EBADF;
-				break;
-			}
-
-			q_stats->q_len		= q->q_len;
-			q_stats->q_limit 	= q->q_limit;
-			q_stats->xmit_cnt	= q->q_stats.xmit_cnt;
-			q_stats->drop_cnt 	= q->q_stats.drop_cnt;
-			q_stats->period   	= q->q_stats.period;
-		} while (/*CONSTCOND*/ 0);
+		error = fifoq_getstats(addr);
 		break;
 
 	case FIFOQ_CONFIG:
-		do {
-			struct fifoq_conf *fc;
-			int limit;
-
-			fc = (struct fifoq_conf *)addr;
-			if ((q = altq_lookup(fc->iface.fifoq_ifname,
-					     ALTQT_FIFOQ)) == NULL) {
-				error = EBADF;
-				break;
-			}
-			limit = fc->fifoq_limit;
-			if (limit < 0)
-				limit = 0;
-			q->q_limit = limit;
-			fc->fifoq_limit = limit;
-		} while (/*CONSTCOND*/ 0);
+		error = fifoq_config(addr);
 		break;
 
 	default:
@@ -386,6 +311,147 @@ fifoq_purge(fifoq_state_t *q)
 	q->q_len = 0;
 	if (ALTQ_IS_ENABLED(q->q_ifq))
 		q->q_ifq->ifq_len = 0;
+}
+
+int
+fifoq_enable(void *addr)
+{
+	fifoq_state_t *q;
+	struct fifoq_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct fifoq_interface *)addr;
+	if ((q = altq_lookup(ifacep->fifoq_ifname, ALTQT_FIFOQ))
+		== NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = altq_enable(q->q_ifq);
+	return error;
+}
+
+int
+fifoq_disable(void *addr)
+{
+	fifoq_state_t *q;
+	struct fifoq_interface *ifacep;
+	int error = 0;
+	
+	ifacep = (struct fifoq_interface *)addr;
+	if ((q = altq_lookup(ifacep->fifoq_ifname, ALTQT_FIFOQ))
+		== NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = altq_disable(q->q_ifq);
+	return error;
+}
+
+int
+fifoq_ifattach(void *addr)
+{
+	struct ifnet *ifp;
+	fifoq_state_t *q;
+	int error = 0;
+
+	ifp = ifunit(((struct fifoq_interface *)addr)->fifoq_ifname);
+	if (ifp == NULL) {
+		error = ENXIO;
+		return error;
+	}
+
+	/* allocate and initialize fifoq_state_t */
+	q = malloc(sizeof(fifoq_state_t), M_DEVBUF, M_WAITOK|M_ZERO);
+	if (q == NULL) {
+		error = ENOMEM;
+		return error;
+	}
+
+	q->q_ifq = &ifp->if_snd;
+	q->q_head = q->q_tail = NULL;
+	q->q_len = 0;
+	q->q_limit = FIFOQ_LIMIT;
+
+	/*
+		* set FIFOQ to this ifnet structure.
+		*/
+	error = altq_attach(q->q_ifq, ALTQT_FIFOQ, q,
+				fifoq_enqueue, fifoq_dequeue, fifoq_request,
+				NULL, NULL);
+	if (error) {
+		free(q, M_DEVBUF);
+		return error;
+	}
+
+	/* add this state to the fifoq list */
+	q->q_next = fifoq_list;
+	fifoq_list = q;
+	return error;
+}
+
+int
+fifoq_ifdetach(void *addr)
+{
+	fifoq_state_t *q;
+	struct fifoq_interface *ifacep;
+	int error = 0;
+
+	ifacep = (struct fifoq_interface *)addr;
+	if ((q = altq_lookup(ifacep->fifoq_ifname, ALTQT_FIFOQ))
+		== NULL) {
+		error = EBADF;
+		return error;
+	}
+	error = fifoq_detach(q);
+	return error;
+}
+
+int
+fifoq_getstats(void *addr)
+{
+	int error = 0;
+	do {
+		struct fifoq_getstats *q_stats;
+		fifoq_state_t *q;
+
+		q_stats = (struct fifoq_getstats *)addr;
+		if ((q = altq_lookup(q_stats->iface.fifoq_ifname,
+						ALTQT_FIFOQ)) == NULL) {
+			error = EBADF;
+			return error;
+		}
+
+		q_stats->q_len		= q->q_len;
+		q_stats->q_limit 	= q->q_limit;
+		q_stats->xmit_cnt	= q->q_stats.xmit_cnt;
+		q_stats->drop_cnt 	= q->q_stats.drop_cnt;
+		q_stats->period   	= q->q_stats.period;
+	} while (/*CONSTCOND*/ 0);
+	return error;
+}
+
+int
+fifoq_config(void *addr)
+{
+	int error = 0;
+	do {
+		struct fifoq_conf *fc;
+		int limit;
+		fifoq_state_t *q;
+
+		fc = (struct fifoq_conf *)addr;
+		if ((q = altq_lookup(fc->iface.fifoq_ifname,
+						ALTQT_FIFOQ)) == NULL) {
+			error = EBADF;
+			return error;
+		}
+		limit = fc->fifoq_limit;
+		if (limit < 0)
+			limit = 0;
+		q->q_limit = limit;
+		fc->fifoq_limit = limit;
+	} while (/*CONSTCOND*/ 0);
+	return error;
 }
 
 #endif /* ALTQ3_COMPAT */
