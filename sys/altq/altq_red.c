@@ -210,8 +210,8 @@ static void red_purgeq(red_queue_t *);
 static int red_detach(red_queue_t *);
 
 /* redioctl helper functions */
-int red_enable(void *);
-int red_disable(void *);
+inline int red_enable(void *);
+inline int red_disable(void *);
 int red_if_detach(void *);
 int red_if_attach(void *);
 int red_state_alloc(red_queue_t *, struct ifnet *);
@@ -877,7 +877,7 @@ red_purgeq(red_queue_t *rqp)
 		rqp->rq_ifq->ifq_len = 0;
 }
 
-int
+inline int
 red_enable(void *addr)
 {
 	red_queue_t *rqp;
@@ -893,7 +893,7 @@ red_enable(void *addr)
 	return error;
 }
 
-int
+inline int
 red_disable(void *addr)
 {
 	red_queue_t *rqp;
