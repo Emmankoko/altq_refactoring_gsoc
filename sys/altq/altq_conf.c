@@ -91,14 +91,6 @@ altqdev_decl(priq);
 altqdev_decl(jobs);
 #endif
 
-inline int altq_routine(enum device_routine, dev_t, int, int, struct lwp *);
-inline int get_queue_type(void *addr);
-inline int tbr(void *, enum TBR);
-inline bool altq_auth(int *, struct lwp *);
-
-enum device_routine; /* device routine types */
-enum TBR; /* tbr manipulation list. mainly get and set*/
-
 /*
  * altq minor device (discipline) table
  */
@@ -244,7 +236,7 @@ altqioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag, struct lwp *l)
 /*
  * altq device open and close routine definition
  */
-inline int
+int
 altq_routine(enum device_routine routine, dev_t dev, int flag,
 			 int fmt, struct lwp *l )
 {
@@ -270,7 +262,7 @@ altq_routine(enum device_routine routine, dev_t dev, int flag,
 /*
  * ioclt routines for altq device
  */
-inline int
+int
 get_queue_type(void *addr)
 {
 	struct ifnet *ifp;
@@ -283,7 +275,7 @@ get_queue_type(void *addr)
 	return 0;
 }
 
-inline int
+int
 tbr(void *addr, enum TBR action)
 {
 	struct ifnet *ifp;
@@ -306,8 +298,7 @@ tbr(void *addr, enum TBR action)
 /*
  * authorize network operation
  */
-inline bool
-altq_auth(int *error, struct lwp *l)
+bool altq_auth(int *error, struct lwp *l)
 {
 	if ((*error = kauth_authorize_network(
 		l->l_cred, KAUTH_NETWORK_ALTQ,

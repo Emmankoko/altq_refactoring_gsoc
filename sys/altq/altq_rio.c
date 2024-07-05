@@ -195,13 +195,13 @@ static struct mbuf *rio_dequeue(struct ifaltq *, int);
 static int rio_request(struct ifaltq *, int, void *);
 static int rio_detach(rio_queue_t *);
 
-inline int rio_cmd_enable(void *);
-inline int rio_cmd_disable(void *);
+int rio_cmd_enable(void *);
+int rio_cmd_disable(void *);
 int rio_cmd_ifattach(void *);
-inline int rio_cmd_ifdetach(void *);
+int rio_cmd_ifdetach(void *);
 int rio_cmd_getstats(void *);
 int rio_cmd_config(void *);
-inline int rio_cmd_setdefaults(void *);
+int rio_cmd_setdefaults(void *);
 
 /*
  * rio device interface
@@ -645,7 +645,7 @@ rio_dequeue(struct ifaltq *ifq, int op)
 	return m;
 }
 
-inline int
+int
 rio_cmd_enable(void *addr)
 {
 	struct rio_interface *ifacep;
@@ -661,7 +661,7 @@ rio_cmd_enable(void *addr)
 	return error;
 }
 
-inline int
+int
 rio_cmd_disable(void *addr)
 {
 	rio_queue_t *rqp;
@@ -738,7 +738,7 @@ rio_cmd_ifattach(void *addr)
 	return error;
 }
 
-inline int
+int
 rio_cmd_ifdetach(void *addr)
 {
 	rio_queue_t *rqp;
@@ -845,7 +845,7 @@ rio_cmd_config(void *addr)
 	return error;
 }
 
-inline int
+int
 rio_cmd_setdefaults(void *addr)
 {
 	int error = 0;

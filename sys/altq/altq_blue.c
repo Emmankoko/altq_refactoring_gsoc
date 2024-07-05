@@ -120,8 +120,8 @@ static int blue_detach(blue_queue_t *);
 static int blue_request(struct ifaltq *, int, void *);
 
 /* blueioctl helper functions */
-inline int blue_enable(void *);
-inline int blue_disable(void *);
+int blue_enable(void *);
+int blue_disable(void *);
 int blue_if_attach(void *);
 int blue_if_detach(void *);
 int blue_state_alloc(blue_queue_t *, struct ifnet *);
@@ -481,7 +481,7 @@ blue_request(struct ifaltq *ifq, int req, void *arg)
 	return 0;
 }
 
-inline int
+int
 blue_enable(void *addr)
 {
 	struct blue_interface *ifacep;
@@ -497,7 +497,7 @@ blue_enable(void *addr)
 	return error;
 }
 
-inline int
+int
 blue_disable(void *addr)
 {
 	struct blue_interface *ifacep;

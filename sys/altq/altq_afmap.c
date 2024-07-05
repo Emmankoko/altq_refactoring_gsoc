@@ -103,7 +103,7 @@ afm_alloc(struct ifnet *ifp)
  * iterate through the list of address family nodes till
  * the address family on the current network interface is located
  */
-inline struct afm_head *
+struct afm_head *
 if_afm_lookup(struct ifnet *ifp)
 {
 	struct afm_head *head;
