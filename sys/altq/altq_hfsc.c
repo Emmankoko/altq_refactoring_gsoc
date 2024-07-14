@@ -83,7 +83,7 @@ __KERNEL_RCSID(0, "$NetBSD: altq_hfsc.c,v 1.30 2021/09/21 14:30:15 christos Exp 
  * function prototypes
  */
 static int			 hfsc_clear_interface(struct hfsc_if *);
-static int			 hfsc_request(struct ifaltq *, int, void *);
+
 static void			 hfsc_purge(struct hfsc_if *);
 static struct hfsc_class	*hfsc_class_create(struct hfsc_if *,
     struct service_curve *, struct service_curve *, struct service_curve *,
@@ -91,8 +91,6 @@ static struct hfsc_class	*hfsc_class_create(struct hfsc_if *,
 struct hfsc_class *class_create_err_ret(struct hfsc_class *);
 static int			 hfsc_class_destroy(struct hfsc_class *);
 static struct hfsc_class	*hfsc_nextclass(struct hfsc_class *);
-static int			 hfsc_enqueue(struct ifaltq *, struct mbuf *);
-static struct mbuf		*hfsc_dequeue(struct ifaltq *, int);
 
 static int		 hfsc_addq(struct hfsc_class *, struct mbuf *);
 static struct mbuf	*hfsc_getq(struct hfsc_class *);
@@ -178,16 +176,7 @@ static struct hfsc_if *hif_list = NULL;
 int
 hfsc_pfattach(struct pf_altq *a)
 {
-	struct ifnet *ifp;
-	int s, error;
-
-	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
-		return EINVAL;
-	s = splnet();
-	error = altq_attach(&ifp->if_snd, ALTQT_HFSC, a->altq_disc,
-	    hfsc_enqueue, hfsc_dequeue, hfsc_request, NULL, NULL);
-	splx(s);
-	return error;
+	return pf_attach(a, ALTQT_HFSC);
 }
 
 int
