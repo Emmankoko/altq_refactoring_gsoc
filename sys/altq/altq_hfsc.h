@@ -318,9 +318,4 @@ struct hfsc_if {
 }
 #endif
 
-/*
- * include altq_gen here so content can make use of content above
- */
-#include <altq/altq_gen.h>
-
 #endif /* _ALTQ_ALTQ_HFSC_H_ */

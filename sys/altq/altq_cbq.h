@@ -219,9 +219,4 @@ typedef struct cbqstate {
 }
 #endif
 
-/*
- * include altq_gen here so content can make use of content above
- */
-#include <altq/altq_gen.h>
-
 #endif /* !_ALTQ_ALTQ_CBQ_H_ */

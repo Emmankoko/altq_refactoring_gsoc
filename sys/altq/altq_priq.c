@@ -71,10 +71,13 @@ static struct priq_if *priq_attach(struct ifaltq *, u_int);
 static void priq_detach(struct priq_if *);
 #endif
 static int priq_clear_interface(struct priq_if *);
+static int priq_request(struct ifaltq *, int, void *);
 static void priq_purge(struct priq_if *);
 static struct priq_class *priq_class_create(struct priq_if *, int, int, int,
     int);
 static int priq_class_destroy(struct priq_class *);
+static int priq_enqueue(struct ifaltq *, struct mbuf *);
+static struct mbuf *priq_dequeue(struct ifaltq *, int);
 
 static int priq_addq(struct priq_class *, struct mbuf *);
 static struct mbuf *priq_getq(struct priq_class *);
@@ -106,7 +109,16 @@ static struct priq_if *pif_list = NULL;
 int
 priq_pfattach(struct pf_altq *a)
 {
-	return pf_attach(a, ALTQT_PRIQ);
+	struct ifnet *ifp;
+	int s, error;
+
+	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
+		return EINVAL;
+	s = splnet();
+	error = altq_attach(&ifp->if_snd, ALTQT_PRIQ, a->altq_disc,
+	    priq_enqueue, priq_dequeue, priq_request, NULL, NULL);
+	splx(s);
+	return error;
 }
 
 int

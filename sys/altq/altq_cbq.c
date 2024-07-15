@@ -81,8 +81,9 @@ static cbq_state_t *cbq_list = NULL;
 static int		 cbq_class_destroy(cbq_state_t *, struct rm_class *);
 static struct rm_class  *clh_to_clp(cbq_state_t *, u_int32_t);
 static int		 cbq_clear_interface(cbq_state_t *);
-
-
+static int		 cbq_request(struct ifaltq *, int, void *);
+static int		 cbq_enqueue(struct ifaltq *, struct mbuf *);
+static struct mbuf	*cbq_dequeue(struct ifaltq *, int);
 static void		 cbqrestart(struct ifaltq *);
 static void		 get_class_stats(class_stats_t *, struct rm_class *);
 static void		 cbq_purge(cbq_state_t *);
@@ -245,7 +246,16 @@ get_class_stats(class_stats_t *statsp, struct rm_class *cl)
 int
 cbq_pfattach(struct pf_altq *a)
 {
-	return pf_attach(a, ALTQT_CBQ);
+	struct ifnet	*ifp;
+	int		 s, error;
+
+	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
+		return EINVAL;
+	s = splnet();
+	error = altq_attach(&ifp->if_snd, ALTQT_CBQ, a->altq_disc,
+	    cbq_enqueue, cbq_dequeue, cbq_request, NULL, NULL);
+	splx(s);
+	return error;
 }
 
 int
