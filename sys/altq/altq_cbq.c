@@ -75,6 +75,7 @@ __KERNEL_RCSID(0, "$NetBSD: altq_cbq.c,v 1.39 2021/12/31 20:22:48 andvar Exp $")
 static cbq_state_t *cbq_list = NULL;
 #endif
 
+extern struct check pktcheck;
 /*
  * Forward Declarations.
  */
@@ -499,16 +500,14 @@ cbq_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	cbq_state_t	*cbqp = (cbq_state_t *)ifq->altq_disc;
 	struct rm_class	*cl;
 	struct m_tag	*t;
-	int		 len;
+	int	len, error;
 
 	/* grab class set by classifier */
-	if ((m->m_flags & M_PKTHDR) == 0) {
-		/* should not happen */
-		printf("altq: packet for %s does not have pkthdr\n",
-		    ifq->altq_ifp->if_xname);
-		m_freem(m);
+
+	/* check pkthdr in packet */
+	if ((error = pktcheck.pkthdr_check(ifq, m)) != 0)
 		return ENOBUFS;
-	}
+
 	cl = NULL;
 	if ((t = m_tag_find(m, PACKET_TAG_ALTQ_QID)) != NULL)
 		cl = clh_to_clp(cbqp, ((struct altq_tag *)(t+1))->qid);
@@ -543,7 +542,7 @@ cbq_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	/* successfully queued. */
 	++cbqp->cbq_qlen;
 	IFQ_INC_LEN(ifq);
-	return 0;
+	return error;
 }
 
 static struct mbuf *

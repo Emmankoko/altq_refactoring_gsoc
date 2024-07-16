@@ -166,6 +166,14 @@ struct pktcntr {
 	u_int64_t	bytes;
 };
 
+/*
+ * generic functions populated
+ * used for packet header check in hfsc, cbq and priq
+ */
+struct check {
+	int (*pkthdr_check)(struct ifaltq *, struct mbuf *);
+};
+
 #define	PKTCNTR_ADD(cntr, len)	\
 	do { (cntr)->packets++; (cntr)->bytes += len; } while (/*CONSTCOND*/ 0)
 

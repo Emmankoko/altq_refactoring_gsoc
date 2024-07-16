@@ -79,6 +79,7 @@ __KERNEL_RCSID(0, "$NetBSD: altq_hfsc.c,v 1.30 2021/09/21 14:30:15 christos Exp 
 #include <altq/altq_conf.h>
 #endif
 
+extern struct check pktcheck;
 /*
  * function prototypes
  */
@@ -676,16 +677,14 @@ hfsc_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	struct hfsc_if	*hif = (struct hfsc_if *)ifq->altq_disc;
 	struct hfsc_class *cl;
 	struct m_tag *t;
-	int len;
+	int len, error = 0;
 
 	/* grab class set by classifier */
-	if ((m->m_flags & M_PKTHDR) == 0) {
-		/* should not happen */
-		printf("altq: packet for %s does not have pkthdr\n",
-		    ifq->altq_ifp->if_xname);
-		m_freem(m);
+
+	/* check pkthdr in packet */
+	if ((error = pktcheck.pkthdr_check(ifq, m)) != 0)
 		return ENOBUFS;
-	}
+
 	cl = NULL;
 	if ((t = m_tag_find(m, PACKET_TAG_ALTQ_QID)) != NULL)
 		cl = clh_to_clp(hif, ((struct altq_tag *)(t+1))->qid);
@@ -723,7 +722,7 @@ hfsc_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	if (qlen(cl->cl_q) == 1)
 		set_active(cl, m_pktlen(m));
 
-	return 0;
+	return error;
 }
 
 /*

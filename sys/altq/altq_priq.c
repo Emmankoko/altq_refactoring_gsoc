@@ -77,6 +77,7 @@ static struct priq_class *priq_class_create(struct priq_if *, int, int, int,
     int);
 static int priq_class_destroy(struct priq_class *);
 static int priq_enqueue(struct ifaltq *, struct mbuf *);
+int pkthdr_check(struct ifaltq *, struct mbuf *);
 static struct mbuf *priq_dequeue(struct ifaltq *, int);
 
 static int priq_addq(struct priq_class *, struct mbuf *);
@@ -431,16 +432,14 @@ priq_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	struct priq_if	*pif = (struct priq_if *)ifq->altq_disc;
 	struct priq_class *cl;
 	struct m_tag *t;
-	int len;
+	int len, error = 0;
 
 	/* grab class set by classifier */
-	if ((m->m_flags & M_PKTHDR) == 0) {
-		/* should not happen */
-		printf("altq: packet for %s does not have pkthdr\n",
-		    ifq->altq_ifp->if_xname);
-		m_freem(m);
+
+	/* check pkthdr in packet */
+	if ((error = pkthdr_check(ifq, m)) != 0)
 		return ENOBUFS;
-	}
+
 	cl = NULL;
 	if ((t = m_tag_find(m, PACKET_TAG_ALTQ_QID)) != NULL)
 		cl = clh_to_clp(pif, ((struct altq_tag *)(t+1))->qid);
@@ -474,6 +473,19 @@ priq_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	IFQ_INC_LEN(ifq);
 
 	/* successfully queued. */
+	return error;
+}
+
+int
+pkthdr_check(struct ifaltq *ifq, struct mbuf *m)
+{
+	if ((m->m_flags & M_PKTHDR) == 0) {
+		/* should not happen */
+		printf("altq: packet for %s does not have pkthdr\n",
+			ifq->altq_ifp->if_xname);
+		m_freem(m);
+		return ENOBUFS;
+	}
 	return 0;
 }
 
@@ -964,4 +976,8 @@ priqcmd_class_stats(struct priq_class_stats *ap)
 }
 
 #endif /* ALTQ3_COMPAT */
+
+struct check pktcheck = {
+	pkthdr_check
+};
 #endif /* ALTQ_PRIQ */
