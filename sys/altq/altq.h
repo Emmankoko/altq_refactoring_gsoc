@@ -64,6 +64,7 @@
 #define	ALTQT_PRIQ		11	/* priority queue */
 #define	ALTQT_JOBS		12	/* JoBS */
 #define	ALTQT_MAX		13	/* should be max discipline type + 1 */
+#define ALTQT_CODEL     14  /* CoDel */
 
 #ifdef ALTQ3_COMPAT
 struct	altqreq {
