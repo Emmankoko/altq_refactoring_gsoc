@@ -72,9 +72,10 @@ typedef struct _class_queue_	class_queue_t;
 #define	qtail(q)	(q)->tail_		/* Tail of the queue */
 #define	qhead(q)	((q)->tail_ ? (q)->tail_->m_nextpkt : NULL)
 
-#define	qempty(q)	((q)->qlen_ == 0)	/* Is the queue empty?? */
-#define	q_is_red(q)	((q)->qtype_ == Q_RED)	/* Is the queue a red queue */
-#define	q_is_rio(q)	((q)->qtype_ == Q_RIO)	/* Is the queue a rio queue */
+#define	qempty(q)	   ((q)->qlen_ == 0)	/* Is the queue empty?? */
+#define q_is_codel(q)  ((q)->qtype_ == Q_CODEL) /* Is the queue a codel queue */
+#define	q_is_red(q)	   ((q)->qtype_ == Q_RED)	/* Is the queue a red queue */
+#define	q_is_rio(q)	   ((q)->qtype_ == Q_RIO)	/* Is the queue a rio queue */
 #define	q_is_red_or_rio(q)	((q)->qtype_ == Q_RED || (q)->qtype_ == Q_RIO)
 
 #if !defined(__GNUC__) || defined(ALTQ_DEBUG)
