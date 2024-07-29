@@ -150,7 +150,13 @@ struct rm_class {
 	void	(*overlimit)(struct rm_class *, struct rm_class *);
 	void	(*drop)(struct rm_class *);       /* Class drop action. */
 
-	struct red	*red_;		/* RED state pointer */
+	union {
+		struct red	*red_;		/* RED state pointer */
+		struct codel *codel_;   /* CODEL state pointer */
+	}
+#define red_ 		cl_aqm_.red_
+#define codel_		cl_aqm_.codel_;
+
 	struct altq_pktattr *pktattr_;	/* saved hdr used by RED/ECN */
 	int		flags_;
 
@@ -219,6 +225,7 @@ struct rm_ifdat {
 #define	RMCF_RIO		0x0004
 #define	RMCF_FLOWVALVE		0x0008	/* use flowvalve (aka penalty-box) */
 #define	RMCF_CLEARDSCP		0x0010  /* clear diffserv codepoint */
+#define RMCF_CODEL			0x0040
 
 /* flags for rmc_init */
 #define	RMCF_WRR		0x0100
