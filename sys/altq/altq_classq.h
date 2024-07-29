@@ -50,6 +50,7 @@ extern "C" {
 #define	Q_RED		0x01
 #define	Q_RIO		0x02
 #define	Q_DROPTAIL	0x03
+#define Q_CODEL 	0x04
 
 #ifdef _KERNEL
 
