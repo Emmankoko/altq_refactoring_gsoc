@@ -62,6 +62,7 @@ struct _class_queue_ {
 	int	qlen_;		/* Queue length (in number of packets) */
 	int	qlim_;		/* Queue limit (in number of packets*) */
 	int	qtype_;		/* Queue type */
+	int qsize_;		/* Queue size(in number of bytes) */
 };
 
 typedef struct _class_queue_	class_queue_t;
