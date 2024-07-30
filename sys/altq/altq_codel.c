@@ -69,6 +69,7 @@ static int codel_request(struct ifaltq *, int, void *);
 static int codel_enqueue(struct ifaltq *, struct mbuf *, struct altq_pktattr *);
 static struct mbuf *codel_dequeue(struct ifaltq *, int);
 
+#if NPF > 0
 int
 codel_pfattach(struct pf_altq *a)
 {
@@ -173,6 +174,7 @@ codel_getqstats(struct pf_altq *a, void *ubuf, int *nbytes, int version)
 
 	return (0);
 }
+#endif /* NPF */
 
 static int
 codel_request(struct ifaltq *ifq, int req, void *arg)
