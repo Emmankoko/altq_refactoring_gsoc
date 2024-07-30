@@ -30,3 +30,4 @@ file	altq/altq_rio.c		altq
 file	altq/altq_rmclass.c	altq
 file	altq/altq_subr.c	altq
 file	altq/altq_wfq.c		altq
+file 	altq/altq_codel.c	altq
