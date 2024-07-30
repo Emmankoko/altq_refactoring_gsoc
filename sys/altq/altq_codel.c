@@ -72,4 +72,83 @@ codel_pfattach(struct pf_altq *a)
 	    codel_enqueue, codel_dequeue, codel_request));
 }
 
+static int
+codel_request(struct ifaltq *ifq, int req, void *arg)
+{
+	struct codel_if	*cif = (struct codel_if *)ifq->altq_disc;
+	struct mbuf *m;
+
+	IFQ_LOCK_ASSERT(ifq);
+
+	switch (req) {
+	case ALTRQ_PURGE:
+		if (!ALTQ_IS_ENABLED(cif->cif_ifq))
+			break;
+
+		if (qempty(cif->cl_q))
+			break;
+
+		while ((m = _getq(cif->cl_q)) != NULL) {
+			PKTCNTR_ADD(&cif->cl_stats.cl_dropcnt, m_pktlen(m));
+			m_freem(m);
+			IFQ_DEC_LEN(cif->cif_ifq);
+		}
+		cif->cif_ifq->ifq_len = 0;
+		break;
+	}
+
+	return 0;
+}
+
+static int
+codel_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
+{
+
+	struct codel_if *cif = (struct codel_if *) ifq->altq_disc;
+
+	IFQ_LOCK_ASSERT(ifq);
+
+	/* grab class set by classifier */
+	if ((m->m_flags & M_PKTHDR) == 0) {
+		/* should not happen */
+		printf("altq: packet for %s does not have pkthdr\n",
+		   ifq->altq_ifp->if_xname);
+		m_freem(m);
+		PKTCNTR_ADD(&cif->cl_stats.cl_dropcnt, m_pktlen(m));
+		return ENOBUFS;
+	}
+
+	if (codel_addq(&cif->codel, cif->cl_q, m)) {
+		PKTCNTR_ADD(&cif->cl_stats.cl_dropcnt, m_pktlen(m));
+		return ENOBUFS;
+	}
+	IFQ_INC_LEN(ifq);
+
+	return 0;
+}
+
+static struct mbuf *
+codel_dequeue(struct ifaltq *ifq, int op)
+{
+	struct codel_if *cif = (struct codel_if *)ifq->altq_disc;
+	struct mbuf *m;
+
+	IFQ_LOCK_ASSERT(ifq);
+
+	if (IFQ_IS_EMPTY(ifq))
+		return NULL;
+
+	if (op == ALTDQ_POLL)
+		return (qhead(cif->cl_q));
+
+	m = codel_getq(&cif->codel, cif->cl_q);
+	if (m != NULL) {
+		IFQ_DEC_LEN(ifq);
+		PKTCNTR_ADD(&cif->cl_stats.cl_xmitcnt, m_pktlen(m));
+		return m;
+	}
+
+	return NULL;
+}
+
 #endif /* ALTQ_CODEL */
