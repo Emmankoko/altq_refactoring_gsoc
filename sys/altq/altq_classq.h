@@ -69,6 +69,7 @@ typedef struct _class_queue_	class_queue_t;
 #define	qtype(q)	(q)->qtype_		/* Get queue type */
 #define	qlimit(q)	(q)->qlim_		/* Max packets to be queued */
 #define	qlen(q)		(q)->qlen_		/* Current queue length. */
+#define qsize(q)	(q)->qsize_		/* Current queue size(in number of bytes) */
 #define	qtail(q)	(q)->tail_		/* Tail of the queue */
 #define	qhead(q)	((q)->tail_ ? (q)->tail_->m_nextpkt : NULL)
 
