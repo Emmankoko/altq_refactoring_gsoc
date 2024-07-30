@@ -153,7 +153,10 @@ struct rm_class {
 	union {
 		struct red	*red_;		/* RED state pointer */
 		struct codel *codel_;   /* CODEL state pointer */
-	};
+	} cl_aqm_;
+
+#define red_		cl_aqm_.red_;
+#define codel_		cl_aqm_.codel_;
 
 	struct altq_pktattr *pktattr_;	/* saved hdr used by RED/ECN */
 	int		flags_;
