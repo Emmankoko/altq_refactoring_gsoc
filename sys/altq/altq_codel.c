@@ -64,12 +64,16 @@ int
 codel_pfattach(struct pf_altq *a)
 {
 	struct ifnet *ifp;
+	int s, int error;
 
 	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
 		return EINVAL;
 
-	return (altq_attach(&ifp->if_snd, ALTQT_CODEL, a->altq_disc,
-	    codel_enqueue, codel_dequeue, codel_request));
+	s = splnet();
+	error =  altq_attach(&ifp->if_snd, ALTQT_CODEL, a->altq_disc,
+	    codel_enqueue, codel_dequeue, codel_request, NULL, NULL);
+	splx(s);
+	return error;
 }
 
 static int
