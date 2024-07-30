@@ -282,7 +282,7 @@ codel_addq(struct codel *c, class_queue_t *q, struct mbuf *m)
 	if (qlen(q) < qlimit(q)) {
 		mtag = m_tag_find(m, PACKET_TAG_ALTQ_QID);
 		if (mtag == NULL) {
-			mtag = m_tag_alloc(MTAG_CODEL, 0, sizeof(uint64_t),
+			mtag = m_tag_get(PACKET_TAG_ALTQ_QID, sizeof(uint64_t),
 			    M_NOWAIT);
 			if (mtag != NULL)
 				m_tag_prepend(m, mtag);
