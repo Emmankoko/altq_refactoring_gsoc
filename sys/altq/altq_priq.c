@@ -320,6 +320,7 @@ priq_class_create(struct priq_if *pif, int pri, int qlimit, int flags, int qid)
 #ifdef ALTQ_CODEL
 		if (q_is_codel(cl->cl_q))
 			codel_destroy(cl->cl_codel);
+#endif
 	} else {
 		cl = malloc(sizeof(struct priq_class), M_DEVBUF,
 		    M_WAITOK|M_ZERO);
