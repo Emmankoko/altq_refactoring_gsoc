@@ -104,9 +104,10 @@ struct hfsc_classstats {
 	u_int			parentperiod;	/* parent's vt period seqno */
 	int			nactive;	/* number of active children */
 
-	/* red and rio related info */
+	/* codel,red and rio related info */
 	int			qtype;
 	struct redstats		red[3];
+	struct codel_stats codel;
 };
 
 #ifdef ALTQ3_COMPAT
