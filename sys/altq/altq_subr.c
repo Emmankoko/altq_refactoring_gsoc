@@ -639,7 +639,7 @@ altq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 #endif
 #ifdef ALTQ_CODEL
 	case ALTQT_CODEL
-		error = codel_getstats(a, ubuf, nbytes);
+		error = codel_getqstats(a, ubuf, nbytes);
 		break;
 #endif
 	default:
