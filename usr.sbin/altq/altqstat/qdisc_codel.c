@@ -1,5 +1,5 @@
-/*	$NetBSD: altqstat.h,v 1.5 2006/10/12 19:59:13 peter Exp $	*/
-/*	$KAME: altqstat.h,v 1.5 2002/10/26 06:59:54 kjc Exp $	*/
+/*	$NetBSD: qdisc_red.c,v 1.5 2006/10/28 11:43:02 peter Exp $	*/
+/*	$KAME: qdisc_red.c,v 1.5 2002/11/08 06:36:18 kjc Exp $	*/
 /*
  * Copyright (C) 1999-2000
  *	Sony Computer Science Laboratories, Inc.  All rights reserved.
@@ -26,42 +26,46 @@
  * SUCH DAMAGE.
  */
 
-typedef void (stat_loop_t)(int fd, const char *ifname,
-			   int count, int interval);
+#include <sys/param.h>
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <altq/altq.h>
+#include <altq/altq_codel.h>
 
-struct qdisc_conf {
-	const char	*qdisc_name;		/* e.g., cbq */
-	int		altqtype;		/* e.g., ALTQT_CBQ */
-	stat_loop_t	*stat_loop;
-};
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <errno.h>
+#include <err.h>
+
+#include "altqstat.h"
 
 /*
- * cast u_int64_t to ull for printf, since type of u_int64_t
- * is architecture dependent
+ * For Userland codel stats, 
+ * We use codel_stats for printing statistics
+ * And use codel_ifstats for codel interfaces
  */
-typedef	unsigned long long	ull;
 
-stat_loop_t cbq_stat_loop;
-stat_loop_t hfsc_stat_loop;
-stat_loop_t cdnr_stat_loop;
-stat_loop_t wfq_stat_loop;
-stat_loop_t fifoq_stat_loop;
-stat_loop_t red_stat_loop;
-stat_loop_t rio_stat_loop;
-stat_loop_t blue_stat_loop;
-stat_loop_t priq_stat_loop;
-stat_loop_t jobs_stat_loop;
+static int avg_scale = 4096;	/* default fixed-point scale */
 
-struct redstats;
-struct codel_stats;
+/*
+ * TODO: implement codel stats loop when used on an interface command
+ * void
+ * codel_stat_loop(//params)
+ */
 
-void chandle2name(const char *, u_long, char *, size_t);
-stat_loop_t *qdisc2stat_loop(const char *);
-int ifname2qdisc(const char *, char *);
-double calc_interval(struct timeval *, struct timeval *);
-double calc_rate(u_int64_t, u_int64_t, double);
-double calc_pps(u_int64_t, u_int64_t, double);
-char *rate2str(double);
-int print_redstats(struct redstats *);
-int print_riostats(struct redstats *);
-int print_codelstats(struct codel_stats *);
+/* Codel uses fewer parameters as compared to RED and RIO */
+int
+print_codelstats(struct codel_stats *cod)
+{
+	printf("     CoDel xmit:%llu (maxpacket:%u marked:%u)\n",
+	       (ull)cod->xmit_cnt.packets, 
+	       cod->maxpacket,
+	       cod->marked_packets);
+	return 0;
+}
