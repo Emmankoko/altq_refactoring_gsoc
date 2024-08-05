@@ -442,7 +442,7 @@ int
 codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		struct lwp *l )
 {
-	struct codel_if cod;
+	struct codel_if *cod;
 	struct codel_interface *ifacep;
 	struct ifnet *ifp;
 	int error = 0;
