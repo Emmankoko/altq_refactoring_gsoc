@@ -500,11 +500,6 @@ altq_add(struct pf_altq *a)
 		error = hfsc_add_altq(a);
 		break;
 #endif
-#ifdef ALTQ_CODEL
-	case ALTQT_CODEL:
-		error = codel_add_altq(ifp, a);
-		break;
-#endif
 	default:
 		error = ENXIO;
 	}
@@ -638,7 +633,7 @@ altq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 		break;
 #endif
 #ifdef ALTQ_CODEL
-	case ALTQT_CODEL
+	case ALTQT_CODEL:
 		error = codel_getqstats(a, ubuf, nbytes);
 		break;
 #endif
