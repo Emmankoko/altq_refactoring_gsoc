@@ -897,7 +897,7 @@ hfsc_getq(struct hfsc_class *cl)
 #endif
 #ifdef ALTQ_CODEL
 	if (q_is_codel(cl->cl_q))
-		return codel_getq(cl->cl-codel, cl->cl_q);
+		return codel_getq(cl->cl_codel, cl->cl_q);
 #endif
 	return _getq(cl->cl_q);
 }
