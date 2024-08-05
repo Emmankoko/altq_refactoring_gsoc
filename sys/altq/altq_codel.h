@@ -105,7 +105,7 @@ struct codel_vars {
 	u_int64_t	drop_next;
 	u_int64_t	ldelay;
 };
-        
+
 struct codel {
 	int			last_pps;
 	struct codel_params	params;
@@ -118,6 +118,7 @@ struct codel {
 /*
  * codel interface state
  */
+#ifdef ALTQ3_COMPAT
 struct codel_if {
 	struct codel_if		*cif_next;	/* interface state list */
 	struct ifaltq		*cif_ifq;	/* backpointer to ifaltq */
@@ -129,6 +130,7 @@ struct codel_if {
 	/* statistics */
 	struct codel_ifstats cl_stats;
 };
+#endif /* ALTQ3_COMPAT */
 
 struct codel	*codel_alloc(int, int, int);
 void		 codel_destroy(struct codel *);

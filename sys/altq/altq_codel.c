@@ -55,7 +55,7 @@
 #include <altq/altq_codel.h>
 
 /* codel interface state list to keep all codel states allocated*/
-static codel_if *codel_list = NULL;
+static struct codel_if *codel_list = NULL;
 
 #define CODEL_LIMIT 1000
 #define DEF_TARG	5

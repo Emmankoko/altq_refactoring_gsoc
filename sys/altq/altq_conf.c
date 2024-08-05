@@ -90,6 +90,9 @@ altqdev_decl(priq);
 #ifdef ALTQ_JOBS
 altqdev_decl(jobs);
 #endif
+#ifdef ALTQ_CODEL
+altqdev_decl(codel);
+#endif
 
 /*
  * altq minor device (discipline) table
@@ -171,7 +174,7 @@ const struct cdevsw altq_cdevsw = {
 	.d_open = altqopen,
 	.d_close = altqclose,
 	.d_read = noread,
-	.d_write = nowrite, 
+	.d_write = nowrite,
 	.d_ioctl = altqioctl,
 	.d_stop = nostop,
 	.d_tty = notty,
