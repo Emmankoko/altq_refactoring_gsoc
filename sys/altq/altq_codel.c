@@ -52,6 +52,7 @@
 
 #include <altq/if_altq.h>
 #include <altq/altq.h>
+#include <altq/altq_conf.h>
 #include <altq/altq_codel.h>
 
 /* codel interface state list to keep all codel states allocated*/
@@ -664,8 +665,13 @@ codel_detach(struct codel_if *cif)
 				break;
 			}
 		if (tmp == NULL)
-			printf("codel_detach: no state found in red_list!\n");
+			printf("codel_detach: no state found in codel_list!\n");
 	}
+	codel_destroy(cif->codel);
+	free(cif->cl_q, M_DEVBUF);
+	free(cif, M_DEVBUF);
+	return (error);
+}
 }
 
 #endif /* ALTQ3_COMPAT */
