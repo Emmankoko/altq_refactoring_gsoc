@@ -667,7 +667,7 @@ codel_detach(struct codel_if *cif)
 		if (tmp == NULL)
 			printf("codel_detach: no state found in codel_list!\n");
 	}
-	codel_destroy(&(cif->codel));
+	codel_destroy(cif->codel);
 	free(cif->cl_q, M_DEVBUF);
 	free(cif, M_DEVBUF);
 	return (error);

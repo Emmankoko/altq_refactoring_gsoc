@@ -125,7 +125,7 @@ struct codel_if {
 	u_int			cif_bandwidth;	/* link bandwidth in bps */
 
 	class_queue_t	*cl_q;		/* class queue structure */
-	struct codel	codel;
+	struct codel	*codel;
 
 	/* statistics */
 	struct codel_ifstats cl_stats;
