@@ -439,7 +439,7 @@ codelclose(dev_t dev, int flag, int fmt,
 }
 
 int
-codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag
+codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 		struct lwp *l )
 {
 	struct codel_if cod;
@@ -667,7 +667,7 @@ codel_detach(struct codel_if *cif)
 		if (tmp == NULL)
 			printf("codel_detach: no state found in codel_list!\n");
 	}
-	codel_destroy(cif->codel);
+	codel_destroy(&(cif->codel));
 	free(cif->cl_q, M_DEVBUF);
 	free(cif, M_DEVBUF);
 	return (error);
