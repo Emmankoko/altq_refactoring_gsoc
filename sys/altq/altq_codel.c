@@ -672,7 +672,6 @@ codel_detach(struct codel_if *cif)
 	free(cif, M_DEVBUF);
 	return (error);
 }
-}
 
 #endif /* ALTQ3_COMPAT */
 
