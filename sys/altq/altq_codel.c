@@ -78,7 +78,7 @@ static u_int64_t	 codel_control_law(u_int64_t t, u_int64_t, u_int32_t);
 #ifdef ALTQ3_COMPAT
 static int codel_request(struct ifaltq *, int, void *);
 
-static int codel_enqueue(struct ifaltq *, struct mbuf *, struct altq_pktattr *);
+static int codel_enqueue(struct ifaltq *, struct mbuf *);
 static struct mbuf *codel_dequeue(struct ifaltq *, int);
 static int codel_detach(struct codel_if *);
 #endif /* ALTQ3_COMPAT */
@@ -474,9 +474,9 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 				break;
 			}
 
-			/* allocate and initialize red_queue_t */
+			/* allocate and initialize codel_queue state */
 			cod = malloc(sizeof(struct codel_if), M_DEVBUF, M_WAITOK|M_ZERO);
-			if (rqp == NULL) {
+			if (cod == NULL) {
 				error = ENOMEM;
 				break;
 			}
@@ -504,11 +504,11 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 			qtype(cod->cl_q) = Q_CODEL;
 
 			/*
-			* set RED to this ifnet structure.
+			* set CODEL to this ifnet structure.
 			*/
-			error = altq_attach(cod->cif_ifq, ALTQT_CODEL, cod,
-						codel_enqueue, codel_dequeue, codel_request,
-						NULL, NULL);
+			error =  altq_attach(&ifp->if_snd, ALTQT_CODEL, cod,
+	    		codel_enqueue, codel_dequeue, codel_request, NULL, NULL);
+
 			if (error) {
 				codel_destroy(cod->codel);
 				free(cod->cl_q, M_DEVBUF);
@@ -516,9 +516,9 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 				break;
 			}
 
-			/* add this state to the red list */
-			cod->cif_next = cod_list;
-			cod_list = cod;
+			/* add this state to the codel list */
+			cod->cif_next = codel_list;
+			codel_list = cod;
 			break;
 
 		case CODEL_IF_DETACH:
@@ -530,7 +530,7 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 			error = codel_detach(cod);
 			break;
 
-		case RED_GETSTATS:
+		case CODEL_GETSTATS:
 			do {
 				struct codel_ifstats *q_stats;
 				struct codel *cd;
@@ -556,7 +556,7 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 
 		case CODEL_SETDEFAULTS:
 			do {
-				struct codel_params cd;
+				struct codel_params *cd;
 				cd = (struct codel_params *)addr;
 
 				default_target = cd->target;
@@ -598,7 +598,7 @@ codel_request(struct ifaltq *ifq, int req, void *arg)
 }
 
 static int
-codel_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
+codel_enqueue(struct ifaltq *ifq, struct mbuf *m)
 {
 
 	struct codel_if *cif = (struct codel_if *) ifq->altq_disc;
@@ -613,7 +613,7 @@ codel_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
 		return ENOBUFS;
 	}
 
-	if (codel_addq(&cif->codel, cif->cl_q, m)) {
+	if (codel_addq(cif->codel, cif->cl_q, m)) {
 		PKTCNTR_ADD(&cif->cl_stats.cl_dropcnt, m_pktlen(m));
 		return ENOBUFS;
 	}
@@ -634,7 +634,7 @@ codel_dequeue(struct ifaltq *ifq, int op)
 	if (op == ALTDQ_POLL)
 		return (qhead(cif->cl_q));
 
-	m = codel_getq(&cif->codel, cif->cl_q);
+	m = codel_getq(cif->codel, cif->cl_q);
 	if (m != NULL) {
 		IFQ_DEC_LEN(ifq);
 		PKTCNTR_ADD(&cif->cl_stats.cl_xmitcnt, m_pktlen(m));
