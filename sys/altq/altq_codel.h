@@ -31,6 +31,24 @@
 #ifndef _ALTQ_ALTQ_CODEL_H_
 #define	_ALTQ_ALTQ_CODEL_H_
 
+#include <altq/altq_classq.h>
+
+#ifdef ALTQ3_COMPAT
+struct codel_interface {
+	char codel_ifname[IFNAMSIZ];
+};
+
+
+/* configuration elemtents for CoDel */
+struct codel_conf {
+	int target;		/* queueing delay target*/
+	int interval;	/* time period over delay */
+	int ecn;		/*checks whether ecn is enabled */
+	int limit;		/* maximum number of packets */
+};
+
+#endif /* ALTQ3_COMPAT */
+
 struct codel_stats {
 	u_int32_t	maxpacket;
 	struct pktcntr	drop_cnt;
@@ -38,6 +56,7 @@ struct codel_stats {
 };
 
 struct codel_ifstats {
+	struct codel_interface iface;
 	u_int			qlength;
 	u_int			qlimit;
 	struct codel_stats	stats;
@@ -52,7 +71,6 @@ struct codel_ifstats {
  */
 
 #ifdef _KERNEL
-#include <altq/altq_classq.h>
 
 /**
  * struct codel_params - contains codel parameters
@@ -120,4 +138,18 @@ void		 codel_getstats(struct codel *, struct codel_stats *);
 
 #endif /* _KERNEL */
 
+#ifdef ALTQ3_COMPAT
+/*
+ * IOCTLs for CoDel
+ */
+
+#define CODEL_IF_ATTACH			_IOW('Q', 1, struct codel_interface);
+#define CODEL_IF_DETACH			_IOW('Q', 2, struct codel_interface);
+#define CODEL_ENABLE			_IOW('Q', 3, struct codel_interface);
+#define CODEL_DISABLE			_IOW('Q', 4, struct codel_interface);
+#define CODEL_CONFIG			_IOW('Q', 6, struct codel_conf);
+#define CODEL_GETSTATS			_IOW('Q', 12, struct codel_ifstats);
+#define CODEL_SETDEFAULTS		_IOW('Q', 30, struct codel_params);
+
+#endif /* ALTQ3_COMPAT*/
 #endif /* _ALTQ_ALTQ_CODEL_H_ */
