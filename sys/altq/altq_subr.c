@@ -503,6 +503,7 @@ altq_add(struct pf_altq *a)
 #ifdef ALTQ_CODEL
 	case ALTQT_CODEL:
 		error = codel_add_altq(a);
+		break;
 #endif
 	default:
 		error = ENXIO;
