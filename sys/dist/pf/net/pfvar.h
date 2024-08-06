@@ -729,7 +729,7 @@ struct pf_state_key {
 	RB_ENTRY(pf_state_key)	 entry_lan_ext;
 	RB_ENTRY(pf_state_key)	 entry_ext_gwy;
 	struct pf_statelist	 states;
-	u_short		 refcnt;	/* same size as if_index */	 
+	u_short		 refcnt;	/* same size as if_index */
 };
 
 
@@ -1280,6 +1280,12 @@ struct hfsc_opts {
 	int		flags;
 };
 
+struct codel_opts {
+	int interval;
+	int target;
+	int ecn;
+};
+
 struct pf_altq {
 	char			 ifname[IFNAMSIZ];
 
@@ -1303,6 +1309,7 @@ struct pf_altq {
 		struct cbq_opts		 cbq_opts;
 		struct priq_opts	 priq_opts;
 		struct hfsc_opts	 hfsc_opts;
+		struct codel_opts	 codel_opts;
 	} pq_u;
 
 	u_int32_t		 qid;		/* return value */

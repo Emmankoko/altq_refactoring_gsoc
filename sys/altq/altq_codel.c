@@ -92,7 +92,7 @@ int
 codel_pfattach(struct pf_altq *a)
 {
 	struct ifnet *ifp;
-	int s, int error;
+	int s, error;
 
 	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
 		return EINVAL;
@@ -141,10 +141,10 @@ codel_add_altq( struct pf_altq *a)
 		opts->target = 5;
 	if (opts->interval == 0)
 		opts->interval = 100;
-	cif->codel.params.target = machclk_freq * opts->target / 1000;
-	cif->codel.params.interval = machclk_freq * opts->interval / 1000;
-	cif->codel.params.ecn = opts->ecn;
-	cif->codel.stats.maxpacket = 256;
+	cif->codel->params.target = machclk_freq * opts->target / 1000;
+	cif->codel->params.interval = machclk_freq * opts->interval / 1000;
+	cif->codel->params.ecn = opts->ecn;
+	cif->codel->stats.maxpacket = 256;
 
 	cif->cl_stats.qlength = qlen(cif->cl_q);
 	cif->cl_stats.qlimit = qlimit(cif->cl_q);
@@ -185,7 +185,7 @@ codel_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 		return (EINVAL);
 
 	stats = cif->cl_stats;
-	stats.stats = cif->codel.stats;
+	stats.stats = cif->codel->stats;
 
 	if ((error = copyout((caddr_t)&stats, ubuf, sizeof(stats))) != 0)
 		return (error);
