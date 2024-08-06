@@ -30,8 +30,12 @@
  * CoDel - The Controlled-Delay Active Queue Management algorithm
  */
 
+#ifdef _KERNEL_OPT
 #include "opt_altq.h"
 #include "opt_inet.h"
+#include "pf.h"
+#endif
+
 #ifdef ALTQ_CODEL	/* cbq is enabled by ALTQ_CBQ option in opt_altq.h */
 
 #include <sys/param.h>
@@ -101,12 +105,13 @@ codel_pfattach(struct pf_altq *a)
 }
 
 int
-codel_add_altq(struct ifnet *ifp, struct pf_altq *a)
+codel_add_altq( struct pf_altq *a)
 {
+	struct ifnet *ifp;
 	struct codel_if	*cif;
 	struct codel_opts	*opts;
 
-	if (ifp == NULL)
+	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
 		return (EINVAL);
 	if (!ALTQ_IS_READY(&ifp->if_snd))
 		return (ENODEV);
