@@ -187,7 +187,7 @@ codel_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 	stats = cif->cl_stats;
 	stats.stats = cif->codel->stats;
 
-	if ((error = copyout((caddr_t)&stats, ubuf, sizeof(stats))) != 0)
+	if ((error = copyout((void *)&stats, ubuf, sizeof(stats))) != 0)
 		return (error);
 	*nbytes = sizeof(stats);
 
