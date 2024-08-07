@@ -360,7 +360,7 @@ codel_getq(struct codel *c, class_queue_t *q)
 						  * divide */
 				codel_Newton_step(&c->vars);
 				/* TODO ECN */
-				PKTCNTR_ADD(&c->stats.drop_cnt, m_pktlen(m));
+				PKTCNTR_ADD(&c->stats.cl_dropcnt, m_pktlen(m));
 				m_freem(m);
 				m = _getq(q);
 				if (!codel_should_drop(c, q, m, now))
@@ -376,7 +376,7 @@ codel_getq(struct codel *c, class_queue_t *q)
 		}
 	} else if (drop) {
 		/* TODO ECN */
-		PKTCNTR_ADD(&c->stats.drop_cnt, m_pktlen(m));
+		PKTCNTR_ADD(&c->stats.cl_dropcnt, m_pktlen(m));
 		m_freem(m);
 
 		m = _getq(q);
