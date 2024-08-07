@@ -41,6 +41,7 @@ struct codel_interface {
 
 /* configuration elemtents for CoDel */
 struct codel_conf {
+	struct codel_interface iface;
 	int target;		/* queueing delay target*/
 	int interval;	/* time period over delay */
 	int ecn;		/*checks whether ecn is enabled */
