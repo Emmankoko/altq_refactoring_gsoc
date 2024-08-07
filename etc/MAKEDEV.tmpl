@@ -708,7 +708,7 @@ makedev_main()
 		} 4>&1 1>&3 \
 		| (
 			read status1;
-			read status2; 
+			read status2;
 			case "$status1,$status2" in
 			0,0) exit 0;;
 			0,*) exit $status2;;
@@ -1732,7 +1732,7 @@ dpt[0-9]*)
 altq)
 	makedir altq 755
 	unit=0
-	for dev in altq cbq wfq afm fifoq red rio localq hfsc cdnr blue priq jobs
+	for dev in altq cbq wfq codel afm fifoq red rio localq hfsc cdnr blue priq jobs
 	do
 		mkdev altq/$dev c %altq_chr% $unit 644
 		unit=$(($unit + 1))
