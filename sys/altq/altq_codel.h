@@ -52,8 +52,9 @@ struct codel_conf {
 
 struct codel_stats {
 	u_int32_t	maxpacket;
-	struct pktcntr	drop_cnt;
-	u_int		marked_packets;
+	u_int	marked_packets;
+	struct pktcntr	cl_dropcnt;
+	struct pktcntr	cl_xmitcnt;	/* transmitted packet counter */
 };
 
 struct codel_ifstats {
@@ -61,8 +62,6 @@ struct codel_ifstats {
 	u_int			qlength;
 	u_int			qlimit;
 	struct codel_stats	stats;
-	struct pktcntr	cl_xmitcnt;	/* transmitted packet counter */
-	struct pktcntr	cl_dropcnt;	/* dropped packet counter */
 };
 
 /*

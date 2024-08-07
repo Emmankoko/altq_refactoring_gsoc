@@ -552,9 +552,10 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 
 				cd = cod->codel;
 
-				q_stats->cl_dropcnt = cd->stats.drop_cnt;
 				q_stats->stats.maxpacket = cd->stats.maxpacket;
 				q_stats->stats.marked_packets = cd->stats.marked_packets;
+				q_stats->stats.cl_xmitcnt = cd->stats.cl_xmitcnt;
+				q_stats->stats.cl_dropcnt = cd->stats.cl_dropcnt;
 
 			} while (/* CONSTCOND */ 0);
 			break;
@@ -591,7 +592,7 @@ codel_request(struct ifaltq *ifq, int req, void *arg)
 			break;
 
 		while ((m = _getq(cif->cl_q)) != NULL) {
-			PKTCNTR_ADD(&cif->cl_stats.cl_dropcnt, m_pktlen(m));
+			PKTCNTR_ADD(&cif->cl_stats.stats.cl_dropcnt, m_pktlen(m));
 			m_freem(m);
 			IFQ_DEC_LEN(cif->cif_ifq);
 		}
@@ -614,12 +615,12 @@ codel_enqueue(struct ifaltq *ifq, struct mbuf *m)
 		printf("altq: packet for %s does not have pkthdr\n",
 		   ifq->altq_ifp->if_xname);
 		m_freem(m);
-		PKTCNTR_ADD(&cif->cl_stats.cl_dropcnt, m_pktlen(m));
+		PKTCNTR_ADD(&cif->cl_stats.stats.cl_dropcnt, m_pktlen(m));
 		return ENOBUFS;
 	}
 
 	if (codel_addq(cif->codel, cif->cl_q, m)) {
-		PKTCNTR_ADD(&cif->cl_stats.cl_dropcnt, m_pktlen(m));
+		PKTCNTR_ADD(&cif->cl_stats.stats.cl_dropcnt, m_pktlen(m));
 		return ENOBUFS;
 	}
 	IFQ_INC_LEN(ifq);
@@ -642,7 +643,7 @@ codel_dequeue(struct ifaltq *ifq, int op)
 	m = codel_getq(cif->codel, cif->cl_q);
 	if (m != NULL) {
 		IFQ_DEC_LEN(ifq);
-		PKTCNTR_ADD(&cif->cl_stats.cl_xmitcnt, m_pktlen(m));
+		PKTCNTR_ADD(&cif->cl_stats.stats.cl_xmitcnt, m_pktlen(m));
 		return m;
 	}
 
