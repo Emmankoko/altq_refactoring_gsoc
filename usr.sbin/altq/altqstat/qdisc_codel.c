@@ -1,5 +1,3 @@
-/*	$NetBSD: qdisc_red.c,v 1.5 2006/10/28 11:43:02 peter Exp $	*/
-/*	$KAME: qdisc_red.c,v 1.5 2002/11/08 06:36:18 kjc Exp $	*/
 /*
  * Copyright (C) 1999-2000
  *	Sony Computer Science Laboratories, Inc.  All rights reserved.
@@ -46,25 +44,67 @@
 #include "altqstat.h"
 
 /*
- * For Userland codel stats, 
+ * For Userland codel stats,
  * We use codel_stats for printing statistics
  * And use codel_ifstats for codel interfaces
  */
 
-static int avg_scale = 4096;	/* default fixed-point scale */
+void
+codel_stat_loop(int fd, const char *ifname, int count, int interval)
+{
+	struct codel_ifstats codel_stats;
+	struct timeval cur_time, last_time;
+	u_int64_t last_bytes;
+	double sec;
+	int cnt = count;
+	sigset_t		omask;
 
-/*
- * TODO: implement codel stats loop when used on an interface command
- * void
- * codel_stat_loop(//params)
- */
+	strlcpy(codel_stats.iface.codel_ifname, ifname,
+		sizeof(codel_stats.iface.codel_ifname));
 
-/* Codel uses fewer parameters as compared to RED and RIO */
+	gettimeofday(&last_time, NULL);
+	last_time.tv_sec -= interval;
+	last_bytes = 0;
+
+	for (;;) {
+		if (ioctl(fd, CODEL_GETSTATS, &codel_stats) < 0)
+			err(1, "ioctl CODEL_GETSTATS");
+
+		gettimeofday(&cur_time, NULL);
+		sec = calc_interval(&cur_time, &last_time);
+
+		printf(" q_len:%d , q_limit:%d , maxpacket:\n",
+		       codel_stats.qlength,
+		       codel_stats.qlimit, codel_stats.stats.maxpacket);
+		printf(" xmit:%llu pkts, drop:%llu pkts \n",
+		       (ull)codel_stats.cl_xmitcnt.packets,
+		       (ull)codel_stats.cl_dropcnt.packets)
+		if (codel_stats.stats.marked_packets != 0)
+			printf(" marked: %u\n", codel_stats.stats.marked_packets);
+		printf(" throughput: %sbps\n",
+		       rate2str(calc_rate(codel_stats.cl_xmitcnt.bytes,
+					  last_bytes, sec)));
+		}
+		printf("\n");
+
+		last_bytes = codel_stats.cl_xmitcnt.bytes;
+		last_time = cur_time;
+
+		if (count != 0 && --cnt == 0)
+			break;
+
+		/* wait for alarm signal */
+		if (sigprocmask(SIG_BLOCK, NULL, &omask) == 0)
+			sigsuspend(&omask);
+	}
+}
+
+/* Codel stats to be used on other disciplines */
 int
 print_codelstats(struct codel_stats *cod)
 {
 	printf("     CoDel xmit:%llu (maxpacket:%u marked:%u)\n",
-	       (ull)cod->xmit_cnt.packets, 
+	       (ull)cod->xmit_cnt.packets,
 	       cod->maxpacket,
 	       cod->marked_packets);
 	return 0;
