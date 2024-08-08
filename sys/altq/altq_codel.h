@@ -42,13 +42,16 @@ struct codel_interface {
 /* configuration elemtents for CoDel */
 struct codel_conf {
 	struct codel_interface iface;
-	int target;		/* queueing delay target*/
-	int interval;	/* time period over delay */
+	u_int64_t target;		/* queueing delay target*/
+	u_int64_t interval;	/* time period over delay */
 	int ecn;		/*checks whether ecn is enabled */
 	int limit;		/* maximum number of packets */
 };
 
 #endif /* ALTQ3_COMPAT */
+
+/*codel flags*/
+#define CODEL_ECN	0x01	/* for marking packets*/
 
 struct codel_stats {
 	u_int32_t	maxpacket;
