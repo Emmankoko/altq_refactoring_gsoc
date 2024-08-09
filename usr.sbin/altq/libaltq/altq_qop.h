@@ -182,6 +182,7 @@ u_long atobps(const char *s);
 u_long atobytes(const char *s);
 int qop_red_set_defaults(int th_min, int th_max, int inv_pmax);
 int qop_rio_set_defaults(struct redparams *params);
+int qop_codel_set_defaults(u_int64_t target, u_int64_t interval, int ecn);
 int open_module(const char *devname, int flags);
 int client_input(FILE *fp);
 

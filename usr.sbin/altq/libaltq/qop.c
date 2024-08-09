@@ -53,6 +53,7 @@
 #include <altq/altq_red.h>
 #include <altq/altq_rio.h>
 #include <altq/altq_cdnr.h>
+#include <altq/altq_codel.h>
 #include "altq_qop.h"
 #include "qop_cdnr.h"
 
@@ -60,6 +61,7 @@
 #define RED_DEVICE	"/dev/altq/red"
 #define RIO_DEVICE	"/dev/altq/rio"
 #define CDNR_DEVICE	"/dev/altq/cdnr"
+#define CODEL_DEVICE "/dev/altq/codel"
 
 #ifndef LIST_HEAD_INITIALIZER
 #define LIST_HEAD_INITIALIZER(head)	{ NULL }
@@ -173,7 +175,7 @@ qcmd_disableall()
 {
 	struct ifinfo	*ifinfo;
 	int	lerr, error = 0;
-	
+
 	LIST_FOREACH(ifinfo, &qop_iflist, next)
 		if ((lerr = qop_disable(ifinfo)) != 0)
 			if (error == 0)
@@ -189,7 +191,7 @@ qcmd_clear(const char *ifname)
 
 	if ((ifinfo = ifname2ifinfo(ifname)) == NULL)
 		error = QOPERR_BADIF;
-		
+
 	if (error == 0)
 		error = qop_clear(ifinfo);
 	if (error != 0)
@@ -278,7 +280,7 @@ qcmd_delete_filter(const char *ifname, const char *clname, const char *flname)
 	struct classinfo	*clinfo = NULL;
 	struct fltrinfo		*fltrinfo = NULL;
 	int error = 0;
-	
+
 	if ((ifinfo = ifname2ifinfo(ifname)) == NULL)
 		error = QOPERR_BADIF;
 
@@ -463,7 +465,7 @@ qop_clear(struct ifinfo *ifinfo)
 	} else {
 		/* input interface. delete from parents */
 		struct classinfo *root = get_rootclass(ifinfo);
-		
+
 		while (!LIST_EMPTY(&ifinfo->cllist)) {
 			LIST_FOREACH(clinfo, &ifinfo->cllist, next)
 				if (clinfo->parent == root) {
@@ -474,7 +476,7 @@ qop_clear(struct ifinfo *ifinfo)
 				qop_delete_class(root);
 		}
 	}
-	
+
 	/* clear the interface */
 	if (ifinfo->qdisc->clear != NULL)
 		return (*ifinfo->qdisc->clear)(ifinfo);
@@ -483,7 +485,7 @@ qop_clear(struct ifinfo *ifinfo)
 
 int
 qop_add_class(struct classinfo **rp, const char *clname,
-	      struct ifinfo *ifinfo, struct classinfo *parent, 
+	      struct ifinfo *ifinfo, struct classinfo *parent,
 	      void *class_private)
 {
 	struct classinfo	*clinfo;
@@ -659,7 +661,7 @@ const char *
 qoperror(int qoperrno)
 {
 	static char buf[64];
-	
+
 	if (qoperrno <= QOPERR_MAX)
 		return (qop_errlist[qoperrno]);
 	snprintf(buf, sizeof(buf), "unknown error %d", qoperrno);
@@ -697,7 +699,7 @@ struct classinfo *
 clname2clinfo(const struct ifinfo *ifinfo, const char *clname)
 {
 	struct classinfo	*clinfo;
-	
+
 	LIST_FOREACH(clinfo, &ifinfo->cllist, next)
 		if (clinfo->clname != NULL &&
 		    strcmp(clinfo->clname, clname) == 0)
@@ -720,7 +722,7 @@ struct fltrinfo *
 flname2flinfo(const struct classinfo *clinfo, const char *flname)
 {
 	struct fltrinfo	*fltrinfo;
-	
+
 	LIST_FOREACH(fltrinfo, &clinfo->fltrlist, next)
 		if (fltrinfo->flname != NULL &&
 		    strcmp(fltrinfo->flname, flname) == 0)
@@ -793,7 +795,7 @@ atobps(const char *s)
 {
 	double bandwidth;
 	char *cp;
-			
+
 	bandwidth = strtod(s, &cp);
 	if (cp != NULL) {
 		if (*cp == 'K' || *cp == 'k')
@@ -813,7 +815,7 @@ atobytes(const char *s)
 {
 	double bytes;
 	char *cp;
-			
+
 	bytes = strtod(s, &cp);
 	if (cp != NULL) {
 		if (*cp == 'K' || *cp == 'k')
@@ -828,7 +830,7 @@ atobytes(const char *s)
 	return ((u_long)bytes);
 }
 
-static int 
+static int
 get_ifmtu(const char *ifname)
 {
 	int s, mtu;
@@ -879,7 +881,7 @@ tbr_install(const char *ifname)
 	/* save the current values */
 	info->otb_prof.rate = req.tb_prof.rate;
 	info->otb_prof.depth = req.tb_prof.depth;
-	
+
 	/*
 	 * if tbr is not specified in the config file and tbr is already
 	 * configured, do not change.
@@ -898,7 +900,7 @@ tbr_install(const char *ifname)
 	/* if the new size is not specified, use heuristics */
 	if (info->tb_prof.depth == 0) {
 		u_int rate, size;
-		
+
 		rate = info->tb_prof.rate;
 		if (rate <= 1*1000*1000)
 			size = 1;
@@ -980,7 +982,7 @@ print_filter(const struct flow_filter *filt)
 		char str1[INET6_ADDRSTRLEN], str2[INET6_ADDRSTRLEN];
 		const struct flow_filter6 *sfilt6;
 
-		sfilt6 = (const struct flow_filter6 *)filt; 
+		sfilt6 = (const struct flow_filter6 *)filt;
 		LOG(LOG_DEBUG, 0, "Filter6 Dest Addr: %s (mask %s) Port: %d",
 		    inet_ntop(AF_INET6, &sfilt6->ff_flow6.fi6_dst,
 			      str1, sizeof(str1)),
@@ -1031,7 +1033,7 @@ print_filter(const struct flow_filter *filt)
 #define FILT_INTERSECT		4
 #define FILT_PORTINTERSECT	5
 
-static int 
+static int
 add_filter_rule(struct ifinfo *ifinfo, struct fltrinfo *fltrinfo,
 		struct fltrinfo **conflict)
 {
@@ -1058,7 +1060,7 @@ add_filter_rule(struct ifinfo *ifinfo, struct fltrinfo *fltrinfo,
 		case FILT_SUPERSET:
 			if (front->dontwarn == 0 && back->dontwarn == 0)
 				LOG(LOG_ERR, 0,
-				    "filters for \"%s\" at line %d and for \"%s\" at line %d has an order problem!", 
+				    "filters for \"%s\" at line %d and for \"%s\" at line %d has an order problem!",
 				    front->clinfo->clname, front->line_no,
 				    back->clinfo->clname, back->line_no);
 
@@ -1076,7 +1078,7 @@ add_filter_rule(struct ifinfo *ifinfo, struct fltrinfo *fltrinfo,
 				break;
 			if (front->dontwarn == 0 && back->dontwarn == 0)
 				LOG(LOG_WARNING, 0,
-				    "warning: filter for \"%s\" at line %d could override filter for \"%s\" at line %d", 
+				    "warning: filter for \"%s\" at line %d could override filter for \"%s\" at line %d",
 				    front->clinfo->clname, front->line_no,
 				    back->clinfo->clname, back->line_no);
 			break;
@@ -1090,7 +1092,7 @@ add_filter_rule(struct ifinfo *ifinfo, struct fltrinfo *fltrinfo,
 	return (0);
 }
 
-static int 
+static int
 remove_filter_rule(struct ifinfo *ifinfo, struct fltrinfo *fltrinfo)
 {
 	LIST_REMOVE(fltrinfo, nextrule);
@@ -1101,7 +1103,7 @@ static int
 filt_check_relation(struct flow_filter *front, struct flow_filter *back)
 {
 	int rval;
-	
+
 	if (front->ff_flow.fi_family != back->ff_flow.fi_family)
 		return (FILT_DISJOINT);
 
@@ -1116,7 +1118,7 @@ filt_check_relation(struct flow_filter *front, struct flow_filter *back)
 
 	if (rval == 2)
 		return (FILT_PORTINTERSECT);
-	
+
 	return (FILT_INTERSECT);
 }
 
@@ -1125,7 +1127,7 @@ filt_disjoint(struct flow_filter *front, struct flow_filter *back)
 {
 	u_int32_t mask;
 	u_int8_t tosmask;
-	
+
 	if (front->ff_flow.fi_family == AF_INET) {
 		if (front->ff_flow.fi_proto != 0 && back->ff_flow.fi_proto != 0
 		    && front->ff_flow.fi_proto != back->ff_flow.fi_proto)
@@ -1238,7 +1240,7 @@ static int
 filt_subset(struct flow_filter *front, struct flow_filter *back)
 {
 	u_int16_t srcport, dstport;
-	
+
 	if (front->ff_flow.fi_family == AF_INET) {
 		if (front->ff_flow.fi_proto == 0 &&
 		    back->ff_flow.fi_proto != 0)
@@ -1280,14 +1282,14 @@ filt_subset(struct flow_filter *front, struct flow_filter *back)
 				return (2);
 			return (0);
 		}
-			
+
 		return (1);
 	}
 #ifdef INET6
 	else if (front->ff_flow.fi_family == AF_INET6) {
 		struct flow_filter6 *front6, *back6;
 		int i;
-		
+
 		front6 = (struct flow_filter6 *)front;
 		back6 = (struct flow_filter6 *)back;
 
@@ -1300,7 +1302,7 @@ filt_subset(struct flow_filter *front, struct flow_filter *back)
 		if (front6->ff_flow6.fi6_gpi == 0 &&
 		    back6->ff_flow6.fi6_gpi != 0)
 			return (0);
-		
+
 		if (IN6_IS_ADDR_UNSPECIFIED(&front6->ff_flow6.fi6_src)) {
 			if (!IN6_IS_ADDR_UNSPECIFIED(&back6->ff_flow6.fi6_src))
 				return (0);
@@ -1393,6 +1395,31 @@ qop_rio_set_defaults(struct redparams *params)
 
 	if (ioctl(fd, RIO_SETDEFAULTS, params) < 0) {
 		LOG(LOG_ERR, errno, "RIO_SETDEFAULTS");
+		(void)close(fd);
+		return (QOPERR_SYSCALL);
+	}
+
+	(void)close(fd);
+	return (0);
+}
+
+int
+qop_codel_set_defaults(u_int64_t target, u_int64_t interval, int ecn)
+{
+	struct codel_params params;
+	int fd;
+
+	if ((fd = open(CODEL_DEVICE, O_RDWR)) < 0) {
+		LOG(LOG_ERR, errno, "CoDel open");
+		return (QOPERR_SYSCALL);
+	}
+
+	params.target = target;
+	params.interval = interval;
+	params.ecn = ecn;
+
+	if (ioctl(fd, CODEL_SETDEFAULTS, &params) < 0) {
+		LOG(LOG_ERR, errno, "CODEL_SETDEFAULTS");
 		(void)close(fd);
 		return (QOPERR_SYSCALL);
 	}

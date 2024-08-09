@@ -47,6 +47,7 @@
 #include <altq/altq_cdnr.h>
 #include <altq/altq_red.h>
 #include <altq/altq_rio.h>
+#include <altq/altq_codel.h>
 #include "altq_qop.h"
 #include "qop_cdnr.h"
 
@@ -72,6 +73,7 @@ static int ctl_parser(char *);
 static int delete_parser(char *);
 static int red_parser(char *);
 static int rio_parser(char *);
+static int codel_parser(char *);
 static int conditioner_parser(char *);
 static int tc_action_parser(char *, char **, struct tc_action *);
 
@@ -112,6 +114,7 @@ struct cmd_tab {
 #endif
 	{"red",		red_parser,	"red th_min th_max inv_pmax"},
 	{"rio",		rio_parser,	"rio low_th_min low_th_max low_inv_pmax med_th_min med_th_max med_inv_pmax high_th_min high_th_max high_inv_pmax"},
+	{"codel",	codel_parser, "codel target interval ecn"},
 	{"conditioner",	conditioner_parser,	"conditioner if_name cdnr_name <tc_action>"},
 	{"debug",	NULL,		"debug"},
 	{NULL,		NULL,		NULL}	/* termination */
@@ -294,7 +297,7 @@ qcmd_config(void)
 	return (rval);
 }
 
-static int 
+static int
 next_word(char **cpp, char *b)
 {
 	char	*cp;
@@ -463,7 +466,7 @@ interface_parser(char *cmdbuf)
 	char	w[MAX_WORD], *ap, *cp = cmdbuf;
 	char	*ifname, *argv[MAX_ARGS], qdisc_name[MAX_WORD];
 	int     argc;
-    
+
 	if (!get_ifname(&cp, &ifname)) {
 		LOG(LOG_ERR, 0, "missing interface name");
 		return (0);
@@ -626,7 +629,7 @@ filter_parser(char *cmdbuf)
 		LOG(LOG_ERR, 0, "bad protocol");
 		return (0);
 	}
-	sfilt.ff_flow.fi_proto = protocol; 
+	sfilt.ff_flow.fi_proto = protocol;
 
 	while (next_word(&cp, w)) {
 		if (EQUAL(w, "tos")) {
@@ -999,6 +1002,38 @@ rio_parser(char *cmdbuf)
  bad:
 	LOG(LOG_ERR, 0, "bad rio parameter");
 	return (0);
+}
+
+static int
+codel_parser(char *cmdbuf)
+{
+	char	w[MAX_WORD], *cp = cmdbuf;
+	u_int64_t target, interval;
+	int ecn;
+
+	if (!next_word(&cp, w))
+		goto bad;
+	target = strtoull(w, NULL, 0);
+
+	if (!next_word(&cp, w))
+		goto bad;
+	interval = strtoull(w, NULL, 0);
+
+	if (!next_word(&cp, w))
+		goto bad;
+	ecn = (int)strtol(w, NULL, 0);
+
+	if (qop_codel_set_defaults(target, interval, ecn) != 0) {
+		LOG(LOG_ERR, 0, "can't set codel default parameters");
+		return (0);
+	}
+
+	return (1);
+
+ bad:
+	LOG(LOG_ERR, 0, "bad codel parameter");
+	return (0);
+
 }
 
 static int
