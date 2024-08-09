@@ -77,12 +77,12 @@ codel_stat_loop(int fd, const char *ifname, int count, int interval)
 		       codel_stats.qlength,
 		       codel_stats.qlimit, codel_stats.stats.maxpacket);
 		printf(" xmit:%llu pkts, drop:%llu pkts \n",
-		       (ull)codel_stats.cl_xmitcnt.packets,
-		       (ull)codel_stats.cl_dropcnt.packets)
+		       (ull)codel_stats.stats.cl_xmitcnt.packets,
+		       (ull)codel_stats.stats.cl_dropcnt.packets)
 		if (codel_stats.stats.marked_packets != 0)
 			printf(" marked: %u\n", codel_stats.stats.marked_packets);
 		printf(" throughput: %sbps\n",
-		       rate2str(calc_rate(codel_stats.cl_xmitcnt.bytes,
+		       rate2str(calc_rate(codel_stats.stat.cl_xmitcnt.bytes,
 					  last_bytes, sec)));
 		}
 		printf("\n");
@@ -104,7 +104,7 @@ int
 print_codelstats(struct codel_stats *cod)
 {
 	printf("     CoDel xmit:%llu (maxpacket:%u marked:%u)\n",
-	       (ull)cod->xmit_cnt.packets,
+	       (ull)cod->cl_xmitcnt.packets,
 	       cod->maxpacket,
 	       cod->marked_packets);
 	return 0;
