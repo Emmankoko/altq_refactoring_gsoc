@@ -594,7 +594,8 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 				cf->target = cod->codel->params.target;
 				cf->interval = cod->codel->params.interval;
 				cf->ecn = cod->codel->params.ecn;
-			}
+			} while (/* CONSTCOND */ 0);
+			break;
 
 		case CODEL_SETDEFAULTS:
 			do {
