@@ -85,6 +85,7 @@ static int codel_request(struct ifaltq *, int, void *);
 static int codel_enqueue(struct ifaltq *, struct mbuf *);
 static struct mbuf *codel_dequeue(struct ifaltq *, int);
 static int codel_detach(struct codel_if *);
+static void codel_purgeq(struct codel_if *);
 #endif /* ALTQ3_COMPAT */
 
 #if NPF > 0
@@ -677,6 +678,14 @@ codel_detach(struct codel_if *cif)
 	free(cif->cl_q, M_DEVBUF);
 	free(cif, M_DEVBUF);
 	return (error);
+}
+
+static void
+codel_purgeq(struct codel_if *cif)
+{
+	_flushq(cif->cl_q);
+	if (ALTQ_IS_ENABLED(cif->cif_ifq))
+		cif->cif_ifq->ifq_len = 0;
 }
 
 #endif /* ALTQ3_COMPAT */
