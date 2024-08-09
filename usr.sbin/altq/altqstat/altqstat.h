@@ -51,6 +51,7 @@ stat_loop_t rio_stat_loop;
 stat_loop_t blue_stat_loop;
 stat_loop_t priq_stat_loop;
 stat_loop_t jobs_stat_loop;
+stat_loop_t codel_stat_loop;
 
 struct redstats;
 struct codel_stats;
