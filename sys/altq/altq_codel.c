@@ -572,7 +572,7 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 					error = EBADF;
 					break;
 				}
-				new-> = codel_alloc(cf->target,
+				new = codel_alloc(cf->target,
 							cf->interval,
 							cf->ecn);
 				if (new == NULL) {
