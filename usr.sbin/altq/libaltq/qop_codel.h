@@ -28,8 +28,8 @@
  * codel private ifinfo structure
  */
 struct codel_ifinfo {
-	int target;		/* queueing delay target*/
-	int interval;	/* time period over delay */
+	u_int64_t target;		/* queueing delay target*/
+	u_int64_t interval;	/* time period over delay */
 	int ecn;		/*checks whether ecn is enabled */
 	int qlimit;		/* maximum number of packets in a queue */
 };
