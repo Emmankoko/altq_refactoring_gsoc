@@ -560,6 +560,41 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 
 			} while (/* CONSTCOND */ 0);
 			break;
+		case CODEL_CONFIG:
+			do {
+				struct codel_conf *cf;
+				struct codel *new;
+				int s, limit;
+
+				cf = (struct codel_conf *)addr;
+				if ((cod = altq_lookup(cf->iface.codel_ifname,
+							ALTQT_CODEL)) == NULL) {
+					error = EBADF;
+					break;
+				}
+				new-> = codel_alloc(cf->target,
+							cf->interval,
+							cf->ecn);
+				if (new == NULL) {
+					error = ENOMEM;
+					break;
+				}
+
+				s = splnet();
+				codel_purgeq(cod);
+				limit = cf->limit;
+				qlimit(cod->cl_q) = limit;
+				cf->limit = limit;
+
+				codel_destroy(cod->codel);
+				cod->codel = new;
+
+				splx(s);
+				cf->limit = limit;
+				cf->target = cod->codel->params.target;
+				cf->interval = cod->codel->params.interval;
+				cf->ecn = cod->codel->params.ecn;
+			}
 
 		case CODEL_SETDEFAULTS:
 			do {
