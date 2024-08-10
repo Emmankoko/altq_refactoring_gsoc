@@ -57,6 +57,7 @@ struct qdisc_conf qdisc_table[] = {
 	{"blue",	ALTQT_BLUE,	blue_stat_loop},
 	{"priq",	ALTQT_PRIQ,	priq_stat_loop},
 	{"jobs",	ALTQT_JOBS,	jobs_stat_loop},
+	{"codel",	ALTQT_CODEL, codel_stat_loop},
 	{NULL, 		0,		NULL}
 };
 
@@ -104,7 +105,7 @@ ifname2qdisc(const char *ifname, char *qname)
 			if (st->altqtype == qtype)
 				strlcpy(qname, st->qdisc_name, 64);
 	}
-		
+
 	return (qtype);
 }
 

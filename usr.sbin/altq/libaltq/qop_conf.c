@@ -54,6 +54,7 @@ extern interface_parser_t	priq_interface_parser;
 extern class_parser_t		priq_class_parser;
 extern interface_parser_t	jobs_interface_parser;
 extern class_parser_t		jobs_class_parser;
+extern interface_parser_t	codel_interface_parser;
 
 struct qdisc_parser qdisc_parser[] = {
 	{"null",	null_interface_parser,	null_class_parser},
@@ -66,6 +67,7 @@ struct qdisc_parser qdisc_parser[] = {
 	{"fifoq",	fifoq_interface_parser,	NULL},
 	{"priq",	priq_interface_parser,	priq_class_parser},
 	{"jobs",	jobs_interface_parser,	jobs_class_parser},
+	{"codel", 	codel_interface_parser, NULL};
 	{NULL, NULL, NULL}
 };
 
