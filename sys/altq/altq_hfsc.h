@@ -107,7 +107,7 @@ struct hfsc_classstats {
 	/* codel,red and rio related info */
 	int			qtype;
 	struct redstats		red[3];
-	struct codel_stats codel;
+	struct codel_stats *codel;
 };
 
 #ifdef ALTQ3_COMPAT

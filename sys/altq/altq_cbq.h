@@ -96,7 +96,7 @@ typedef struct _cbq_class_stats_ {
 	/* codel, red and rio related info */
 	int		qtype;
 	struct redstats	red[3];
-	struct codel_stats codel;
+	struct codel_stats *codel;
 } class_stats_t;
 
 #ifdef ALTQ3_COMPAT

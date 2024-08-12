@@ -55,18 +55,6 @@ struct codel_stats {
 	struct pktcntr	cl_xmitcnt;	/* transmitted packet counter */
 };
 
-struct codel_ifstats {
-	struct codel_interface iface;
-	u_int			qlength;
-	u_int			qlimit;
-	struct codel_stats	stats;
-};
-
-#endif /* ALTQ3_COMPAT */
-
-/*codel flags*/
-#define CODEL_ECN	0x01	/* for marking packets*/
-
 /**
  * struct codel_params - contains codel parameters
  *  <at> target:	target queue size (in time units)
@@ -79,6 +67,18 @@ struct codel_params {
 	int		ecn;
 };
 
+struct codel_ifstats {
+	struct codel_interface iface;
+	u_int			qlength;
+	u_int			qlimit;
+	struct codel_stats	stats;
+	struct codel_params params;
+};
+
+#endif /* ALTQ3_COMPAT */
+
+/*codel flags*/
+#define CODEL_ECN	0x01	/* for marking packets*/
 
 /*
  * CBQ_STATS_VERSION is defined in altq.h to work around issues stemming
