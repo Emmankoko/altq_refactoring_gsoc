@@ -48,11 +48,6 @@ struct codel_conf {
 	int limit;		/* maximum number of packets */
 };
 
-#endif /* ALTQ3_COMPAT */
-
-/*codel flags*/
-#define CODEL_ECN	0x01	/* for marking packets*/
-
 struct codel_stats {
 	u_int32_t	maxpacket;
 	u_int	marked_packets;
@@ -67,13 +62,10 @@ struct codel_ifstats {
 	struct codel_stats	stats;
 };
 
-/*
- * CBQ_STATS_VERSION is defined in altq.h to work around issues stemming
- * from mixing of public-API and internal bits in each scheduler-specific
- * header.
- */
+#endif /* ALTQ3_COMPAT */
 
-#ifdef _KERNEL
+/*codel flags*/
+#define CODEL_ECN	0x01	/* for marking packets*/
 
 /**
  * struct codel_params - contains codel parameters
@@ -86,6 +78,28 @@ struct codel_params {
 	u_int64_t	interval;
 	int		ecn;
 };
+
+
+/*
+ * CBQ_STATS_VERSION is defined in altq.h to work around issues stemming
+ * from mixing of public-API and internal bits in each scheduler-specific
+ * header.
+ */
+
+/*
+ * IOCTLs for CoDel
+ */
+
+#define CODEL_IF_ATTACH			_IOW('Q', 1, struct codel_interface)
+#define CODEL_IF_DETACH			_IOW('Q', 2, struct codel_interface)
+#define CODEL_ENABLE			_IOW('Q', 3, struct codel_interface)
+#define CODEL_DISABLE			_IOW('Q', 4, struct codel_interface)
+#define CODEL_CONFIG			_IOW('Q', 6, struct codel_conf)
+#define CODEL_GETSTATS			_IOW('Q', 12, struct codel_ifstats)
+#define CODEL_SETDEFAULTS		_IOW('Q', 30, struct codel_params)
+
+#ifdef _KERNEL
+
 
 /**
  * struct codel_vars - contains codel variables
@@ -143,18 +157,4 @@ void		 codel_getstats(struct codel *, struct codel_stats *);
 
 #endif /* _KERNEL */
 
-#ifdef ALTQ3_COMPAT
-/*
- * IOCTLs for CoDel
- */
-
-#define CODEL_IF_ATTACH			_IOW('Q', 1, struct codel_interface)
-#define CODEL_IF_DETACH			_IOW('Q', 2, struct codel_interface)
-#define CODEL_ENABLE			_IOW('Q', 3, struct codel_interface)
-#define CODEL_DISABLE			_IOW('Q', 4, struct codel_interface)
-#define CODEL_CONFIG			_IOW('Q', 6, struct codel_conf)
-#define CODEL_GETSTATS			_IOW('Q', 12, struct codel_ifstats)
-#define CODEL_SETDEFAULTS		_IOW('Q', 30, struct codel_params)
-
-#endif /* ALTQ3_COMPAT*/
 #endif /* _ALTQ_ALTQ_CODEL_H_ */
