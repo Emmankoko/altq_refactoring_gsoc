@@ -1,7 +1,7 @@
 /* $NetBSD: kauth.h,v 1.90 2023/10/04 22:17:09 ad Exp $ */
 
 /*-
- * Copyright (c) 2005, 2006 Elad Efrat <elad@NetBSD.org>  
+ * Copyright (c) 2005, 2006 Elad Efrat <elad@NetBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -282,6 +282,7 @@ enum kauth_network_req {
 	KAUTH_REQ_NETWORK_ALTQ_RED,
 	KAUTH_REQ_NETWORK_ALTQ_RIO,
 	KAUTH_REQ_NETWORK_ALTQ_WFQ,
+	KAUTH_REQ_NETWORK_ALTQ_CODEL,
 	KAUTH_REQ_NETWORK_BIND_PORT,
 	KAUTH_REQ_NETWORK_BIND_PRIVPORT,
 	KAUTH_REQ_NETWORK_FIREWALL_FW,

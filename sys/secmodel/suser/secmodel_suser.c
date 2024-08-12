@@ -585,6 +585,7 @@ secmodel_suser_network_cb(kauth_cred_t cred, kauth_action_t action,
 		case KAUTH_REQ_NETWORK_ALTQ_RED:
 		case KAUTH_REQ_NETWORK_ALTQ_RIO:
 		case KAUTH_REQ_NETWORK_ALTQ_WFQ:
+		case KAUTH_REQ_NETWORK_ALTQ_CODEL:
 			if (isroot)
 				result = KAUTH_RESULT_ALLOW;
 			break;

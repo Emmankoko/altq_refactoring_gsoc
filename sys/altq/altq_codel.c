@@ -453,6 +453,18 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 	struct ifnet *ifp;
 	int error = 0;
 
+		/* check super-user privilege */
+	switch (cmd) {
+	case CODEL_GETSTATS:
+		break;
+	default:
+		if ((error = kauth_authorize_network(l->l_cred,
+		    KAUTH_NETWORK_ALTQ, KAUTH_REQ_NETWORK_ALTQ_CODEL, NULL,
+		    NULL, NULL)) != 0)
+			return (error);
+		break;
+	}
+
 	switch (cmd) {
 
 		case CODEL_ENABLE:
