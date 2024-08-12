@@ -46,7 +46,7 @@
 #include <sys/proc.h>
 #include <sys/errno.h>
 #include <sys/time.h>
-
+#include <sys/kauth.h>
 #include <net/if.h>
 #include <netinet/in.h>
 
