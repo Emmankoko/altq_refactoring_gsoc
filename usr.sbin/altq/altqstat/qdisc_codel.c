@@ -78,7 +78,7 @@ codel_stat_loop(int fd, const char *ifname, int count, int interval)
 		printf("q_len:%d , q_limit:%d , maxpacket:%u\n",
 		       codel_stats.qlength,
 		       codel_stats.qlimit, codel_stats.stats.maxpacket);
-		printf(" xmit:%lu pkts, drop:%lu pkts \n",
+		printf(" xmit:%llu pkts, drop:%llu pkts \n",
 		       (ull)codel_stats.stats.cl_xmitcnt.packets,
 		       (ull)codel_stats.stats.cl_dropcnt.packets);
 		if (codel_stats.stats.marked_packets != 0)
