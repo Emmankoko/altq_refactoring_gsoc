@@ -67,7 +67,7 @@ struct qdisc_parser qdisc_parser[] = {
 	{"fifoq",	fifoq_interface_parser,	NULL},
 	{"priq",	priq_interface_parser,	priq_class_parser},
 	{"jobs",	jobs_interface_parser,	jobs_class_parser},
-	{"codel", 	codel_interface_parser, NULL};
+	{"codel", 	codel_interface_parser, NULL},
 	{NULL, NULL, NULL}
 };
 
