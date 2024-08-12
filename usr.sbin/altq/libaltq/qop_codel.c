@@ -269,6 +269,3 @@ codel_disable(struct ifinfo *ifinfo)
 		return (QOPERR_SYSCALL);
 	return (0);
 }
-
-
-
