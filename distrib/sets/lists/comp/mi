@@ -118,6 +118,7 @@
 ./usr/include/altq/altq_wfq.h			comp-c-include
 ./usr/include/altq/altqconf.h			comp-c-include
 ./usr/include/altq/if_altq.h			comp-c-include
+./usr/include/altq/altq_codel.h         comp-c-include
 ./usr/include/ar.h				comp-c-include
 ./usr/include/archive.h				comp-c-include
 ./usr/include/archive_entry.h			comp-c-include
