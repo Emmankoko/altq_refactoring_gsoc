@@ -33,3 +33,10 @@ struct codel_ifinfo {
 	int ecn;		/*checks whether ecn is enabled */
 	int qlimit;		/* maximum number of packets in a queue */
 };
+
+int codel_interface_parser(const char *ifname, int argc, char **argv);
+int qcmd_codel_add_if(const char *ifname, u_int bandwidth, u_int64_t target,
+		u_int64_t interval, int qlimit, int ecn);
+int qop_codel_add_if(struct ifinfo **rp, const char *ifname,
+	        u_int bandwidth, u_int64_t target, u_int64_t interval,
+		    int qlimit, int ecn);
