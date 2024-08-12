@@ -86,6 +86,7 @@ struct codel_params {
  * header.
  */
 
+#ifdef ALTQ3_COMPAT
 /*
  * IOCTLs for CoDel
  */
@@ -94,9 +95,10 @@ struct codel_params {
 #define CODEL_IF_DETACH			_IOW('Q', 2, struct codel_interface)
 #define CODEL_ENABLE			_IOW('Q', 3, struct codel_interface)
 #define CODEL_DISABLE			_IOW('Q', 4, struct codel_interface)
-#define CODEL_CONFIG			_IOW('Q', 6, struct codel_conf)
-#define CODEL_GETSTATS			_IOW('Q', 12, struct codel_ifstats)
+#define CODEL_CONFIG			_IOWR('Q', 6, struct codel_conf)
+#define CODEL_GETSTATS			_IOWR('Q', 12, struct codel_ifstats)
 #define CODEL_SETDEFAULTS		_IOW('Q', 30, struct codel_params)
+#endif /* ALTQ3_COMPAT*/
 
 #ifdef _KERNEL
 
