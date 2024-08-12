@@ -558,8 +558,8 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 				q_stats->stats.cl_xmitcnt = cd->stats.cl_xmitcnt;
 				q_stats->stats.cl_dropcnt = cd->stats.cl_dropcnt;
 
-				q_stats->params.target = cd->codel->params.target;
-				q_stats->params.interval = cd->codel->params.interval;
+				q_stats->params.target = cd->params.target;
+				q_stats->params.interval = cd->params.interval;
 
 			} while (/* CONSTCOND */ 0);
 			break;
