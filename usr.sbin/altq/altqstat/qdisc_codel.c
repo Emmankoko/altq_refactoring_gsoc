@@ -73,23 +73,23 @@ codel_stat_loop(int fd, const char *ifname, int count, int interval)
 		gettimeofday(&cur_time, NULL);
 		sec = calc_interval(&cur_time, &last_time);
 
-		printf("target:%llu , interval:%llu\n",
+		printf("target:%lu , interval:%lu\n",
 		       codel_stats.params.target, codel_stats.params.interval);
-		printf("q_len:%d , q_limit:%d , maxpacket:\n",
+		printf("q_len:%d , q_limit:%d , maxpacket:%u\n",
 		       codel_stats.qlength,
 		       codel_stats.qlimit, codel_stats.stats.maxpacket);
-		printf(" xmit:%llu pkts, drop:%llu pkts \n",
+		printf(" xmit:%lu pkts, drop:%lu pkts \n",
 		       (ull)codel_stats.stats.cl_xmitcnt.packets,
-		       (ull)codel_stats.stats.cl_dropcnt.packets)
+		       (ull)codel_stats.stats.cl_dropcnt.packets);
 		if (codel_stats.stats.marked_packets != 0)
 			printf(" marked: %u\n", codel_stats.stats.marked_packets);
 		printf(" throughput: %sbps\n",
-		       rate2str(calc_rate(codel_stats.stat.cl_xmitcnt.bytes,
+		       rate2str(calc_rate(codel_stats.stats.cl_xmitcnt.bytes,
 					  last_bytes, sec)));
-		}
+
 		printf("\n");
 
-		last_bytes = codel_stats.cl_xmitcnt.bytes;
+		last_bytes = codel_stats.stats.cl_xmitcnt.bytes;
 		last_time = cur_time;
 
 		if (count != 0 && --cnt == 0)
