@@ -158,7 +158,7 @@ static struct altqsw altqsw[] = {				/* minor */
 	{"jobs",jobsopen,	jobsclose,	jobsioctl},	/* 12 */
 #endif
 #ifdef ALTQ_CODEL
-	{"codel", codelopen, codelclose, codelioctl}, /* 14*/
+	{"codel", codelopen, codelclose, codelioctl}, /* 13*/
 #else
 	{"noq", noopen,		noclose,	noioctl},	/* 13 */
 #endif
