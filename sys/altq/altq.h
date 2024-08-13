@@ -63,7 +63,7 @@
 #define	ALTQT_BLUE		10	/* blue */
 #define	ALTQT_PRIQ		11	/* priority queue */
 #define	ALTQT_JOBS		12	/* JoBS */
-#define ALTQ_CODEL		13  /* CoDel */
+#define ALTQT_CODEL		13  /* CoDel */
 #define	ALTQT_MAX		14	/* should be max discipline type + 1 */
 
 #ifdef ALTQ3_COMPAT
