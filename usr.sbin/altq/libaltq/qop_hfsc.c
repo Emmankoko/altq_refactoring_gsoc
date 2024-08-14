@@ -222,6 +222,8 @@ hfsc_class_parser(const char *ifname, const char *class_name,
 			flags |= HFCF_ECN;
 		} else if (EQUAL(*argv, "rio")) {
 			flags |= HFCF_RIO;
+		} else if (EQUAL(*argv, "codel")) {
+			flags |= HFCF_CODEL;
 		} else if (EQUAL(*argv, "cleardscp")) {
 			flags |= HFCF_CLEARDSCP;
 		} else {
@@ -408,7 +410,7 @@ qcmd_hfsc_modify_class(const char *ifname, const char *class_name,
 /*
  * qop api
  */
-int 
+int
 qop_hfsc_add_if(struct ifinfo **rp, const char *ifname,
 		u_int bandwidth, int flags)
 {
@@ -456,9 +458,9 @@ qop_hfsc_add_if(struct ifinfo **rp, const char *ifname,
 
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
-int 
+int
 qop_hfsc_add_class(struct classinfo **rp, const char *class_name,
-		   struct ifinfo *ifinfo, struct classinfo *parent, 
+		   struct ifinfo *ifinfo, struct classinfo *parent,
 		   struct service_curve *sc, int qlimit, int flags)
 {
 	struct classinfo *clinfo;
@@ -546,7 +548,7 @@ qop_hfsc_add_class(struct classinfo **rp, const char *class_name,
  * this is called from qop_delete_class() before a class is destroyed
  * for discipline specific cleanup.
  */
-static int 
+static int
 qop_hfsc_delete_class_hook(struct classinfo *clinfo)
 {
 	struct hfsc_classinfo *hfsc_clinfo, *parent_clinfo;
@@ -567,7 +569,7 @@ qop_hfsc_delete_class_hook(struct classinfo *clinfo)
 }
 
 int
-qop_hfsc_modify_class(struct classinfo *clinfo, 
+qop_hfsc_modify_class(struct classinfo *clinfo,
 		      struct service_curve *sc, int sctype)
 {
 	struct hfsc_classinfo *hfsc_clinfo, *parent_clinfo;
@@ -576,7 +578,7 @@ qop_hfsc_modify_class(struct classinfo *clinfo,
 
 	if (validate_sc(sc) != 0)
 		return (QOPERR_INVAL);
-		
+
 	hfsc_clinfo = clinfo->private;
 	if (clinfo->parent == NULL)
 		return (QOPERR_CLASS_INVAL);

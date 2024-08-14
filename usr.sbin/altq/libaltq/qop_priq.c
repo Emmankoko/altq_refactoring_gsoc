@@ -148,6 +148,8 @@ priq_class_parser(const char *ifname, const char *class_name,
 			flags |= PRCF_ECN;
 		} else if (EQUAL(*argv, "rio")) {
 			flags |= PRCF_RIO;
+		} else if (EQUAL(*argv, "codel")) {
+			flags |= PRCF_CODEL;
 		} else if (EQUAL(*argv, "cleardscp")) {
 			flags |= PRCF_CLEARDSCP;
 		} else {
@@ -180,7 +182,7 @@ int
 qcmd_priq_add_if(const char *ifname, u_int bandwidth, int flags)
 {
 	int error;
-	
+
 	error = qop_priq_add_if(NULL, ifname, bandwidth, flags);
 	if (error != 0)
 		LOG(LOG_ERR, errno, "%s: can't add priq on interface '%s'",
@@ -227,7 +229,7 @@ qcmd_priq_modify_class(const char *ifname, const char *class_name,
 /*
  * qop api
  */
-int 
+int
 qop_priq_add_if(struct ifinfo **rp, const char *ifname,
 		u_int bandwidth, int flags)
 {
@@ -259,7 +261,7 @@ qop_priq_add_if(struct ifinfo **rp, const char *ifname,
 	return (error);
 }
 
-int 
+int
 qop_priq_add_class(struct classinfo **rp, const char *class_name,
 		   struct ifinfo *ifinfo, int pri, int qlimit, int flags)
 {
@@ -297,12 +299,12 @@ qop_priq_add_class(struct classinfo **rp, const char *class_name,
 		free(priq_clinfo);
 		clinfo->private = NULL;
 	}
-	
+
 	return (error);
 }
 
 int
-qop_priq_modify_class(struct classinfo *clinfo, 
+qop_priq_modify_class(struct classinfo *clinfo,
 		      int pri, int qlimit, int flags)
 {
 	struct priq_classinfo *priq_clinfo;
@@ -330,7 +332,7 @@ static int
 qop_priq_enable_hook(struct ifinfo *ifinfo)
 {
 	struct priq_ifinfo *priq_ifinfo;
-	
+
 	priq_ifinfo = ifinfo->private;
 	if (priq_ifinfo->default_class == NULL) {
 		LOG(LOG_ERR, 0, "priq: no default class on interface %s!",
@@ -347,7 +349,7 @@ static int
 priq_attach(struct ifinfo *ifinfo)
 {
 	struct priq_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.ifname, ifinfo->ifname, IFNAMSIZ);
 
@@ -372,7 +374,7 @@ static int
 priq_detach(struct ifinfo *ifinfo)
 {
 	struct priq_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.ifname, ifinfo->ifname, IFNAMSIZ);
 
@@ -432,7 +434,7 @@ priq_add_class(struct classinfo *clinfo)
 	struct priq_classinfo *priq_clinfo;
 
 	priq_clinfo = clinfo->private;
-	
+
 	memset(&class_add, 0, sizeof(class_add));
 	strncpy(class_add.iface.ifname, clinfo->ifinfo->ifname, IFNAMSIZ);
 
@@ -490,7 +492,7 @@ static int
 priq_add_filter(struct fltrinfo *fltrinfo)
 {
 	struct priq_add_filter fltr_add;
-	
+
 	memset(&fltr_add, 0, sizeof(fltr_add));
 	strncpy(fltr_add.iface.ifname, fltrinfo->clinfo->ifinfo->ifname,
 		IFNAMSIZ);

@@ -26,7 +26,7 @@
  * SUN MICROSYSTEMS DOES NOT CLAIM MERCHANTABILITY OF THIS SOFTWARE OR THE
  * SUITABILITY OF THIS SOFTWARE FOR ANY PARTICULAR PURPOSE.  The software is
  * provided "as is" without express or implied warranty of any kind.
- *  
+ *
  * These notices must be retained in any copies of any part of this software.
  */
 
@@ -265,6 +265,8 @@ cbq_class_parser(const char *ifname, const char *class_name,
 			flags |= CBQCLF_RIO;
 		} else if (EQUAL(*argv, "cleardscp")) {
 			flags |= CBQCLF_CLEARDSCP;
+		} else if (EQUAL(*argv, "codel")) {
+			flags |= CBQCLF_CODEL;
 		} else {
 			LOG(LOG_ERR, 0,
 			    "Unknown keyword '%s' in %s, line %d",
@@ -313,7 +315,7 @@ qcmd_cbq_add_if(const char *ifname, u_int bandwidth, int is_wrr, int efficient,
     bool no_control)
 {
 	int error;
-	
+
 	error = qop_cbq_add_if(NULL, ifname, bandwidth, is_wrr, efficient,
 	    no_control);
 	if (error != 0)
@@ -427,7 +429,7 @@ qcmd_cbq_modify_class(const char *ifname, const char *class_name,
 #define IPPROTO_RSVP		46
 #endif
 
-static int 
+static int
 qcmd_cbq_add_ctl_filters(const char *ifname, const char *clname)
 {
 	struct flow_filter	sfilt;
@@ -477,7 +479,7 @@ qcmd_cbq_add_ctl_filters(const char *ifname, const char *clname)
 /*
  * qop api
  */
-int 
+int
 qop_cbq_add_if(struct ifinfo **rp, const char *ifname,
 	       u_int bandwidth, int is_wrr, int efficient, bool no_control)
 {
@@ -517,9 +519,9 @@ qop_cbq_add_if(struct ifinfo **rp, const char *ifname,
 
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
-int 
+int
 qop_cbq_add_class(struct classinfo **rp, const char *class_name,
-		  struct ifinfo *ifinfo, struct classinfo *parent, 
+		  struct ifinfo *ifinfo, struct classinfo *parent,
 		  struct classinfo *borrow, u_int pri, u_int bandwidth,
 		  u_int maxdelay, u_int maxburst, u_int minburst,
 		  u_int av_pkt_size, u_int max_pkt_size,
@@ -566,7 +568,7 @@ qop_cbq_add_class(struct classinfo **rp, const char *class_name,
 #endif /* !ALLOW_OVERCOMMIT */
 		}
 	}
-		
+
 	if ((cbq_clinfo = calloc(1, sizeof(*cbq_clinfo))) == NULL)
 		return (QOPERR_NOMEM);
 
@@ -610,7 +612,7 @@ qop_cbq_add_class(struct classinfo **rp, const char *class_name,
 
 	/* set delete hook */
 	clinfo->delete_hook = qop_cbq_delete_class_hook;
-	
+
 	if (parent == NULL)
 		cbq_ifinfo->root_class = clinfo;
 	else {
@@ -652,7 +654,7 @@ qop_cbq_add_class(struct classinfo **rp, const char *class_name,
  * this is called from qop_delete_class() before a class is destroyed
  * for discipline specific cleanup.
  */
-static int 
+static int
 qop_cbq_delete_class_hook(struct classinfo *clinfo)
 {
 	struct cbq_classinfo *cbq_clinfo, *parent_clinfo;
@@ -661,7 +663,7 @@ qop_cbq_delete_class_hook(struct classinfo *clinfo)
 	if (clinfo->parent != NULL) {
 		cbq_clinfo = clinfo->private;
 		parent_clinfo = clinfo->parent->private;
-		
+
 		parent_clinfo->allocated -= cbq_clinfo->bandwidth;
 	}
 	return (0);
@@ -748,7 +750,7 @@ static int
 qop_cbq_enable_hook(struct ifinfo *ifinfo)
 {
 	struct cbq_ifinfo *cbq_ifinfo;
-	
+
 	cbq_ifinfo = ifinfo->private;
 	if (cbq_ifinfo->root_class == NULL) {
 		LOG(LOG_ERR, 0, "cbq: no root class on interface %s!",
@@ -861,7 +863,7 @@ cbq_class_spec(struct ifinfo *ifinfo, u_long parent_class,
 	/* adjust queue size when maxdelay is specified.
 	   queue size should be relative to its share */
 	if (maxdelay == 0) {
-		if (flags & (CBQCLF_RED|CBQCLF_RIO))
+		if (flags & (CBQCLF_RED|CBQCLF_RIO|CBQCLF_CODEL))
 			maxq = 60.0;
 		else
 			maxq = 30.0;
@@ -943,7 +945,7 @@ static int
 cbq_detach(struct ifinfo *ifinfo)
 {
 	struct cbq_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.cbq_ifacename, ifinfo->ifname, IFNAMSIZ);
 
@@ -1003,7 +1005,7 @@ cbq_add_class(struct classinfo *clinfo)
 	struct cbq_classinfo *cbq_clinfo;
 
 	cbq_clinfo = clinfo->private;
-	
+
 	memset(&class_add, 0, sizeof(class_add));
 	strncpy(class_add.cbq_iface.cbq_ifacename,
 		clinfo->ifinfo->ifname, IFNAMSIZ);
@@ -1055,7 +1057,7 @@ static int
 cbq_add_filter(struct fltrinfo *fltrinfo)
 {
 	struct cbq_add_filter fltr_add;
-	
+
 	memset(&fltr_add, 0, sizeof(fltr_add));
 	strncpy(fltr_add.cbq_iface.cbq_ifacename,
 		fltrinfo->clinfo->ifinfo->ifname, IFNAMSIZ);

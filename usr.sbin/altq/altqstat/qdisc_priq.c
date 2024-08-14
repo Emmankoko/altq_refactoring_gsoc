@@ -58,7 +58,7 @@ priq_stat_loop(int fd, const char *ifname, int count, int interval)
 	double			sec;
 	int			cnt = count;
 	sigset_t		omask;
-	
+
 	strlcpy(get_stats.iface.ifname, ifname,
 		sizeof(get_stats.iface.ifname));
 	new = &stats1[0];
@@ -107,6 +107,8 @@ priq_stat_loop(int fd, const char *ifname, int count, int interval)
 				print_redstats(sp->red);
 			else if (sp->qtype == Q_RIO)
 				print_riostats(sp->red);
+			else if (sp->qtype == Q_CODEL)
+				print_codelstats(sp->codel);
 		}
 
 		/* swap the buffer pointers */
