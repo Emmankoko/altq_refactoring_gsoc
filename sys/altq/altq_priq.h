@@ -108,7 +108,7 @@ struct priq_classstats {
 	/* codel, red and rio related info */
 	int			qtype;
 	struct redstats		red[3];	/* rio has 3 red stats */
-	struct codel_stats	codel;
+	struct codel_stats	*codel;
 };
 
 #ifdef ALTQ3_COMPAT
