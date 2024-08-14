@@ -630,7 +630,7 @@ get_class_stats(struct priq_classstats *sp, struct priq_class *cl)
 #endif
 #ifdef ALTQ_CODEL
 	if (q_is_codel(cl->cl_q))
-		codel_getstats(cl->cl_codel, &sp->codel);
+		codel_getstats(cl->cl_codel, sp->codel);
 #endif
 }
 
