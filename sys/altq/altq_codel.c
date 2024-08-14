@@ -50,14 +50,13 @@
 #include <net/if.h>
 #include <netinet/in.h>
 
-#if NPF > 0
-#include <net/pfvar.h>
-#endif
-
 #include <altq/if_altq.h>
 #include <altq/altq.h>
-#include <altq/altq_conf.h>
 #include <altq/altq_codel.h>
+
+#ifdef ALTQ3_COMPAT
+#include <altq/altq_conf.h>
+#endif
 
 /* codel interface state list to keep all codel states allocated*/
 static struct codel_if *codel_list = NULL;
@@ -87,114 +86,6 @@ static struct mbuf *codel_dequeue(struct ifaltq *, int);
 static int codel_detach(struct codel_if *);
 static void codel_purgeq(struct codel_if *);
 #endif /* ALTQ3_COMPAT */
-
-#if NPF > 0
-int
-codel_pfattach(struct pf_altq *a)
-{
-	struct ifnet *ifp;
-	int s, error;
-
-	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
-		return EINVAL;
-
-	s = splnet();
-	error =  altq_attach(&ifp->if_snd, ALTQT_CODEL, a->altq_disc,
-	    codel_enqueue, codel_dequeue, codel_request, NULL, NULL);
-	splx(s);
-	return error;
-}
-
-int
-codel_add_altq( struct pf_altq *a)
-{
-	struct ifnet *ifp;
-	struct codel_if	*cif;
-	struct codel_opts	*opts;
-
-	if ((ifp = ifunit(a->ifname)) == NULL || a->altq_disc == NULL)
-		return (EINVAL);
-	if (!ALTQ_IS_READY(&ifp->if_snd))
-		return (ENODEV);
-
-	opts = &a->pq_u.codel_opts;
-
-	cif = malloc(sizeof(struct codel_if), M_DEVBUF, M_NOWAIT | M_ZERO);
-	if (cif == NULL)
-		return (ENOMEM);
-	cif->cif_bandwidth = a->ifbandwidth;
-	cif->cif_ifq = &ifp->if_snd;
-
-	cif->cl_q = malloc(sizeof(class_queue_t), M_DEVBUF, M_NOWAIT | M_ZERO);
-	if (cif->cl_q == NULL) {
-		free(cif, M_DEVBUF);
-		return (ENOMEM);
-	}
-
-	if (a->qlimit == 0)
-		a->qlimit = 50;	/* use default. */
-	qlimit(cif->cl_q) = a->qlimit;
-	qtype(cif->cl_q) = Q_CODEL;
-	qlen(cif->cl_q) = 0;
-	qsize(cif->cl_q) = 0;
-
-	if (opts->target == 0)
-		opts->target = 5;
-	if (opts->interval == 0)
-		opts->interval = 100;
-	cif->codel->params.target = machclk_freq * opts->target / 1000;
-	cif->codel->params.interval = machclk_freq * opts->interval / 1000;
-	cif->codel->params.ecn = opts->ecn;
-	cif->codel->stats.maxpacket = 256;
-
-	cif->cl_stats.qlength = qlen(cif->cl_q);
-	cif->cl_stats.qlimit = qlimit(cif->cl_q);
-
-	/* keep the state in pf_altq */
-	a->altq_disc = cif;
-
-	return (0);
-}
-
-int
-codel_remove_altq(struct pf_altq *a)
-{
-	struct codel_if *cif;
-
-	if ((cif = a->altq_disc) == NULL)
-		return (EINVAL);
-	a->altq_disc = NULL;
-
-	if (cif->cl_q)
-		free(cif->cl_q, M_DEVBUF);
-	free(cif, M_DEVBUF);
-
-	return (0);
-}
-
-int
-codel_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
-{
-	struct codel_if *cif;
-	struct codel_ifstats stats;
-	int error = 0;
-
-	if ((cif = altq_lookup(a->ifname, ALTQT_CODEL)) == NULL)
-		return (EBADF);
-
-	if (*nbytes < sizeof(stats))
-		return (EINVAL);
-
-	stats = cif->cl_stats;
-	stats.stats = cif->codel->stats;
-
-	if ((error = copyout((void *)&stats, ubuf, sizeof(stats))) != 0)
-		return (error);
-	*nbytes = sizeof(stats);
-
-	return (0);
-}
-#endif /* NPF */
 
 struct codel *
 codel_alloc(int target, int interval, int ecn)

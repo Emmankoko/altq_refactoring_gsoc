@@ -428,11 +428,6 @@ altq_pfattach(struct pf_altq *a)
 		error = hfsc_pfattach(a);
 		break;
 #endif
-#ifdef ALTQ_CODEL
-	case ALTQT_CODEL:
-		error = codel_pfattach(a);
-		break;
-#endif
 	default:
 		error = ENXIO;
 	}
@@ -500,11 +495,6 @@ altq_add(struct pf_altq *a)
 		error = hfsc_add_altq(a);
 		break;
 #endif
-#ifdef ALTQ_CODEL
-	case ALTQT_CODEL:
-		error = codel_add_altq(a);
-		break;
-#endif
 	default:
 		error = ENXIO;
 	}
@@ -537,11 +527,6 @@ altq_remove(struct pf_altq *a)
 #ifdef ALTQ_HFSC
 	case ALTQT_HFSC:
 		error = hfsc_remove_altq(a);
-		break;
-#endif
-#ifdef ALTQ_CODEL
-	case ALTQT_CODEL:
-		error = codel_remove_altq(a);
 		break;
 #endif
 	default:
@@ -635,11 +620,6 @@ altq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 #ifdef ALTQ_HFSC
 	case ALTQT_HFSC:
 		error = hfsc_getqstats(a, ubuf, nbytes);
-		break;
-#endif
-#ifdef ALTQ_CODEL
-	case ALTQT_CODEL:
-		error = codel_getqstats(a, ubuf, nbytes);
 		break;
 #endif
 	default:
