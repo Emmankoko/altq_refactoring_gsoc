@@ -128,9 +128,6 @@ codel_interface_parser(const char *ifname, int argc, char **argv)
 		argc--; argv++;
 	}
 
-	target = machclk_freq * target / 1000;
-	interval = machclk_freq * interval / 1000;
-
 	if (qcmd_tbr_register(ifname, bandwidth, tbrsize) != 0)
 		return (0);
 
