@@ -1013,11 +1013,11 @@ codel_parser(char *cmdbuf)
 
 	if (!next_word(&cp, w))
 		goto bad;
-	target = strtoull(w, NULL, 0);
+	target = (u_int64_t)strtoull(w, NULL, 0);
 
 	if (!next_word(&cp, w))
 		goto bad;
-	interval = strtoull(w, NULL, 0);
+	interval = (u_int64_t)strtoull(w, NULL, 0);
 
 	if (!next_word(&cp, w))
 		goto bad;

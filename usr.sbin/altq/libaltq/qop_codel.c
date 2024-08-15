@@ -88,8 +88,8 @@ codel_interface_parser(const char *ifname, int argc, char **argv)
 {
 	u_int  	bandwidth = 100000000;	/* 100Mbps */
 	u_int	tbrsize = 0;
-	u_int64_t	target = 0;		/* 0: use default */
-	u_int64_t	interval = 0;	/* 0: use default */
+	u_int64_t	target = 5;
+	u_int64_t	interval = 100;
 	int	qlimit = 60;
 	int ecn = 0;
 
@@ -112,11 +112,11 @@ codel_interface_parser(const char *ifname, int argc, char **argv)
 		} else if (EQUAL(*argv, "target")) {
 			argc--; argv++;
 			if (argc > 0)
-				target = strtoull(*argv, NULL, 0);
+				target = (u_int64_t)strtoull(*argv, NULL, 0);
 		} else if (EQUAL(*argv, "interval")) {
 			argc--; argv++;
 			if (argc > 0)
-				interval = strtoull(*argv, NULL, 0);
+				interval = (u_int64_t)strtoull(*argv, NULL, 0);
 		} else if (EQUAL(*argv, "codel")) {
 			/* just skip */
 		} else if (EQUAL(*argv, "ecn")) {
@@ -127,6 +127,9 @@ codel_interface_parser(const char *ifname, int argc, char **argv)
 		}
 		argc--; argv++;
 	}
+
+	target = machclk_freq * target / 1000;
+	interval = machclk_freq * interval / 1000;
 
 	if (qcmd_tbr_register(ifname, bandwidth, tbrsize) != 0)
 		return (0);

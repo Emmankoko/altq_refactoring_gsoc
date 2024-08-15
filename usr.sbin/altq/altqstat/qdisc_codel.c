@@ -73,9 +73,9 @@ codel_stat_loop(int fd, const char *ifname, int count, int interval)
 		gettimeofday(&cur_time, NULL);
 		sec = calc_interval(&cur_time, &last_time);
 
-		printf("target:%lu , interval:%lu\n",
+		printf("target: %lums , interval: %lums\n",
 		       codel_stats.params.target, codel_stats.params.interval);
-		printf("q_len:%d , q_limit:%d , maxpacket:%u\n",
+		printf("q_len:%d , q_limit:%d , maxpacket:%u pkts\n",
 		       codel_stats.qlength,
 		       codel_stats.qlimit, codel_stats.stats.maxpacket);
 		printf(" xmit:%llu pkts, drop:%llu pkts \n",

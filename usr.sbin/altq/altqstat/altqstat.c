@@ -81,7 +81,7 @@ alrm_handler(int sig)
 	/* nothing */
 }
 
-static void 
+static void
 usage(void)
 {
 	fprintf(stderr, "usage: altqstat [-enrs] [-c count] [-w wait] [-i interface|-I input_interface]\n");
