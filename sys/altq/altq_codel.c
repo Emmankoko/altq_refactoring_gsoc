@@ -64,9 +64,11 @@ static struct codel_if *codel_list = NULL;
 #define CODEL_LIMIT 1000
 #define DEF_TARG	5
 #define DEF_INT		100
+#define DEF_ECN		0
 
 static int default_interval = DEF_INT;
 static int default_target =   DEF_TARG;
+static int default_ecn = DEF_ECN;
 
 static int		 codel_should_drop(struct codel *, class_queue_t *,
 			    struct mbuf *, u_int64_t);
@@ -94,7 +96,12 @@ codel_alloc(int target, int interval, int ecn)
 
 	c = malloc(sizeof(*c), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (c != NULL) {
+		if (target == 0)
+			target = default_target;
 		c->params.target = machclk_freq * target / 1000;
+
+		if (interval == 0)
+			interval = default_interval;
 		c->params.interval = machclk_freq * interval / 1000;
 		c->params.ecn = ecn;
 		c->stats.maxpacket = 256;
@@ -463,6 +470,7 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 
 				q_stats->params.target = cd->params.target;
 				q_stats->params.interval = cd->params.interval;
+				q_stats->params.ecn = cd->params.ecn;
 
 			} while (/* CONSTCOND */ 0);
 			break;
@@ -510,6 +518,7 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 
 				default_target = cd->target;
 				default_interval = cd->interval;
+				default_ecn = cd->ecn;
 			} while (/* CONSTCOND */ 0);
 			break;
 
