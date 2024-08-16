@@ -468,8 +468,9 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 				q_stats->stats.cl_xmitcnt = cd->stats.cl_xmitcnt;
 				q_stats->stats.cl_dropcnt = cd->stats.cl_dropcnt;
 
-				q_stats->params.target = cd->params.target;
-				q_stats->params.interval = cd->params.interval;
+				// convert your clock cycles back to time unit(milli sec) when fetching stats
+				q_stats->params.target = cd->params.target * 1000 / machclk_freq;
+				q_stats->params.interval = cd->params.interval * 1000 / machclk_freq;
 				q_stats->params.ecn = cd->params.ecn;
 
 			} while (/* CONSTCOND */ 0);
