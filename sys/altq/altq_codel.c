@@ -159,7 +159,7 @@ codel_should_drop(struct codel *c, class_queue_t *q, struct mbuf *m,
 		return (0);
 	}
 
-	mtag = m_tag_find(m, PACKET_TAG_ALTQ_QID);
+	mtag = m_tag_find(m, MTAG_CODEL);
 	if (mtag == NULL) {
 		/* Only one warning per second. */
 		if (ppsratecheck(&c->last_log, &c->last_pps, 1))
