@@ -66,6 +66,7 @@ static struct codel_if *codel_list = NULL;
 #define DEF_INT		100
 #define DEF_ECN		0
 
+/* remain default when not configured. or use values configured from userland */
 static int default_interval = DEF_INT;
 static int default_target =   DEF_TARG;
 static int default_ecn = DEF_ECN;
@@ -96,13 +97,21 @@ codel_alloc(int target, int interval, int ecn)
 
 	c = malloc(sizeof(*c), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (c != NULL) {
+		if (machclk_freq == 0)
+			init_machclk();
+
+		if (machclk_freq == 0) {
+			printf("codel: no CPU clock available!\n");
+			return NULL;
+		}
+
 		if (target == 0)
 			target = default_target;
-		c->params.target = machclk_freq * target / 1000;
+		c->params.target = (machclk_freq * target) / 1000;
 
 		if (interval == 0)
 			interval = default_interval;
-		c->params.interval = machclk_freq * interval / 1000;
+		c->params.interval = (machclk_freq * interval) / 1000;
 		c->params.ecn = ecn;
 		c->stats.maxpacket = 256;
 	}
@@ -469,8 +478,15 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 				q_stats->stats.cl_dropcnt = cd->stats.cl_dropcnt;
 
 				// convert your clock cycles back to time unit(milli sec) when fetching stats
-				q_stats->params.target = cd->params.target * 1000 / machclk_freq;
-				q_stats->params.interval = cd->params.interval * 1000 / machclk_freq;
+				if (machclk_freq == 0)
+					init_machclk();
+
+				if (machclk_freq == 0) {
+					printf("codel: no CPU clock available!\n");
+					break;
+				}
+				q_stats->params.target = default_target;
+				q_stats->params.interval = default_interval;
 				q_stats->params.ecn = cd->params.ecn;
 
 			} while (/* CONSTCOND */ 0);
