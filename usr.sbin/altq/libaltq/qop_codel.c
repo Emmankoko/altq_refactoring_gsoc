@@ -81,7 +81,6 @@ static struct qdisc_ops codel_qdisc = {
 /*
  * parser interface
  */
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int
 codel_interface_parser(const char *ifname, int argc, char **argv)

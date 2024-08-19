@@ -78,7 +78,6 @@ static struct qdisc_ops red_qdisc = {
 /*
  * parser interface
  */
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int
 red_interface_parser(const char *ifname, int argc, char **argv)
@@ -150,7 +149,7 @@ red_interface_parser(const char *ifname, int argc, char **argv)
 	if (weight != 0) {
 		/* check if weight is power of 2 */
 		int i, w;
-		
+
 		w = weight;
 		for (i = 0; w > 1; i++)
 			w = w >> 1;
@@ -177,7 +176,7 @@ qcmd_red_add_if(const char *ifname, u_int bandwidth, int weight,
 		int pkttime, int flags)
 {
 	int error;
-	
+
 	error = qop_red_add_if(NULL, ifname, bandwidth, weight, inv_pmax,
 			       th_min, th_max, qlimit, pkttime, flags);
 	if (error != 0)
@@ -189,7 +188,7 @@ qcmd_red_add_if(const char *ifname, u_int bandwidth, int weight,
 /*
  * qop api
  */
-int 
+int
 qop_red_add_if(struct ifinfo **rp, const char *ifname,
 	       u_int bandwidth, int weight, int inv_pmax, int th_min,
 	       int th_max, int qlimit, int pkttime, int flags)
@@ -267,7 +266,7 @@ static int
 red_detach(struct ifinfo *ifinfo)
 {
 	struct red_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.red_ifname, ifinfo->ifname, IFNAMSIZ);
 

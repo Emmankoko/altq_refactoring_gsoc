@@ -79,7 +79,6 @@ static struct qdisc_ops rio_qdisc = {
 /*
  * parser interface
  */
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int
 rio_interface_parser(const char *ifname, int argc, char **argv)
@@ -179,7 +178,7 @@ rio_interface_parser(const char *ifname, int argc, char **argv)
 	if (weight != 0) {
 		/* check if weight is power of 2 */
 		int i, w;
-		
+
 		w = weight;
 		for (i = 0; w > 1; i++)
 			w = w >> 1;
@@ -222,7 +221,7 @@ qcmd_rio_add_if(const char *ifname, u_int bandwidth, int weight,
 	red_params[2].inv_pmax = hi_inv_pmax;
 	red_params[2].th_min   = hi_th_min;
 	red_params[2].th_max   = hi_th_max;
-	
+
 	error = qop_rio_add_if(NULL, ifname, bandwidth, weight, red_params,
 			       qlimit, pkttime, flags);
 	if (error != 0)
@@ -234,7 +233,7 @@ qcmd_rio_add_if(const char *ifname, u_int bandwidth, int weight,
 /*
  * qop api
  */
-int 
+int
 qop_rio_add_if(struct ifinfo **rp, const char *ifname,
 	       u_int bandwidth, int weight, struct redparams *red_params,
 	       int qlimit, int pkttime, int flags)
@@ -311,7 +310,7 @@ static int
 rio_detach(struct ifinfo *ifinfo)
 {
 	struct rio_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.rio_ifname, ifinfo->ifname, IFNAMSIZ);
 

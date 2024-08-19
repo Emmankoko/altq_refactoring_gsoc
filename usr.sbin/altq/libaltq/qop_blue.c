@@ -78,7 +78,6 @@ static struct qdisc_ops blue_qdisc = {
 /*
  * parser interface
  */
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int
 blue_interface_parser(const char *ifname, int argc, char **argv)
@@ -150,7 +149,7 @@ qcmd_blue_add_if(const char *ifname, u_int bandwidth, int max_pmark,
 		 int hold_time, int qlimit, int pkttime, int flags)
 {
 	int error;
-	
+
 	error = qop_blue_add_if(NULL, ifname, bandwidth, max_pmark, hold_time,
 				qlimit, pkttime, flags);
 	if (error != 0)
@@ -162,7 +161,7 @@ qcmd_blue_add_if(const char *ifname, u_int bandwidth, int max_pmark,
 /*
  * qop api
  */
-int 
+int
 qop_blue_add_if(struct ifinfo **rp, const char *ifname, u_int bandwidth,
 		int max_pmark, int hold_time, int qlimit,
 		int pkttime, int flags)
@@ -237,7 +236,7 @@ static int
 blue_detach(struct ifinfo *ifinfo)
 {
 	struct blue_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.blue_ifname, ifinfo->ifname, IFNAMSIZ);
 

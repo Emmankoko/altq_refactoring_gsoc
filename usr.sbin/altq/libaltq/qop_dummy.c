@@ -66,8 +66,6 @@ struct qdisc_ops nop_qdisc = {
 	nop_delete_filter,
 };
 
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
-
 /*
  * parser interface for null interface
  */
@@ -125,7 +123,7 @@ int
 qcmd_nop_add_if(const char *ifname)
 {
 	int error;
-	
+
 	error = qop_add_if(NULL, ifname, 0, &nop_qdisc, NULL);
 	if (error != 0)
 		LOG(LOG_ERR, errno, "%s: can't add nop on interface '%s'",

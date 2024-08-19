@@ -78,7 +78,6 @@ static struct qdisc_ops wfq_qdisc = {
 /*
  * parser interface
  */
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int
 wfq_interface_parser(const char *ifname, int argc, char **argv)
@@ -134,7 +133,7 @@ wfq_interface_parser(const char *ifname, int argc, char **argv)
 		}
 		argc--; argv++;
 	}
-	
+
 	if (qcmd_tbr_register(ifname, bandwidth, tbrsize) != 0)
 		return (0);
 
@@ -157,7 +156,7 @@ qcmd_wfq_add_if(const char *ifname, u_int bandwidth, int hash_policy,
 		int nqueues, int qsize)
 {
 	int error;
-	
+
 	error = qop_wfq_add_if(NULL, ifname, bandwidth,
 			       hash_policy, nqueues, qsize);
 	if (error != 0)
@@ -169,7 +168,7 @@ qcmd_wfq_add_if(const char *ifname, u_int bandwidth, int hash_policy,
 /*
  * qop api
  */
-int 
+int
 qop_wfq_add_if(struct ifinfo **rp, const char *ifname, u_int bandwidth,
 	       int hash_policy, int nqueues, int qsize)
 {
@@ -243,7 +242,7 @@ static int
 wfq_detach(struct ifinfo *ifinfo)
 {
 	struct wfq_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.wfq_ifacename, ifinfo->ifname, IFNAMSIZ);
 

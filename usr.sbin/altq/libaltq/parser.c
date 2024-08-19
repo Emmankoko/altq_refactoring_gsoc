@@ -88,7 +88,6 @@ static int tc_action_parser(char *, char **, struct tc_action *);
 #ifndef MIN
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #endif
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int	line_no = 0;
 int	filter_dontwarn;

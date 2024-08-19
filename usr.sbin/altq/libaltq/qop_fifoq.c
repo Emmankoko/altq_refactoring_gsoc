@@ -78,7 +78,6 @@ static struct qdisc_ops fifoq_qdisc = {
 /*
  * parser interface
  */
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int
 fifoq_interface_parser(const char *ifname, int argc, char **argv)
@@ -127,7 +126,7 @@ int
 qcmd_fifoq_add_if(const char *ifname, u_int bandwidth, int qlimit)
 {
 	int error;
-	
+
 	error = qop_fifoq_add_if(NULL, ifname, bandwidth, qlimit);
 	if (error != 0)
 		LOG(LOG_ERR, errno, "%s: can't add fifoq on interface '%s'",
@@ -138,7 +137,7 @@ qcmd_fifoq_add_if(const char *ifname, u_int bandwidth, int qlimit)
 /*
  * qop api
  */
-int 
+int
 qop_fifoq_add_if(struct ifinfo **rp, const char *ifname,
 		 u_int bandwidth, int qlimit)
 {
@@ -205,7 +204,7 @@ static int
 fifoq_detach(struct ifinfo *ifinfo)
 {
 	struct fifoq_interface iface;
-	
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.fifoq_ifname, ifinfo->ifname, IFNAMSIZ);
 

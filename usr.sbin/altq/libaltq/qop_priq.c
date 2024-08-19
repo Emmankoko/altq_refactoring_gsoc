@@ -83,8 +83,6 @@ static struct qdisc_ops priq_qdisc = {
 	priq_delete_filter,
 };
 
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
-
 /*
  * parser interface
  */

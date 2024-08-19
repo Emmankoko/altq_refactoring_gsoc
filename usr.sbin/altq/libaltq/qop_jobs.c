@@ -1,39 +1,39 @@
 /*	$KAME: qop_jobs.c,v 1.2 2002/10/26 07:09:22 kjc Exp $	*/
 /*
- * Copyright (c) 2001-2002, by the Rector and Board of Visitors of 
+ * Copyright (c) 2001-2002, by the Rector and Board of Visitors of
  * the University of Virginia.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, 
- * with or without modification, are permitted provided 
+ * Redistribution and use in source and binary forms,
+ * with or without modification, are permitted provided
  * that the following conditions are met:
  *
- * Redistributions of source code must retain the above 
- * copyright notice, this list of conditions and the following 
- * disclaimer. 
+ * Redistributions of source code must retain the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer.
  *
- * Redistributions in binary form must reproduce the above 
- * copyright notice, this list of conditions and the following 
- * disclaimer in the documentation and/or other materials provided 
- * with the distribution. 
+ * Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer in the documentation and/or other materials provided
+ * with the distribution.
  *
- * Neither the name of the University of Virginia nor the names 
- * of its contributors may be used to endorse or promote products 
- * derived from this software without specific prior written 
- * permission. 
+ * Neither the name of the University of Virginia nor the names
+ * of its contributors may be used to endorse or promote products
+ * derived from this software without specific prior written
+ * permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- * DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE 
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
- * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND 
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+ * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+ * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
@@ -61,21 +61,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/*                                                                     
- * JoBS - altq prototype implementation                                
- *                                                                     
+/*
+ * JoBS - altq prototype implementation
+ *
  * Author: Nicolas Christin <nicolas@cs.virginia.edu>
  *
- * JoBS algorithms originally devised and proposed by		       
+ * JoBS algorithms originally devised and proposed by
  * Nicolas Christin and Jorg Liebeherr.
- * Grateful Acknowledgments to Tarek Abdelzaher for his help and       
+ * Grateful Acknowledgments to Tarek Abdelzaher for his help and
  * comments, and to Kenjiro Cho for some helpful advice.
  * Contributed by the Multimedia Networks Group at the University
- * of Virginia. 
+ * of Virginia.
  *
  * http://qosbox.cs.virginia.edu
- *                                                                      
- */ 							               
+ *
+ */
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -142,7 +142,6 @@ static struct qdisc_ops jobs_qdisc = {
 /*
  * parser interface
  */
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 int
 jobs_interface_parser(const char *ifname, int argc, char **argv)
@@ -179,10 +178,10 @@ jobs_interface_parser(const char *ifname, int argc, char **argv)
 		}
 		argc--; argv++;
 	}
-  
+
 	if (qcmd_tbr_register(ifname, bandwidth, tbrsize) != 0)
 		return (0);
-  
+
 	if (qcmd_jobs_add_if(ifname, bandwidth, qlimit, separate) != 0)
 		return (0);
 	return (1);
@@ -212,7 +211,7 @@ jobs_class_parser(const char *ifname, const char *class_name,
 					pri = 0;
 				else
 					pri = strtol(*argv, NULL, 0);
-			}	
+			}
 		} else if (EQUAL(*argv, "adc")) {
 			argc--; argv++;
 			if (argc > 0) {
@@ -220,7 +219,7 @@ jobs_class_parser(const char *ifname, const char *class_name,
 					adc = -1;
 				else
 					adc = strtol(*argv, NULL, 0);
-			}      
+			}
 		} else if (EQUAL(*argv, "rdc")) {
 			argc--; argv++;
 			if (argc > 0) {
@@ -268,7 +267,7 @@ jobs_class_parser(const char *ifname, const char *class_name,
 		}
 		argc--; argv++;
 	}
-  
+
 	error = qcmd_jobs_add_class(ifname, class_name, pri,
 	    adc, rdc, alc, rlc, arc, flags);
 
@@ -287,7 +286,7 @@ int
 qcmd_jobs_add_if(const char *ifname, u_int bandwidth, int qlimit, int separate)
 {
 	int error;
-  
+
 	error = qop_jobs_add_if(NULL, ifname, bandwidth, qlimit, separate);
 	if (error != 0)
 		LOG(LOG_ERR, errno, "%s: can't add jobs on interface '%s'",
@@ -307,7 +306,7 @@ qcmd_jobs_add_class(const char *ifname, const char *class_name, int pri,
 	if ((ifinfo = ifname2ifinfo(ifname)) == NULL)
 		error = QOPERR_BADIF;
 	if (error == 0)
-		error = qop_jobs_add_class(NULL, class_name, ifinfo, 
+		error = qop_jobs_add_class(NULL, class_name, ifinfo,
 		    pri, adc, rdc, alc, rlc, arc, flags);
 	if (error != 0)
 		LOG(LOG_ERR, errno,
@@ -335,8 +334,8 @@ qcmd_jobs_add_class(const char *ifname, const char *class_name, int pri,
 			sprintf(name_arc,"%.2f Mbps",(double)arc/1000000.);
 		else
 			sprintf(name_arc,"N/A");
-	      
-		LOG(LOG_INFO, 0, 
+
+		LOG(LOG_INFO, 0,
 		    "added '%s' (pri=%d,adc=%s,rdc=%s,alc=%s,rlc=%s,arc=%s) on interface '%s'\n",
 		    class_name,pri,name_adc,name_rdc,name_alc,name_rlc,name_arc,ifname);
 	}
@@ -344,12 +343,12 @@ qcmd_jobs_add_class(const char *ifname, const char *class_name, int pri,
 }
 
 int
-qcmd_jobs_modify_class(const char *ifname, const char *class_name, int pri, 
+qcmd_jobs_modify_class(const char *ifname, const char *class_name, int pri,
     int64_t adc, int64_t rdc, int64_t alc, int64_t rlc, int64_t arc)
 {
 	struct ifinfo *ifinfo;
 	struct classinfo *clinfo;
-  
+
 	if ((ifinfo = ifname2ifinfo(ifname)) == NULL)
 		return (QOPERR_BADIF);
 
@@ -369,7 +368,7 @@ qop_jobs_add_if(struct ifinfo **rp, const char *ifname,
 	struct ifinfo *ifinfo = NULL;
 	struct jobs_ifinfo *jobs_ifinfo;
 	int error;
-  
+
 	if ((jobs_ifinfo = calloc(1, sizeof(*jobs_ifinfo))) == NULL)
 		return (QOPERR_NOMEM);
 	jobs_ifinfo->qlimit   = qlimit;
@@ -387,7 +386,7 @@ qop_jobs_add_if(struct ifinfo **rp, const char *ifname,
 	return (0);
 }
 
-int 
+int
 qop_jobs_add_class(struct classinfo **rp, const char *class_name,
     struct ifinfo *ifinfo, int pri,
     int64_t adc, int64_t rdc, int64_t alc, int64_t rlc, int64_t arc,
@@ -421,7 +420,7 @@ qop_jobs_add_class(struct classinfo **rp, const char *class_name,
 
 	/* set delete hook */
 	clinfo->delete_hook = qop_jobs_delete_class_hook;
-  
+
 	if (flags & JOCF_DEFAULTCLASS)
 		jobs_ifinfo->default_class = clinfo;
 
@@ -460,7 +459,7 @@ qop_jobs_modify_class(struct classinfo *clinfo, int pri,
 	int error;
 	int pri_old;
 	int64_t adc_old, rdc_old, alc_old, rlc_old, arc_old;
- 
+
 	pri_old = jobs_clinfo->pri;
 	adc_old = jobs_clinfo->adc;
 	rdc_old = jobs_clinfo->rdc;
@@ -479,7 +478,7 @@ qop_jobs_modify_class(struct classinfo *clinfo, int pri,
 	error = qop_modify_class(clinfo, NULL);
 	if (error == 0)
 		return (0);
-  
+
 	/* modify failed!, restore the old service guarantees */
 	jobs_clinfo->adc = adc_old;
 	jobs_clinfo->rdc = rdc_old;
@@ -499,7 +498,7 @@ static int
 qop_jobs_enable_hook(struct ifinfo *ifinfo)
 {
 	struct jobs_ifinfo *jobs_ifinfo;
-	
+
 	jobs_ifinfo = ifinfo->private;
 	if (jobs_ifinfo->default_class == NULL) {
 		LOG(LOG_ERR, 0, "jobs: no default class on interface %s!",
@@ -517,7 +516,7 @@ static int
 jobs_attach(struct ifinfo *ifinfo)
 {
 	struct jobs_attach attach;
-  
+
 	if (jobs_fd < 0 &&
 	    (jobs_fd = open(JOBS_DEVICE, O_RDWR)) < 0 &&
 	    (jobs_fd = open_module(JOBS_DEVICE, O_RDWR)) < 0) {
@@ -567,7 +566,7 @@ static int
 jobs_enable(struct ifinfo *ifinfo)
 {
 	struct jobs_interface iface;
-  
+
 	memset(&iface, 0, sizeof(iface));
 	strncpy(iface.jobs_ifname, ifinfo->ifname, IFNAMSIZ);
 
@@ -656,7 +655,7 @@ static int
 jobs_delete_class(struct classinfo *clinfo)
 {
 	struct jobs_delete_class class_delete;
-  
+
 	if (clinfo->handle == JOBS_NULLCLASS_HANDLE)
 		return (0);
 

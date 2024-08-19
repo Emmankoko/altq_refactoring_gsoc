@@ -186,6 +186,9 @@ int qop_codel_set_defaults(u_int64_t target, u_int64_t interval, int ecn);
 int open_module(const char *devname, int flags);
 int client_input(FILE *fp);
 
+/* for configuration parsing*/
+#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
+
 /* misc system errors */
 #define QOPERR_OK		0	/* no error */
 #define QOPERR_SYSCALL		1	/* syscall err; see errno */

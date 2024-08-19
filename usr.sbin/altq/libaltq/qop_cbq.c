@@ -104,8 +104,6 @@ static struct qdisc_ops cbq_qdisc = {
 	cbq_delete_filter,
 };
 
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
-
 /*
  * parser interface
  */

@@ -45,13 +45,12 @@
 #include <altq/altq.h>
 #include <altq/altq_red.h>
 #include <altq/altq_rio.h>
+#include <altq/altq_codel.h>
 
 #include "altq_qop.h"
 #include "quip_server.h"
 
 extern LIST_HEAD(qop_iflist, ifinfo)	qop_iflist;
-
-#define EQUAL(s1, s2)	(strcmp((s1), (s2)) == 0)
 
 static int next_word(char **, char *);
 
@@ -139,11 +138,11 @@ quip_input(FILE *fp)
 
 /*
  * Skip leading blanks, then copy next word (delimited by blank or zero, but
- * no longer than 63 bytes) into buffer b, set scan pointer to following 
+ * no longer than 63 bytes) into buffer b, set scan pointer to following
  * non-blank (or end of string), and return 1.  If there is no non-blank text,
  * set scan ptr to point to 0 byte and return 0.
  */
-static int 
+static int
 next_word(char **cpp, char *b)
 {
 	char           *tp;
@@ -283,7 +282,7 @@ query_filterspec(const char *cmd, const char *arg, char *msg, size_t maxmsg)
 		return (-1);
 
 	filt = &fltrinfo->fltr;
-	
+
 	if (filt->ff_flow.fi_family == AF_INET) {
 		char src[128], dst[128], smask[128], dmask[128], tos[128];
 
@@ -331,8 +330,8 @@ query_filterspec(const char *cmd, const char *arg, char *msg, size_t maxmsg)
 		char dst6[INET6_ADDRSTRLEN], dmask6[INET6_ADDRSTRLEN];
 		char src6[INET6_ADDRSTRLEN], smask6[INET6_ADDRSTRLEN];
 		char tclass6[128];
-		const struct in6_addr mask128 = 
-		{{{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+		const struct in6_addr mask128 =
+		{{{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }}};
 
 		filt6 = (struct flow_filter6 *)&fltrinfo->fltr;
