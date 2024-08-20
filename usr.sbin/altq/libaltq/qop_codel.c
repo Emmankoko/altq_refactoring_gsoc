@@ -55,11 +55,7 @@ static int codel_enable(struct ifinfo *);
 static int codel_disable(struct ifinfo *);
 
 #define CODEL_DEVICE	"/dev/altq/codel"
-/*
- * CoDel is an Active Queue Management mechanism which is not in immediate need
- * of an interface parser since it's going to be worked on priq, hfsc, or cbq
- * scheduled queues.
- */
+
 static int codel_fd = -1;
 static int codel_refcount = 0;
 
