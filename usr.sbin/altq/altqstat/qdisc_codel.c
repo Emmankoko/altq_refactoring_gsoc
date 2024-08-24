@@ -105,9 +105,10 @@ codel_stat_loop(int fd, const char *ifname, int count, int interval)
 int
 print_codelstats(struct codel_stats *cod)
 {
-	printf("     CoDel xmit:%llu (maxpacket:%u marked:%u)\n",
+	printf("     CoDel xmit:%llu marked:%u\n",
 	       (ull)cod->cl_xmitcnt.packets,
-	       cod->maxpacket,
 	       cod->marked_packets);
+	printf("	(maxpacket:%u , drop:%llu)\n",
+			cod->maxpacket, (ull)cod->cl_dropcnt.packets);
 	return 0;
 }

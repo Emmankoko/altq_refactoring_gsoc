@@ -275,12 +275,27 @@ cbq_class_parser(const char *ifname, const char *class_name,
 		argc--; argv++;
 	}
 
+	if ((flags & (CBQCLF_RED|CBQCLF_RIO|CBQCLF_CODEL)) == (CBQCLF_RED|CBQCLF_RIO|CBQCLF_CODEL)) {
+		LOG(LOG_ERR, 0,
+		    "red, rio and codel defined on interface '%s'",
+		    ifname);
+		return (0);
+	}
+
 	if ((flags & (CBQCLF_RED|CBQCLF_RIO)) == (CBQCLF_RED|CBQCLF_RIO)) {
 		LOG(LOG_ERR, 0,
 		    "both red and rio defined on interface '%s'",
 		    ifname);
 		return (0);
 	}
+
+	if ((flags & (CBQCLF_RED|CBQCLF_CODEL)) == (CBQCLF_RED|CBQCLF_CODEL)) {
+		LOG(LOG_ERR, 0,
+		    "both red and codel defined on interface '%s'",
+		    ifname);
+		return (0);
+	}
+
 	if ((flags & (CBQCLF_ECN|CBQCLF_FLOWVALVE))
 	    && (flags & (CBQCLF_RED|CBQCLF_RIO)) == 0)
 		flags |= CBQCLF_RED;
