@@ -223,7 +223,7 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, uint64_t psecPerByte,
 		return (NULL);
 	}
 #endif
-#ifdef ALTQ_CODEL
+#ifndef ALTQ_CODEL
 	if (flags & RMCF_CODEL) {
 #ifdef ALTQ_DEBUG
 		printf("rmc_newclass: CODEL not configured for CBQ!\n");
