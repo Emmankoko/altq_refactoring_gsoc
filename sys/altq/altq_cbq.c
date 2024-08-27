@@ -242,7 +242,7 @@ get_class_stats(class_stats_t *statsp, struct rm_class *cl)
 #endif
 #ifdef ALTQ_CODEL
 	if (q_is_codel(cl->q_))
-		codel_getstats(cl->codel_, statsp->codel);
+		codel_getstats(cl->codel_, &statsp->codel[0]);
 #endif
 }
 

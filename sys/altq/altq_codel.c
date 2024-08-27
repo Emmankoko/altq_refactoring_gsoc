@@ -318,7 +318,10 @@ codel_getq(struct codel *c, class_queue_t *q)
 void
 codel_getstats(struct codel *c, struct codel_stats *s)
 {
-	*s = c->stats;
+	s->maxpacket = c->stats.maxpacket;
+	s->marked_packets = c->stats.marked_packet;
+	s->cl_dropcnt = c->stats.cl_dropcnt;
+	s->cl_xmitcnt = c->stats.cl_xmitcnt;
 }
 
 #ifdef ALTQ3_COMPAT
