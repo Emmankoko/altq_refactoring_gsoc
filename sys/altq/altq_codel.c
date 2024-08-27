@@ -319,7 +319,7 @@ void
 codel_getstats(struct codel *c, struct codel_stats *s)
 {
 	s->maxpacket = c->stats.maxpacket;
-	s->marked_packets = c->stats.marked_packet;
+	s->marked_packets = c->stats.marked_packets;
 	s->cl_dropcnt = c->stats.cl_dropcnt;
 	s->cl_xmitcnt = c->stats.cl_xmitcnt;
 }
