@@ -168,6 +168,19 @@ yyerror(const char *fmt, ...)
 %token			TO
 %token			TREE
 %token			TYPE
+%token 			ALTQ
+%token 			CBQ
+%token			PRIQ
+%token			HFSC
+%token			BANDWIDTH
+%token			TBRSIZE
+%token			LINKSHARE
+%token			REALTIME
+%token			UPPERLIMIT
+%token 			QUEUE
+%token 			PRIORITY
+%token			QLIMIT
+%table 			RTABLE
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
