@@ -34,6 +34,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <altq/altq.h>
+#include <altq/altq_cbq.h>
+#include <altq/altq_priq.h>
+#include <altq/altq_hfsc.h>
 #ifdef __NetBSD__
 #include <vis.h>
 #endif
@@ -77,6 +81,20 @@ yyerror(const char *fmt, ...)
 	fprintf(stderr, "\n");
 	exit(EXIT_FAILURE);
 }
+
+struct queue_opts {
+	int			marker;
+#define QOM_BWSPEC	0x01
+#define QOM_SCHEDULER	0x02
+#define QOM_PRIORITY	0x04
+#define QOM_TBRSIZE	0x08
+#define QOM_QLIMIT	0x10
+	struct node_queue_bw	queue_bwspec;
+	struct node_queue_opt	scheduler;
+	int			priority;
+	int			tbrsize;
+	int			qlimit;
+} queue_opts;
 
 %}
 
@@ -245,6 +263,7 @@ line
 	| rproc
 	| alg
 	| set
+	| altq
 	|
 	;
 
@@ -490,6 +509,111 @@ proc_param_val
 	| FPNUM		{ (void)asprintf(&$$, "%lf", $1); }
 	|		{ $$ = NULL; }
 	;
+/*
+ * altq and queue options ruleset
+ */
+
+ altq
+	: ALTQ on_ifname queue_opts QUEUE qassign {
+					struct npf_altq	a;
+
+			if (check_rulestate(PFCTL_STATE_QUEUE))
+				YYERROR;
+
+			memset(&a, 0, sizeof(a));
+			if ($3.scheduler.qtype == ALTQT_NONE) {
+				yyerror("no scheduler specified!");
+				YYERROR;
+			}
+			a.scheduler = $3.scheduler.qtype;
+			a.qlimit = $3.qlimit;
+			a.tbrsize = $3.tbrsize;
+			if ($5 == NULL) {
+				yyerror("no child queues specified");
+				YYERROR;
+			}
+			if (expand_altq(&a, $2, $5, $3.queue_bwspec,
+			    &$3.scheduler))
+				YYERROR;
+		}
+		;
+
+queue_opts	:	{
+			bzero(&queue_opts, sizeof queue_opts);
+			queue_opts.priority = DEFAULT_PRIORITY;
+			queue_opts.qlimit = DEFAULT_QLIMIT;
+			queue_opts.scheduler.qtype = ALTQT_NONE;
+			queue_opts.queue_bwspec.bw_percent = 100;
+		}
+		    queue_opts_l
+			{ $$ = queue_opts; }
+		| /* empty */ {
+			bzero(&queue_opts, sizeof queue_opts);
+			queue_opts.priority = DEFAULT_PRIORITY;
+			queue_opts.qlimit = DEFAULT_QLIMIT;
+			queue_opts.scheduler.qtype = ALTQT_NONE;
+			queue_opts.queue_bwspec.bw_percent = 100;
+			$$ = queue_opts;
+		}
+		;
+
+queue_opts_l	: queue_opts_l queue_opt
+		| queue_opt
+		;
+
+queue_opt	: BANDWIDTH bandwidth	{
+			if (queue_opts.marker & QOM_BWSPEC) {
+				yyerror("bandwidth cannot be respecified");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_BWSPEC;
+			queue_opts.queue_bwspec = $2;
+		}
+		| PRIORITY number	{
+			if (queue_opts.marker & QOM_PRIORITY) {
+				yyerror("priority cannot be respecified");
+				YYERROR;
+			}
+			if ($2 > 255) {
+				yyerror("priority out of range: max 255");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_PRIORITY;
+			queue_opts.priority = $2;
+		}
+		| QLIMIT number	{
+			if (queue_opts.marker & QOM_QLIMIT) {
+				yyerror("qlimit cannot be respecified");
+				YYERROR;
+			}
+			if ($2 > 65535) {
+				yyerror("qlimit out of range: max 65535");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_QLIMIT;
+			queue_opts.qlimit = $2;
+		}
+		| scheduler	{
+			if (queue_opts.marker & QOM_SCHEDULER) {
+				yyerror("scheduler cannot be respecified");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_SCHEDULER;
+			queue_opts.scheduler = $1;
+		}
+		| TBRSIZE number	{
+			if (queue_opts.marker & QOM_TBRSIZE) {
+				yyerror("tbrsize cannot be respecified");
+				YYERROR;
+			}
+			if ($2 > 65535) {
+				yyerror("tbrsize too big: max 65535");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_TBRSIZE;
+			queue_opts.tbrsize = $2;
+		}
+		;
 
 /*
  * Group and dynamic ruleset definition.
