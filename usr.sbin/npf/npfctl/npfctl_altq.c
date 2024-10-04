@@ -50,10 +50,10 @@
 
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
-TAILQ_HEAD(altqs, pf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
+TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 LIST_HEAD(gen_sc, segment) rtsc, lssc;
 
-struct pf_altq	*qname_to_pfaltq(const char *, const char *);
+struct npf_altq	*qname_to_pfaltq(const char *, const char *);
 u_int32_t	 qname_to_qid(const char *);
 
 static int	eval_npfqueue_cbq(struct npfctl *, struct npf_altq *);
@@ -99,7 +99,7 @@ pfaltq_store(struct npf_altq *a)
 }
 
 struct npf_altq *
-pfaltq_lookup(const char *ifname)
+npfaltq_lookup(const char *ifname)
 {
 	struct npf_altq	*altq;
 
@@ -114,7 +114,7 @@ pfaltq_lookup(const char *ifname)
 struct npf_altq *
 qname_to_pfaltq(const char *qname, const char *ifname)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 
 	TAILQ_FOREACH(altq, &altqs, entries) {
 		if (strncmp(ifname, altq->ifname, IFNAMSIZ) == 0 &&
@@ -262,7 +262,7 @@ eval_npfaltq(struct npfctl *pf, struct npf_altq *pa, struct node_queue_bw *bw,
 int
 check_commit_altq(int dev, int opts)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 	int		 error = 0;
 
 	/* call the discipline check for each interface. */
@@ -294,12 +294,12 @@ eval_npfqueue(struct npfctl *pf, struct npf_altq *pa, struct node_queue_bw *bw,
     struct node_queue_opt *opts)
 {
 	/* should be merged with expand_queue */
-	struct pf_altq	*if_pa, *parent, *altq;
+	struct npf_altq	*if_pa, *parent, *altq;
 	u_int32_t	 bwsum;
 	int		 error = 0;
 
 	/* find the corresponding interface and copy fields used by queues */
-	if ((if_pa = pfaltq_lookup(pa->ifname)) == NULL) {
+	if ((if_pa = npfaltq_lookup(pa->ifname)) == NULL) {
 		fprintf(stderr, "altq not defined on %s\n", pa->ifname);
 		return (1);
 	}
@@ -509,7 +509,7 @@ cbq_compute_idletime(struct npfctl *pf, struct npf_altq *pa)
 static int
 check_commit_cbq(int dev, int opts, struct npf_altq *pa)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 	int		 root_class, default_class;
 	int		 error = 0;
 
@@ -582,7 +582,7 @@ print_cbq_opts(const struct npf_altq *a)
 static int
 eval_pfqueue_priq(struct npfctl *pf, struct npf_altq *pa)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 
 	if (pa->priority >= PRIQ_MAXPRI) {
 		warnx("priority out of range: max %d", PRIQ_MAXPRI - 1);
@@ -604,7 +604,7 @@ eval_pfqueue_priq(struct npfctl *pf, struct npf_altq *pa)
 static int
 check_commit_priq(int dev, int opts, struct npf_altq *pa)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 	int		 default_class;
 	int		 error = 0;
 
