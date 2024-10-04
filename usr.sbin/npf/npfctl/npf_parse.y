@@ -44,6 +44,13 @@
 
 #include "npfctl.h"
 
+int	expand_altq(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw bwspec, struct node_queue_opt *);
+int	expand_queue(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw, struct node_queue_opt *);
+
+
+
 #define	YYSTACKSIZE	4096
 
 int			yystarttoken;
@@ -95,6 +102,15 @@ struct queue_opts {
 	int			tbrsize;
 	int			qlimit;
 } queue_opts;
+
+struct node_queue {
+	char			 queue[PF_QNAME_SIZE];
+	char			 parent[PF_QNAME_SIZE];
+	char			 ifname[IFNAMSIZ];
+	int			 scheduler;
+	struct node_queue	*next;
+	struct node_queue	*tail;
+}	*queues = NULL;
 
 %}
 
@@ -538,6 +554,43 @@ proc_param_val
 		}
 		;
 
+queuespec	: QUEUE STRING interface queue_opts qassign {
+			struct npf_altq	a;
+
+			if (check_rulestate(PFCTL_STATE_QUEUE)) {
+				free($2);
+				YYERROR;
+			}
+
+			memset(&a, 0, sizeof(a));
+
+			if (strlcpy(a.qname, $2, sizeof(a.qname)) >=
+			    sizeof(a.qname)) {
+				yyerror("queue name too long (max "
+				    "%d chars)", PF_QNAME_SIZE-1);
+				free($2);
+				YYERROR;
+			}
+			free($2);
+			if ($4.tbrsize) {
+				yyerror("cannot specify tbrsize for queue");
+				YYERROR;
+			}
+			if ($4.priority > 255) {
+				yyerror("priority out of range: max 255");
+				YYERROR;
+			}
+			a.priority = $4.priority;
+			a.qlimit = $4.qlimit;
+			a.scheduler = $4.scheduler.qtype;
+			if (expand_queue(&a, $3, $5, $4.queue_bwspec,
+			    &$4.scheduler)) {
+				yyerror("errors in queue definition");
+				YYERROR;
+			}
+		}
+		;
+
 queue_opts	:	{
 			bzero(&queue_opts, sizeof queue_opts);
 			queue_opts.priority = DEFAULT_PRIORITY;
@@ -614,6 +667,238 @@ queue_opt	: BANDWIDTH bandwidth	{
 			queue_opts.tbrsize = $2;
 		}
 		;
+
+
+bandwidth	: STRING {
+			double	 bps;
+			char	*cp;
+
+			$$.bw_percent = 0;
+
+			bps = strtod($1, &cp);
+			if (cp != NULL) {
+				if (!strcmp(cp, "b"))
+					; /* nothing */
+				else if (!strcmp(cp, "Kb"))
+					bps *= 1000;
+				else if (!strcmp(cp, "Mb"))
+					bps *= 1000 * 1000;
+				else if (!strcmp(cp, "Gb"))
+					bps *= 1000 * 1000 * 1000;
+				else if (!strcmp(cp, "%")) {
+					if (bps < 0 || bps > 100) {
+						yyerror("bandwidth spec "
+						    "out of range");
+						free($1);
+						YYERROR;
+					}
+					$$.bw_percent = bps;
+					bps = 0;
+				} else {
+					yyerror("unknown unit %s", cp);
+					free($1);
+					YYERROR;
+				}
+			}
+			free($1);
+			$$.bw_absolute = (u_int32_t)bps;
+		}
+		;
+
+scheduler	: CBQ				{
+			$$.qtype = ALTQT_CBQ;
+			$$.data.cbq_opts.flags = 0;
+		}
+		| CBQ '(' cbqflags_list ')'	{
+			$$.qtype = ALTQT_CBQ;
+			$$.data.cbq_opts.flags = $3;
+		}
+		| PRIQ				{
+			$$.qtype = ALTQT_PRIQ;
+			$$.data.priq_opts.flags = 0;
+		}
+		| PRIQ '(' priqflags_list ')'	{
+			$$.qtype = ALTQT_PRIQ;
+			$$.data.priq_opts.flags = $3;
+		}
+		| HFSC				{
+			$$.qtype = ALTQT_HFSC;
+			bzero(&$$.data.hfsc_opts,
+			    sizeof(struct node_hfsc_opts));
+		}
+		| HFSC '(' hfsc_opts ')'	{
+			$$.qtype = ALTQT_HFSC;
+			$$.data.hfsc_opts = $3;
+		}
+		;
+
+cbqflags_list	: cbqflags_item				{ $$ |= $1; }
+		| cbqflags_list comma cbqflags_item	{ $$ |= $3; }
+		;
+
+cbqflags_item	: STRING	{
+			if (!strcmp($1, "default"))
+				$$ = CBQCLF_DEFCLASS;
+#ifdef CBQCLF_BORROW
+			else if (!strcmp($1, "borrow"))
+				$$ = CBQCLF_BORROW;
+#endif
+			else if (!strcmp($1, "red"))
+				$$ = CBQCLF_RED;
+			else if (!strcmp($1, "ecn"))
+				$$ = CBQCLF_RED|CBQCLF_ECN;
+			else if (!strcmp($1, "rio"))
+				$$ = CBQCLF_RIO;
+			else {
+				yyerror("unknown cbq flag \"%s\"", $1);
+				free($1);
+				YYERROR;
+			}
+			free($1);
+		}
+		;
+
+priqflags_list	: priqflags_item			{ $$ |= $1; }
+		| priqflags_list comma priqflags_item	{ $$ |= $3; }
+		;
+
+priqflags_item	: STRING	{
+			if (!strcmp($1, "default"))
+				$$ = PRCF_DEFAULTCLASS;
+			else if (!strcmp($1, "red"))
+				$$ = PRCF_RED;
+			else if (!strcmp($1, "ecn"))
+				$$ = PRCF_RED|PRCF_ECN;
+			else if (!strcmp($1, "rio"))
+				$$ = PRCF_RIO;
+			else {
+				yyerror("unknown priq flag \"%s\"", $1);
+				free($1);
+				YYERROR;
+			}
+			free($1);
+		}
+		;
+
+hfsc_opts	:	{
+				bzero(&hfsc_opts,
+				    sizeof(struct node_hfsc_opts));
+			}
+		    hfscopts_list				{
+			$$ = hfsc_opts;
+		}
+		;
+
+hfscopts_list	: hfscopts_item
+		| hfscopts_list comma hfscopts_item
+		;
+
+hfscopts_item	: LINKSHARE bandwidth				{
+			if (hfsc_opts.linkshare.used) {
+				yyerror("linkshare already specified");
+				YYERROR;
+			}
+			hfsc_opts.linkshare.m2 = $2;
+			hfsc_opts.linkshare.used = 1;
+		}
+		| LINKSHARE '(' bandwidth comma number comma bandwidth ')'
+		    {
+			if (hfsc_opts.linkshare.used) {
+				yyerror("linkshare already specified");
+				YYERROR;
+			}
+			hfsc_opts.linkshare.m1 = $3;
+			hfsc_opts.linkshare.d = $5;
+			hfsc_opts.linkshare.m2 = $7;
+			hfsc_opts.linkshare.used = 1;
+		}
+		| REALTIME bandwidth				{
+			if (hfsc_opts.realtime.used) {
+				yyerror("realtime already specified");
+				YYERROR;
+			}
+			hfsc_opts.realtime.m2 = $2;
+			hfsc_opts.realtime.used = 1;
+		}
+		| REALTIME '(' bandwidth comma number comma bandwidth ')'
+		    {
+			if (hfsc_opts.realtime.used) {
+				yyerror("realtime already specified");
+				YYERROR;
+			}
+			hfsc_opts.realtime.m1 = $3;
+			hfsc_opts.realtime.d = $5;
+			hfsc_opts.realtime.m2 = $7;
+			hfsc_opts.realtime.used = 1;
+		}
+		| UPPERLIMIT bandwidth				{
+			if (hfsc_opts.upperlimit.used) {
+				yyerror("upperlimit already specified");
+				YYERROR;
+			}
+			hfsc_opts.upperlimit.m2 = $2;
+			hfsc_opts.upperlimit.used = 1;
+		}
+		| UPPERLIMIT '(' bandwidth comma number comma bandwidth ')'
+		    {
+			if (hfsc_opts.upperlimit.used) {
+				yyerror("upperlimit already specified");
+				YYERROR;
+			}
+			hfsc_opts.upperlimit.m1 = $3;
+			hfsc_opts.upperlimit.d = $5;
+			hfsc_opts.upperlimit.m2 = $7;
+			hfsc_opts.upperlimit.used = 1;
+		}
+		| STRING	{
+			if (!strcmp($1, "default"))
+				hfsc_opts.flags |= HFCF_DEFAULTCLASS;
+			else if (!strcmp($1, "red"))
+				hfsc_opts.flags |= HFCF_RED;
+			else if (!strcmp($1, "ecn"))
+				hfsc_opts.flags |= HFCF_RED|HFCF_ECN;
+			else if (!strcmp($1, "rio"))
+				hfsc_opts.flags |= HFCF_RIO;
+			else {
+				yyerror("unknown hfsc flag \"%s\"", $1);
+				free($1);
+				YYERROR;
+			}
+			free($1);
+		}
+		;
+
+qassign		: /* empty */		{ $$ = NULL; }
+		| qassign_item		{ $$ = $1; }
+		| '{' qassign_list '}'	{ $$ = $2; }
+		;
+
+qassign_list	: qassign_item			{ $$ = $1; }
+		| qassign_list comma qassign_item	{
+			$1->tail->next = $3;
+			$1->tail = $3;
+			$$ = $1;
+		}
+		;
+
+qassign_item	: STRING			{
+			$$ = calloc(1, sizeof(struct node_queue));
+			if ($$ == NULL)
+				err(1, "qassign_item: calloc");
+			if (strlcpy($$->queue, $1, sizeof($$->queue)) >=
+			    sizeof($$->queue)) {
+				yyerror("queue name '%s' too long (max "
+				    "%d chars)", $1, sizeof($$->queue)-1);
+				free($1);
+				free($$);
+				YYERROR;
+			}
+			free($1);
+			$$->next = NULL;
+			$$->tail = $$;
+		}
+		;
+
 
 /*
  * Group and dynamic ruleset definition.
@@ -1118,3 +1403,259 @@ some_name
 	;
 
 %%
+
+int
+expand_altq(struct npf_altq *a, struct node_if *interfaces,
+    struct node_queue *nqueues, struct node_queue_bw bwspec,
+    struct node_queue_opt *opts)
+{
+	struct npf_altq		 pa, pb;
+	char			 qname[PF_QNAME_SIZE];
+	struct node_queue	*n;
+	struct node_queue_bw	 bw;
+	int			 errs = 0;
+
+	if ((pf->loadopt & PFCTL_FLAG_ALTQ) == 0) {
+		FREE_LIST(struct node_if, interfaces);
+		FREE_LIST(struct node_queue, nqueues);
+		return (0);
+	}
+
+	LOOP_THROUGH(struct node_if, interface, interfaces,
+		memcpy(&pa, a, sizeof(struct pf_altq));
+		if (strlcpy(pa.ifname, interface->ifname,
+		    sizeof(pa.ifname)) >= sizeof(pa.ifname))
+			errx(1, "expand_altq: strlcpy");
+
+		if (interface->not) {
+			yyerror("altq on ! <interface> is not supported");
+			errs++;
+		} else {
+			if (eval_npfaltq(pf, &pa, &bwspec, opts))
+				errs++;
+			else
+				if (pfctl_add_altq(pf, &pa))
+					errs++;
+
+			if (pf->opts & PF_OPT_VERBOSE) {
+				print_altq(&pf->paltq->altq, 0,
+				    &bwspec, opts);
+				if (nqueues && nqueues->tail) {
+					printf("queue { ");
+					LOOP_THROUGH(struct node_queue, queue,
+					    nqueues,
+						printf("%s ",
+						    queue->queue);
+					);
+					printf("}");
+				}
+				printf("\n");
+			}
+
+			if (pa.scheduler == ALTQT_CBQ ||
+			    pa.scheduler == ALTQT_HFSC) {
+				/* now create a root queue */
+				memset(&pb, 0, sizeof(struct pf_altq));
+				if (strlcpy(qname, "root_", sizeof(qname)) >=
+				    sizeof(qname))
+					errx(1, "expand_altq: strlcpy");
+				if (strlcat(qname, interface->ifname,
+				    sizeof(qname)) >= sizeof(qname))
+					errx(1, "expand_altq: strlcat");
+				if (strlcpy(pb.qname, qname,
+				    sizeof(pb.qname)) >= sizeof(pb.qname))
+					errx(1, "expand_altq: strlcpy");
+				if (strlcpy(pb.ifname, interface->ifname,
+				    sizeof(pb.ifname)) >= sizeof(pb.ifname))
+					errx(1, "expand_altq: strlcpy");
+				pb.qlimit = pa.qlimit;
+				pb.scheduler = pa.scheduler;
+				bw.bw_absolute = pa.ifbandwidth;
+				bw.bw_percent = 0;
+				if (eval_npfqueue(pf, &pb, &bw, opts))
+					errs++;
+				else
+					if (pfctl_add_altq(pf, &pb))
+						errs++;
+			}
+
+			LOOP_THROUGH(struct node_queue, queue, nqueues,
+				n = calloc(1, sizeof(struct node_queue));
+				if (n == NULL)
+					err(1, "expand_altq: calloc");
+				if (pa.scheduler == ALTQT_CBQ ||
+				    pa.scheduler == ALTQT_HFSC)
+					if (strlcpy(n->parent, qname,
+					    sizeof(n->parent)) >=
+					    sizeof(n->parent))
+						errx(1, "expand_altq: strlcpy");
+				if (strlcpy(n->queue, queue->queue,
+				    sizeof(n->queue)) >= sizeof(n->queue))
+					errx(1, "expand_altq: strlcpy");
+				if (strlcpy(n->ifname, interface->ifname,
+				    sizeof(n->ifname)) >= sizeof(n->ifname))
+					errx(1, "expand_altq: strlcpy");
+				n->scheduler = pa.scheduler;
+				n->next = NULL;
+				n->tail = n;
+				if (queues == NULL)
+					queues = n;
+				else {
+					queues->tail->next = n;
+					queues->tail = n;
+				}
+			);
+		}
+	);
+	FREE_LIST(struct node_if, interfaces);
+	FREE_LIST(struct node_queue, nqueues);
+
+	return (errs);
+}
+
+int
+expand_queue(struct npf_altq *a, struct node_if *interfaces,
+    struct node_queue *nqueues, struct node_queue_bw bwspec,
+    struct node_queue_opt *opts)
+{
+	struct node_queue	*n, *nq;
+	struct npf_altq		 pa;
+	u_int8_t		 found = 0;
+	u_int8_t		 errs = 0;
+
+	if ((pf->loadopt & PFCTL_FLAG_ALTQ) == 0) {
+		FREE_LIST(struct node_queue, nqueues);
+		return (0);
+	}
+
+	if (queues == NULL) {
+		yyerror("queue %s has no parent", a->qname);
+		FREE_LIST(struct node_queue, nqueues);
+		return (1);
+	}
+
+	LOOP_THROUGH(struct node_if, interface, interfaces,
+		LOOP_THROUGH(struct node_queue, tqueue, queues,
+			if (!strncmp(a->qname, tqueue->queue, PF_QNAME_SIZE) &&
+			    (interface->ifname[0] == 0 ||
+			    (!interface->not && !strncmp(interface->ifname,
+			    tqueue->ifname, IFNAMSIZ)) ||
+			    (interface->not && strncmp(interface->ifname,
+			    tqueue->ifname, IFNAMSIZ)))) {
+				/* found ourself in queues */
+				found++;
+
+				memcpy(&pa, a, sizeof(struct npf_altq));
+
+				if (pa.scheduler != ALTQT_NONE &&
+				    pa.scheduler != tqueue->scheduler) {
+					yyerror("exactly one scheduler type "
+					    "per interface allowed");
+					errs++;
+					goto out;
+				}
+				pa.scheduler = tqueue->scheduler;
+
+				/* scheduler dependent error checking */
+				switch (pa.scheduler) {
+				case ALTQT_PRIQ:
+					if (nqueues != NULL) {
+						yyerror("priq queues cannot "
+						    "have child queues");
+						errs++;
+						goto out;
+					}
+					if (bwspec.bw_absolute > 0 ||
+					    bwspec.bw_percent < 100) {
+						yyerror("priq doesn't take "
+						    "bandwidth");
+						errs++;
+						goto out;
+					}
+					break;
+				default:
+					break;
+				}
+
+				if (strlcpy(pa.ifname, tqueue->ifname,
+				    sizeof(pa.ifname)) >= sizeof(pa.ifname))
+					errx(1, "expand_queue: strlcpy");
+				if (strlcpy(pa.parent, tqueue->parent,
+				    sizeof(pa.parent)) >= sizeof(pa.parent))
+					errx(1, "expand_queue: strlcpy");
+
+				if (eval_npfqueue(pf, &pa, &bwspec, opts))
+					errs++;
+				else
+					if (pfctl_add_altq(pf, &pa))
+						errs++;
+
+				for (nq = nqueues; nq != NULL; nq = nq->next) {
+					if (!strcmp(a->qname, nq->queue)) {
+						yyerror("queue cannot have "
+						    "itself as child");
+						errs++;
+						continue;
+					}
+					n = calloc(1,
+					    sizeof(struct node_queue));
+					if (n == NULL)
+						err(1, "expand_queue: calloc");
+					if (strlcpy(n->parent, a->qname,
+					    sizeof(n->parent)) >=
+					    sizeof(n->parent))
+						errx(1, "expand_queue strlcpy");
+					if (strlcpy(n->queue, nq->queue,
+					    sizeof(n->queue)) >=
+					    sizeof(n->queue))
+						errx(1, "expand_queue strlcpy");
+					if (strlcpy(n->ifname, tqueue->ifname,
+					    sizeof(n->ifname)) >=
+					    sizeof(n->ifname))
+						errx(1, "expand_queue strlcpy");
+					n->scheduler = tqueue->scheduler;
+					n->next = NULL;
+					n->tail = n;
+					if (queues == NULL)
+						queues = n;
+					else {
+						queues->tail->next = n;
+						queues->tail = n;
+					}
+				}
+				if ((pf->opts & PF_OPT_VERBOSE) && (
+				    (found == 1 && interface->ifname[0] == 0) ||
+				    (found > 0 && interface->ifname[0] != 0))) {
+					print_queue(&pf->paltq->altq, 0,
+					    &bwspec, interface->ifname[0] != 0,
+					    opts);
+					if (nqueues && nqueues->tail) {
+						printf("{ ");
+						LOOP_THROUGH(struct node_queue,
+						    queue, nqueues,
+							printf("%s ",
+							    queue->queue);
+						);
+						printf("}");
+					}
+					printf("\n");
+				}
+			}
+		);
+	);
+
+out:
+	FREE_LIST(struct node_queue, nqueues);
+	FREE_LIST(struct node_if, interfaces);
+
+	if (!found) {
+		yyerror("queue %s has no parent", a->qname);
+		errs++;
+	}
+
+	if (errs)
+		return (1);
+	else
+		return (0);
+}
+

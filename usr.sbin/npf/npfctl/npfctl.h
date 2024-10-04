@@ -108,6 +108,44 @@ typedef enum {
 	NPFCTL_PARSE_MAP
 } parse_entry_t;
 
+struct node_if {
+	char			 ifname[IFNAMSIZ];
+	u_int8_t		 not;
+	u_int8_t		 dynamic; /* antispoof */
+	u_int			 ifa_flags;
+	struct node_if		*next;
+	struct node_if		*tail;
+};
+
+
+struct node_queue_bw {
+	u_int32_t	bw_absolute;
+	u_int16_t	bw_percent;
+};
+
+struct node_hfsc_sc {
+	struct node_queue_bw	m1;	/* slope of 1st segment; bps */
+	u_int			d;	/* x-projection of m1; msec */
+	struct node_queue_bw	m2;	/* slope of 2nd segment; bps */
+	u_int8_t		used;
+};
+
+struct node_hfsc_opts {
+	struct node_hfsc_sc	realtime;
+	struct node_hfsc_sc	linkshare;
+	struct node_hfsc_sc	upperlimit;
+	int			flags;
+};
+
+struct node_queue_opt {
+	int			 qtype;
+	union {
+		struct cbq_opts		cbq_opts;
+		struct priq_opts	priq_opts;
+		struct node_hfsc_opts	hfsc_opts;
+	}			 data;
+};
+
 #define	NPF_IFNET_TABLE_PREF		".ifnet-"
 #define	NPF_IFNET_TABLE_PREFLEN		(sizeof(NPF_IFNET_TABLE_PREF) - 1)
 
@@ -241,4 +279,12 @@ void		npfctl_setparam(const char *, int);
 #define	TH_CWR		0x80
 #endif
 
+/*
+ * altq usage
+ */
+int	 pfctl_show_altq(int, const char *, int, int);
+int		 check_commit_altq(int, int);
+void		 pfaltq_store(struct pf_altq *);
+struct pf_altq	*pfaltq_lookup(const char *);
+char		*rate2str(double);
 #endif

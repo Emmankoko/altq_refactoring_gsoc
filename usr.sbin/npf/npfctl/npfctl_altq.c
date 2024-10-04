@@ -46,7 +46,7 @@
 #include <altq/altq_hfsc.h>
 
 #include "npf_parse.h"
-#include "pfctl.h"
+#include "npfctl.h"
 
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
