@@ -45,7 +45,7 @@
 #include <altq/altq_priq.h>
 #include <altq/altq_hfsc.h>
 
-#include "pfctl_parser.h"
+#include "npf_parse.h"
 #include "pfctl.h"
 
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
@@ -56,18 +56,18 @@ LIST_HEAD(gen_sc, segment) rtsc, lssc;
 struct pf_altq	*qname_to_pfaltq(const char *, const char *);
 u_int32_t	 qname_to_qid(const char *);
 
-static int	eval_pfqueue_cbq(struct pfctl *, struct pf_altq *);
-static int	cbq_compute_idletime(struct pfctl *, struct pf_altq *);
-static int	check_commit_cbq(int, int, struct pf_altq *);
-static int	print_cbq_opts(const struct pf_altq *);
+static int	eval_npfqueue_cbq(struct npfctl *, struct npf_altq *);
+static int	cbq_compute_idletime(struct npfctl *, struct npf_altq *);
+static int	check_commit_cbq(int, int, struct npf_altq *);
+static int	print_cbq_opts(const struct npf_altq *);
 
-static int	eval_pfqueue_priq(struct pfctl *, struct pf_altq *);
-static int	check_commit_priq(int, int, struct pf_altq *);
-static int	print_priq_opts(const struct pf_altq *);
+static int	eval_npfqueue_priq(struct npfctl *, struct npf_altq *);
+static int	check_commit_priq(int, int, struct npf_altq *);
+static int	print_priq_opts(const struct npf_altq *);
 
-static int	eval_pfqueue_hfsc(struct pfctl *, struct pf_altq *);
-static int	check_commit_hfsc(int, int, struct pf_altq *);
-static int	print_hfsc_opts(const struct pf_altq *,
+static int	eval_npfqueue_hfsc(struct npfctl *, struct npf_altq *);
+static int	check_commit_hfsc(int, int, struct npf_altq *);
+static int	print_hfsc_opts(const struct npf_altq *,
 		    const struct node_queue_opt *);
 
 static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
@@ -81,16 +81,16 @@ static double		 sc_x2y(struct service_curve *, double);
 
 u_int32_t	 getifspeed(char *);
 u_long		 getifmtu(char *);
-int		 eval_queue_opts(struct pf_altq *, struct node_queue_opt *,
+int		 eval_queue_opts(struct npf_altq *, struct node_queue_opt *,
 		     u_int32_t);
 u_int32_t	 eval_bwspec(struct node_queue_bw *, u_int32_t);
 void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 		     const struct node_hfsc_sc *);
 
 void
-pfaltq_store(struct pf_altq *a)
+pfaltq_store(struct npf_altq *a)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 
 	if ((altq = malloc(sizeof(*altq))) == NULL)
 		err(1, "malloc");
@@ -98,10 +98,10 @@ pfaltq_store(struct pf_altq *a)
 	TAILQ_INSERT_TAIL(&altqs, altq, entries);
 }
 
-struct pf_altq *
+struct npf_altq *
 pfaltq_lookup(const char *ifname)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 
 	TAILQ_FOREACH(altq, &altqs, entries) {
 		if (strncmp(ifname, altq->ifname, IFNAMSIZ) == 0 &&
@@ -111,7 +111,7 @@ pfaltq_lookup(const char *ifname)
 	return (NULL);
 }
 
-struct pf_altq *
+struct npf_altq *
 qname_to_pfaltq(const char *qname, const char *ifname)
 {
 	struct pf_altq	*altq;
@@ -127,7 +127,7 @@ qname_to_pfaltq(const char *qname, const char *ifname)
 u_int32_t
 qname_to_qid(const char *qname)
 {
-	struct pf_altq	*altq;
+	struct npf_altq	*altq;
 
 	/*
 	 * We guarantee that same named queues on different interfaces
@@ -143,7 +143,7 @@ qname_to_qid(const char *qname)
 }
 
 void
-print_altq(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
+print_altq(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
 	struct node_queue_opt *qopts)
 {
 	if (a->qname[0] != 0) {
@@ -180,7 +180,7 @@ print_altq(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
 }
 
 void
-print_queue(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
+print_queue(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
     int print_interface, struct node_queue_opt *qopts)
 {
 	unsigned	i;
@@ -219,7 +219,7 @@ print_queue(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
  * eval_pfaltq computes the discipline parameters.
  */
 int
-eval_pfaltq(struct pfctl *pf, struct pf_altq *pa, struct node_queue_bw *bw,
+eval_npfaltq(struct npfctl *pf, struct npf_altq *pa, struct node_queue_bw *bw,
     struct node_queue_opt *opts)
 {
 	u_int	rate, size, errors = 0;
@@ -290,7 +290,7 @@ check_commit_altq(int dev, int opts)
  * eval_pfqueue computes the queue parameters.
  */
 int
-eval_pfqueue(struct pfctl *pf, struct pf_altq *pa, struct node_queue_bw *bw,
+eval_npfqueue(struct npfctl *pf, struct npf_altq *pa, struct node_queue_bw *bw,
     struct node_queue_opt *opts)
 {
 	/* should be merged with expand_queue */
@@ -385,7 +385,7 @@ eval_pfqueue(struct pfctl *pf, struct pf_altq *pa, struct node_queue_bw *bw,
 #define	RM_NS_PER_SEC	(1000000000)
 
 static int
-eval_pfqueue_cbq(struct pfctl *pf, struct pf_altq *pa)
+eval_pfqueue_cbq(struct npfctl *pf, struct npf_altq *pa)
 {
 	struct cbq_opts	*opts;
 	u_int		 ifmtu;
@@ -423,7 +423,7 @@ eval_pfqueue_cbq(struct pfctl *pf, struct pf_altq *pa)
  * compute ns_per_byte, maxidle, minidle, and offtime
  */
 static int
-cbq_compute_idletime(struct pfctl *pf, struct pf_altq *pa)
+cbq_compute_idletime(struct npfctl *pf, struct npf_altq *pa)
 {
 	struct cbq_opts	*opts;
 	double		 maxidle_s, maxidle, minidle;
@@ -507,7 +507,7 @@ cbq_compute_idletime(struct pfctl *pf, struct pf_altq *pa)
 }
 
 static int
-check_commit_cbq(int dev, int opts, struct pf_altq *pa)
+check_commit_cbq(int dev, int opts, struct npf_altq *pa)
 {
 	struct pf_altq	*altq;
 	int		 root_class, default_class;
@@ -540,7 +540,7 @@ check_commit_cbq(int dev, int opts, struct pf_altq *pa)
 }
 
 static int
-print_cbq_opts(const struct pf_altq *a)
+print_cbq_opts(const struct npf_altq *a)
 {
 	const struct cbq_opts	*opts;
 
@@ -580,7 +580,7 @@ print_cbq_opts(const struct pf_altq *a)
  * PRIQ support functions
  */
 static int
-eval_pfqueue_priq(struct pfctl *pf, struct pf_altq *pa)
+eval_pfqueue_priq(struct npfctl *pf, struct npf_altq *pa)
 {
 	struct pf_altq	*altq;
 
@@ -602,7 +602,7 @@ eval_pfqueue_priq(struct pfctl *pf, struct pf_altq *pa)
 }
 
 static int
-check_commit_priq(int dev, int opts, struct pf_altq *pa)
+check_commit_priq(int dev, int opts, struct npf_altq *pa)
 {
 	struct pf_altq	*altq;
 	int		 default_class;
@@ -628,7 +628,7 @@ check_commit_priq(int dev, int opts, struct pf_altq *pa)
 }
 
 static int
-print_priq_opts(const struct pf_altq *a)
+print_priq_opts(const struct npf_altq *a)
 {
 	const struct priq_opts	*opts;
 
@@ -657,9 +657,9 @@ print_priq_opts(const struct pf_altq *a)
  * HFSC support functions
  */
 static int
-eval_pfqueue_hfsc(struct pfctl *pf, struct pf_altq *pa)
+eval_pfqueue_hfsc(struct npfctl *pf, struct npf_altq *pa)
 {
-	struct pf_altq		*altq, *parent;
+	struct npf_altq		*altq, *parent;
 	struct hfsc_opts	*opts;
 	struct service_curve	 sc;
 
@@ -795,9 +795,9 @@ err_ret:
 }
 
 static int
-check_commit_hfsc(int dev, int opts, struct pf_altq *pa)
+check_commit_hfsc(int dev, int opts, struct npf_altq *pa)
 {
-	struct pf_altq	*altq, *def = NULL;
+	struct npf_altq	*altq, *def = NULL;
 	int		 default_class;
 	int		 error = 0;
 
@@ -834,7 +834,7 @@ check_commit_hfsc(int dev, int opts, struct pf_altq *pa)
 }
 
 static int
-print_hfsc_opts(const struct pf_altq *a, const struct node_queue_opt *qopts)
+print_hfsc_opts(const struct npf_altq *a, const struct node_queue_opt *qopts)
 {
 	const struct hfsc_opts		*opts;
 	const struct node_hfsc_sc	*rtsc, *lssc, *ulsc;
@@ -1147,7 +1147,7 @@ getifmtu(char *ifname)
 }
 
 int
-eval_queue_opts(struct pf_altq *pa, struct node_queue_opt *opts,
+eval_queue_opts(struct npf_altq *pa, struct node_queue_opt *opts,
     u_int32_t ref_bw)
 {
 	int	errors = 0;
@@ -1237,3 +1237,4 @@ print_hfsc_sc(const char *scname, u_int m1, u_int d, u_int m2,
 	if (d != 0)
 		printf(")");
 }
+
