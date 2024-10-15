@@ -48,6 +48,79 @@
 #define	NPF_CONF_PATH	"/etc/npf.conf"
 #define	NPF_DB_PATH	"/var/db/npf.db"
 
+#ifndef DEFAULT_QLIMIT
+#define DEFAULT_QLIMIT		50
+#endif
+
+#ifndef DEFAULT_PRIORITY
+#define DEFAULT_PRIORITY	1
+#endif
+
+struct node_queue_bw {
+	u_int32_t	bw_absolute;
+	u_int16_t	bw_percent;
+};
+
+struct node_hfsc_sc {
+	struct node_queue_bw	m1;	/* slope of 1st segment; bps */
+	u_int			d;	/* x-projection of m1; msec */
+	struct node_queue_bw	m2;	/* slope of 2nd segment; bps */
+	u_int8_t		used;
+};
+
+struct node_hfsc_opts {
+	struct node_hfsc_sc	realtime;
+	struct node_hfsc_sc	linkshare;
+	struct node_hfsc_sc	upperlimit;
+	int			flags;
+};
+
+struct node_queue_opt {
+	int			 qtype;
+	union {
+		struct npf_cbq_opts		cbq_opts;
+		struct npf_priq_opts	priq_opts;
+		struct node_hfsc_opts	hfsc_opts;
+	}			 data;
+};
+
+struct queue_opts {
+	int			marker;
+/* use flags for which option is set*/
+#define QOM_BWSPEC	0x01
+#define QOM_SCHEDULER	0x02
+#define QOM_PRIORITY	0x04
+#define QOM_TBRSIZE	0x08
+#define QOM_QLIMIT	0x10
+	struct node_queue_bw	queue_bwspec;
+	struct node_queue_opt	scheduler;
+	int			priority;
+	int			tbrsize;
+	int			qlimit;
+};
+
+struct node_queue {
+	char			 queue[NPF_QNAME_SIZE];
+	char			 parent[NPF_QNAME_SIZE];
+	char			 ifname[IFNAMSIZ];
+	int			 scheduler;
+	struct node_queue	*next;
+	struct node_queue	*tail;
+};
+
+struct node_qassign {
+	char		*qname;
+	char		*pqname;
+};
+
+/*
+ * generalized service curve used for admission control
+ */
+struct segment {
+	LIST_ENTRY(segment)	_next;
+	double			x, y, d, m;
+};
+
 typedef struct fam_addr_mask {
 	sa_family_t	fam_family;
 	npf_addr_t	fam_addr;
@@ -206,7 +279,9 @@ void		npfctl_config_init(bool);
 void		npfctl_config_build(void);
 int		npfctl_config_send(int);
 nl_config_t *	npfctl_config_ref(void);
-int		npfctl_config_show(int);
+int		npfctl_config_show(int, int, char **);
+int npfctl_config_flush(int, int, char **);
+int npfctl_config_print(int);
 void		npfctl_config_save(nl_config_t *, const char *);
 int		npfctl_ruleset_show(int, const char *);
 
@@ -222,7 +297,7 @@ void		npfctl_build_group(const char *, int, const char *, bool);
 void		npfctl_build_group_end(void);
 void		npfctl_build_rule(uint32_t, const char *, sa_family_t,
 		    const npfvar_t *, const filt_opts_t *,
-		    const char *, const char *);
+		    const char *, const char *, struct node_qassign);
 void		npfctl_build_natseg(int, int, unsigned, const char *,
 		    const addr_port_t *, const addr_port_t *,
 		    const npfvar_t *, const filt_opts_t *, unsigned);
@@ -230,6 +305,48 @@ void		npfctl_build_maprset(const char *, int, const char *);
 void		npfctl_build_table(const char *, u_int, const char *);
 
 void		npfctl_setparam(const char *, int);
+
+/* ALTQ related */
+int npfctl_test_altqsupport(int);
+extern int npfctl_open_dev(const char *);
+
+int npfctl_eval_bw(struct node_queue_bw *, char *);
+
+int	expand_altq(struct npf_altq *, const char *, struct node_queue *,
+	    struct node_queue_bw bwspec, struct node_queue_opt *);
+int	expand_queue(struct npf_altq *, const char *, struct node_queue *,
+	    struct node_queue_bw, struct node_queue_opt *);
+u_long get_ifmtu(char *);
+u_int32_t get_ifspeed(char *);
+u_int32_t npf_eval_bwspec(struct node_queue_bw *, u_int32_t);
+void npfaltq_store(struct npf_altq *);
+int npfctl_add_altq(struct npf_altq *);
+int npf_eval_queue_opts(struct npf_altq *, struct node_queue_opt *,
+    u_int32_t);
+int eval_npfaltq(struct npf_altq *, struct node_queue_bw *,
+    struct node_queue_opt *);
+int eval_npfqueue(struct npf_altq *, struct node_queue_bw *,
+    struct node_queue_opt *);
+struct npf_altq	*qname_to_npfaltq(const char *, const char *);
+u_int32_t	 qname_to_qid(const char *);
+struct npf_altq *npfaltq_lookup(const char *ifname);
+char		*rate2str(double);
+int npf_rule_qnames_exists(const char *);
+int		npfctl_print_altq(int);
+void print_altq(const struct npf_altq *, unsigned, struct node_queue_bw *,
+	struct node_queue_opt *);
+void print_queue(const struct npf_altq *, unsigned, struct node_queue_bw *,
+    int , struct node_queue_opt *);
+int check_commit_altq(void);
+
+int npfctl_show_altq(int);
+void npfctl_stop_altq(int);
+void npfctl_start_altq(int);
+int  npf_altq_destroy(int);
+
+extern bool npf_altq_running;
+extern int altqattached;
+extern int altqadded;
 
 /*
  * For the systems which do not define TH_ECE and TW_CRW.

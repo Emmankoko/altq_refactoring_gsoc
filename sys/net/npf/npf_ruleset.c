@@ -32,6 +32,7 @@
  * NPF ruleset module.
  */
 
+
 #ifdef _KERNEL
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD: npf_ruleset.c,v 1.52 2023/08/08 16:10:41 kardel Exp $");
@@ -49,6 +50,10 @@ __KERNEL_RCSID(0, "$NetBSD: npf_ruleset.c,v 1.52 2023/08/08 16:10:41 kardel Exp 
 #include <net/bpfjit.h>
 #include <net/pfil.h>
 #include <net/if.h>
+#endif
+
+#ifdef _KERNEL_OPT
+#include "opt_altq.h"
 #endif
 
 #include "npf_impl.h"
@@ -118,6 +123,11 @@ struct npf_rule {
 	LIST_ENTRY(npf_rule)	r_aentry;
 	nvlist_t *		r_info;
 	size_t			r_info_len;
+
+	/* queues set on a rule */
+	u_int32_t		 qid;
+
+	char qname[NPF_QNAME_SIZE];
 };
 
 #define	SKIPTO_ADJ_FLAG		(1U << 31)
@@ -696,6 +706,9 @@ npf_rule_export(npf_t *npf, const npf_rule_t *rl)
 		nvlist_add_string(rule, "rproc", rname);
 		npf_rproc_release(rp);
 	}
+	if (rl->qname[0]) {
+		nvlist_add_string(rule, "queue", rl->qname);
+	}
 	return rule;
 }
 
@@ -726,6 +739,22 @@ npf_rule_setrproc(npf_rule_t *rl, npf_rproc_t *rp)
 	rl->r_rproc = rp;
 }
 
+#ifdef ALTQ
+/* set your rule queues by their IDs*/
+int
+npf_rule_setqid(npf_rule_t * rl, const char *qname)
+{
+	int error = 0;
+
+	strncpy(rl->qname, qname, sizeof(qname));
+	/* set queue IDs */
+	if (rl->qname[0] != 0) {
+		if ((rl->qid = npf_qname2qid(rl->qname)) == 0)
+			error = EBUSY;
+	}
+	return error;
+}
+#endif /*ALTQ*/
 /*
  * npf_rule_free: free the specified rule.
  */
@@ -780,6 +809,16 @@ npf_rule_getrproc(const npf_rule_t *rl)
 	}
 	return rp;
 }
+
+#ifdef ALTQ
+struct qid
+npf_rule_getqid(const npf_rule_t *rl)
+{
+	struct qid qid;
+	qid.qid = rl->qid;
+	return qid;
+}
+#endif /* ALTQ*/
 
 npf_natpolicy_t *
 npf_rule_getnat(const npf_rule_t *rl)

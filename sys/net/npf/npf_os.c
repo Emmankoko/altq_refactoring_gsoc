@@ -85,6 +85,7 @@ MODULE(MODULE_CLASS_DRIVER, npf, "bpf");
 #endif
 
 #define	NPF_IOCTL_DATA_LIMIT	(4 * 1024 * 1024)
+extern bool npf_altq_running;
 
 static int	npf_pfil_register(bool);
 static void	npf_pfil_unregister(bool);
@@ -94,6 +95,10 @@ static int	npf_dev_close(dev_t, int, int, lwp_t *);
 static int	npf_dev_ioctl(dev_t, u_long, void *, int, lwp_t *);
 static int	npf_dev_poll(dev_t, int, lwp_t *);
 static int	npf_dev_read(dev_t, struct uio *, int);
+
+int npf_get_altqs(void *);
+int npf_altq_start(void);
+int npf_enable_altq(struct npf_altq *);
 
 const struct cdevsw npf_cdevsw = {
 	.d_open = npf_dev_open,
@@ -243,7 +248,16 @@ npfctl_switch(void *data)
 	if (onoff) {
 		/* Enable: add pfil hooks. */
 		error = npf_pfil_register(false);
+		/* initialize queuing*/
+#ifdef ALTQ
+		if (!npf_altq_running && npf_altq_loaded)
+			error = npf_altq_start();
+#endif /* ALTQ */
 	} else {
+#ifdef ALTQ
+		if (npf_altq_running)
+			error = npf_stop_altq();
+#endif /* ALTQ */
 		/* Disable: remove pfil hooks. */
 		npf_pfil_unregister(false);
 		error = 0;
@@ -270,10 +284,33 @@ npf_dev_ioctl(dev_t dev, u_long cmd, void *data, int flag, lwp_t *l)
 		return 0;
 	case IOC_NPF_SWITCH:
 		return npfctl_switch(data);
+	case IOC_NPF_ALTQ_STATE:
+		*(int *)data = npf_altq_running;
+		return 0;
 	case IOC_NPF_TABLE:
 		return npfctl_table(npf, data);
 	case IOC_NPF_STATS:
 		return npf_stats_export(npf, data);
+//	case IOC_NPF_ALTQ_START:
+//		return npf_altq_start();
+//	case IOC_NPF_ALTQ_STOP:
+//		return npf_stop_altq();
+	case IOC_NPF_GET_ALTQS:
+		return npf_get_altqs(data);
+	case IOC_NPF_GET_ALTQ:
+		return npf_get_altq(data);
+	case IOC_NPF_ADD_ALTQ:
+		return npf_add_altq(data);
+	case IOC_NPF_GET_QSTATS:
+		return npf_get_qstats(data);
+	case IOC_NPF_BEGIN_ALTQ:
+	/* initialize all queueing components on the first attempt*/
+		if (!npf_altq_loaded) {
+			npf_altq_init();
+		}
+		return npf_begin_altq();
+	case IOC_NPF_DESTROY_ALTQ:
+		return npf_altq_destroy();
 	case IOC_NPF_LOAD:
 	case IOC_NPF_SAVE:
 	case IOC_NPF_RULE:

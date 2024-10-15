@@ -7,13 +7,13 @@ MAN=		npfctl.8 npf.conf.5
 BINDIR=		/sbin
 
 SRCS=		npfctl.c npf_cmd.c npf_var.c npf_data.c npf_build.c
-SRCS+=		npf_bpf_comp.c npf_show.c npf_extmod.c
+SRCS+=		npf_bpf_comp.c npf_show.c npf_extmod.c npfctl_altq.c npfctl_qstats.c
 
 CPPFLAGS+=	-I${.CURDIR}
 SRCS+=		npf_scan.l npf_parse.y
 YHEADER=	1
 
-LDADD+=		-lnpf -lpcap -lutil -ly
+LDADD+=		-lnpf -lpcap -lutil -ly -lm
 DPADD+=		${LIBNPF} ${LIBUTIL} ${LIBPCAP} ${LIBUTIL} ${LIBY}
 
 WARNS=		5

@@ -172,7 +172,7 @@ codel_should_drop(struct codel *c, class_queue_t *q, struct mbuf *m,
 	if (mtag == NULL) {
 		/* Only one warning per second. */
 		if (ppsratecheck(&c->last_log, &c->last_pps, 1))
-			printf("%s: could not found the packet mtag!\n",
+			printf("%s: could not find the packet mtag!\n",
 			    __func__);
 		c->vars.first_above_time = 0;
 		return (0);
@@ -488,8 +488,8 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 					printf("codel: no CPU clock available!\n");
 					break;
 				}
-				q_stats->params.target = default_target;
-				q_stats->params.interval = default_interval;
+				q_stats->params.target = cd->params.target;
+				q_stats->params.interval = cd->params.interval;
 				q_stats->params.ecn = cd->params.ecn;
 
 			} while (/* CONSTCOND */ 0);

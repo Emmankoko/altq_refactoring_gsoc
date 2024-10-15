@@ -40,6 +40,10 @@ __KERNEL_RCSID(0, "$NetBSD: altq_cbq.c,v 1.39 2021/12/31 20:22:48 andvar Exp $")
 #include "pf.h"
 #endif
 
+#ifndef NPF
+#define NPF 1
+#endif
+
 #ifdef ALTQ_CBQ	/* cbq is enabled by ALTQ_CBQ option in opt_altq.h */
 
 #include <sys/param.h>
@@ -59,9 +63,8 @@ __KERNEL_RCSID(0, "$NetBSD: altq_cbq.c,v 1.39 2021/12/31 20:22:48 andvar Exp $")
 #include <net/if.h>
 #include <netinet/in.h>
 
-#if NPF > 0
-#include <net/pfvar.h>
-#endif
+#include <net/npf/npf_altq.h>
+
 #include <altq/altq.h>
 #include <altq/altq_cbq.h>
 #ifdef ALTQ3_COMPAT
@@ -246,9 +249,8 @@ get_class_stats(class_stats_t *statsp, struct rm_class *cl)
 #endif
 }
 
-#if NPF > 0
 int
-cbq_pfattach(struct pf_altq *a)
+cbq_npfattach(struct npf_altq *a)
 {
 	struct ifnet	*ifp;
 	int		 s, error;
@@ -263,7 +265,7 @@ cbq_pfattach(struct pf_altq *a)
 }
 
 int
-cbq_add_altq(struct pf_altq *a)
+cbq_add_altq(struct npf_altq *a)
 {
 	cbq_state_t	*cbqp;
 	struct ifnet	*ifp;
@@ -282,14 +284,14 @@ cbq_add_altq(struct pf_altq *a)
 	cbqp->cbq_qlen = 0;
 	cbqp->ifnp.ifq_ = &ifp->if_snd;	    /* keep the ifq */
 
-	/* keep the state in pf_altq */
+	/* keep the state in npf_altq */
 	a->altq_disc = cbqp;
 
 	return (0);
 }
 
 int
-cbq_remove_altq(struct pf_altq *a)
+cbq_remove_altq(struct npf_altq *a)
 {
 	cbq_state_t	*cbqp;
 
@@ -307,23 +309,32 @@ cbq_remove_altq(struct pf_altq *a)
 	/* deallocate cbq_state_t */
 	free(cbqp, M_DEVBUF);
 
+	printf("altq removed..\n");
+
 	return (0);
 }
 
 #define NSEC_TO_PSEC(s)	((uint64_t)(s) * 1000 * 1000)
 int
-cbq_add_queue(struct pf_altq *a)
+cbq_add_queue(struct npf_altq *a)
 {
 	struct rm_class	*borrow, *parent;
 	cbq_state_t	*cbqp;
 	struct rm_class	*cl;
-	struct cbq_opts	*opts;
+	struct npf_cbq_opts	*opts;
 	int		i, error;
 
-	if ((cbqp = a->altq_disc) == NULL)
+	printf("cbq queue starting.....\n");
+	if ((cbqp = a->altq_disc) == NULL) {
+		printf("cbqp is null\n");
 		return (EINVAL);
-	if (a->qid == 0)
+	}
+
+	if (a->qid == 0) {
+		printf("cbqp not null\n");
 		return (EINVAL);
+	}
+	printf("class about to be created...\n");
 
 	/*
 	 * find a free slot in the class table.  if the slot matching
@@ -335,15 +346,23 @@ cbq_add_queue(struct pf_altq *a)
 		for (i = 0; i < CBQ_MAX_CLASSES; i++)
 			if (cbqp->cbq_class_tbl[i] == NULL)
 				break;
-		if (i == CBQ_MAX_CLASSES)
+		if (i == CBQ_MAX_CLASSES){
+			printf("cbq max classes reached\n");
 			return (EINVAL);
+		}
+
 	}
+
+	printf("checking priority....\n");
 
 	opts = &a->pq_u.cbq_opts;
 	/* check parameters */
-	if (a->priority >= CBQ_MAXPRI)
+	if (a->priority >= CBQ_MAXPRI) {
+		printf("priority limit reached\n");
 		return (EINVAL);
+	}
 
+	printf("borrowing routines....\n");
 	/* Get pointers to parent and borrow classes.  */
 	parent = clh_to_clp(cbqp, a->parent_qid);
 	if (opts->flags & CBQCLF_BORROW)
@@ -365,22 +384,35 @@ cbq_add_queue(struct pf_altq *a)
 		return (EINVAL);
 	}
 
+	printf("checking cbq parameters.....\n");
 	/*
 	 * check parameters
 	 */
 	if ((opts->flags & CBQCLF_ROOTCLASS) != 0) {
-		if (parent != NULL)
+		if (parent != NULL) {
+			printf("parent is not null...\n");
 			return (EINVAL);
-		if (cbqp->ifnp.root_)
+		}
+
+		if (cbqp->ifnp.root_) {
+			printf("root present....\n");
 			return (EINVAL);
+		}
+
 	}
 	if ((opts->flags & CBQCLF_DEFCLASS) != 0) {
-		if (cbqp->ifnp.default_)
+		if (cbqp->ifnp.default_) {
+			printf("default class exist...\n");
 			return (EINVAL);
+		}
+
 	}
 	if ((opts->flags & CBQCLF_CLASSMASK) == 0) {
-		if (a->qid == 0)
+		if (a->qid == 0) {
+			printf("qid is equal to zero....\n");
 			return (EINVAL);
+		}
+
 	}
 
 	/*
@@ -415,11 +447,12 @@ cbq_add_queue(struct pf_altq *a)
 	if ((opts->flags & CBQCLF_DEFCLASS) != 0)
 		cbqp->ifnp.default_ = cl;
 
+	printf("cbq queue addition successful\n");
 	return (0);
 }
 
 int
-cbq_remove_queue(struct pf_altq *a)
+cbq_remove_queue(struct npf_altq *a)
 {
 	struct rm_class	*cl;
 	cbq_state_t	*cbqp;
@@ -450,12 +483,12 @@ cbq_remove_queue(struct pf_altq *a)
 				cbqp->ifnp.default_ = NULL;
 			break;
 		}
-
+	printf("cbq queue removed...\n");
 	return (0);
 }
 
 int
-cbq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
+cbq_getqstats(struct npf_altq *a, void *ubuf, int *nbytes)
 {
 	cbq_state_t	*cbqp;
 	struct rm_class	*cl;
@@ -479,7 +512,6 @@ cbq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 	*nbytes = sizeof(stats);
 	return (0);
 }
-#endif /* NPF > 0 */
 
 /*
  * int

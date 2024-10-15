@@ -46,6 +46,7 @@ __RCSID("$NetBSD: npf_show.c,v 1.33 2023/08/01 20:09:12 andvar Exp $");
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include <inttypes.h>
 #include <errno.h>
 #include <err.h>
@@ -509,11 +510,68 @@ npfctl_print_filter(npf_conf_info_t *ctx, nl_rule_t *rl)
 	return seenf;
 }
 
+int
+npfctl_print_altq(int fd)
+{
+	//struct npf_altq_node	*root = NULL, *node;
+	struct npfioc_altq	 pa;
+	u_int32_t		 mnr, nr;
+
+/*	if (!altqadded) {
+		warn("ALTQ not added in configuration");
+		return -1;
+	}
+*/
+
+	memset(&pa, 0, sizeof(pa));
+	if (ioctl(fd, IOC_NPF_GET_ALTQS, &pa)) {
+		warn("IOC_NPF_GET_ALTQS");
+		return -1;
+	}
+	mnr = pa.nr;
+
+	for (nr = 0; nr < mnr; nr++) {
+		pa.nr = nr;
+		if (ioctl(fd, IOC_NPF_GET_ALTQ, &pa)) {
+			warn("IOC_NPF_GET_ALTQ");
+			return -1;
+		}
+
+		print_altq(&pa.altq, 0, NULL, NULL);
+		printf("\n");
+	}
+	return 0;
+/*
+//	for (node = root; node != NULL; node = node->next) {
+//		if (node->altq.ifname == NULL)
+//			continue;
+//		if (dotitle) {
+//			npfctl_print_title("ALTQ:");
+//			dotitle = 0;
+//		}
+//	}
+//	print_altq(&node->altq, level, NULL, NULL);
+//
+	if (node->children != NULL) {
+		printf("{");
+		for (child = node->children; child != NULL;
+		    child = child->next) {
+			printf("%s", child->altq.qname);
+			if (child->next != NULL)
+				printf(", ");
+		}
+		printf("}");
+	}
+	printf("\n");
+
+*/
+}
+
 static void
 npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 {
 	const uint32_t attr = npf_rule_getattr(rl);
-	const char *rproc, *ifname, *name;
+	const char *rproc, *ifname, *name, *qname;
 	bool dyn_ruleset;
 
 	/* Rule attributes/flags. */
@@ -550,6 +608,10 @@ npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 	/* Rule procedure. */
 	if ((rproc = npf_rule_getproc(rl)) != NULL) {
 		ctx->fpos += fprintf(ctx->fp, "apply \"%s\" ", rproc);
+	}
+
+	if ((qname = npf_rule_getqueue(rl)) != NULL) {
+		ctx->fpos += fprintf(ctx->fp, "queue \"%s\" ", qname);
 	}
 out:
 	npfctl_print_id(ctx, rl);
@@ -685,23 +747,46 @@ npfctl_print_params(npf_conf_info_t *ctx, nl_config_t *ncf)
 }
 
 int
-npfctl_config_show(int fd)
+npfctl_config_show(int fd, int argc, char* argv[])
+{
+	int ch;
+	argc--;
+	argv++;
+	while((ch = getopt(argc, argv, "q")) != -1) {
+		switch (ch) {
+			case 'q':
+				return npfctl_print_altq(fd);
+			default:
+				 errx(EXIT_FAILURE,
+				 "usage: %s show { -q }\n", getprogname());
+		}
+		return -1;
+	}
+	return npfctl_config_print(fd);
+}
+
+int
+npfctl_config_print(int fd)
 {
 	npf_conf_info_t *ctx = npfctl_show_init();
 	nl_config_t *ncf;
 	bool loaded;
+	bool altq_running;
 
 	if (fd) {
 		ncf = npf_config_retrieve(fd);
 		if (ncf == NULL) {
 			return errno;
 		}
+
+		ioctl(fd, IOC_NPF_ALTQ_STATE, &altq_running);
 		loaded = npf_config_loaded_p(ncf);
 		ctx->validating = false;
 		ctx->fpos += fprintf(ctx->fp,
-		    "# filtering:\t%s\n# config:\t%s\n",
+		    "# filtering:\t%s\n# config:\t%s\n# altq:\t%s\n",
 		    npf_config_active_p(ncf) ? "active" : "inactive",
-		    loaded ? "loaded" : "empty");
+		    loaded ? "loaded" : "empty", altq_running ? "enabled" : "disabled");
+
 		print_linesep(ctx);
 	} else {
 		ncf = npfctl_config_ref();
@@ -739,6 +824,7 @@ npfctl_config_show(int fd)
 		while ((nt = npf_nat_iterate(ncf, &i)) != NULL) {
 			npfctl_print_nat(ctx, nt);
 		}
+
 		print_linesep(ctx);
 
 		i = NPF_ITER_BEGIN;

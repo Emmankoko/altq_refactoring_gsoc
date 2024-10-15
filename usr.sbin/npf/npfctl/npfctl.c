@@ -131,7 +131,7 @@ usage(void)
 }
 
 static int
-npfctl_print_stats(int fd)
+npfctl_print_filter_stats(int fd)
 {
 	static const struct stats_s {
 		/* Note: -1 indicates a new section. */
@@ -194,6 +194,32 @@ npfctl_print_stats(int fd)
 
 	free(st);
 	return 0;
+}
+
+static int
+npfctl_print_stats(int fd, int argc, char* argv[])
+{
+	int ch;
+	int error = 0;
+	argc--;
+	argv++;
+
+	while((ch = getopt(argc, argv, "fq")) != -1) {
+		switch(ch)
+		{
+			case 'f':
+				error =	npfctl_print_filter_stats(fd);
+				break;
+			case 'q':
+				error = npfctl_show_altq(fd);
+				break;
+			default:
+				errx(EXIT_FAILURE,
+					"Usage: %s stats { -f | -q }\n",
+					getprogname());
+		}
+	}
+	return error;
 }
 
 void
@@ -339,7 +365,7 @@ npfctl_load(int fd)
 	return errno;
 }
 
-static int
+int
 npfctl_open_dev(const char *path)
 {
 	struct stat st;
@@ -368,6 +394,36 @@ npfctl_open_dev(const char *path)
 	}
 	return fd;
 }
+
+
+int
+npfctl_config_flush(int fd, int argc, char* argv[])
+{
+	int ch;
+	int error = 0;
+	argc--;
+	argv++;
+	while((ch = getopt(argc, argv, "q")) != -1) {
+		switch(ch) {
+			case 'q':
+				return npf_altq_destroy(fd);
+//				break;
+//			case 'f':
+//				error = npf_config_flush(fd);
+//				break;
+			default:
+				errx(EXIT_FAILURE,
+					"Usage: %s flush -q }\n",
+					getprogname());
+		}
+	}
+	/* a single flush destroys queueing then filtering altogether*/
+	error = npf_altq_destroy(fd);
+	if (!error)
+		error = npf_config_flush(fd);
+	return error;
+}
+
 
 static void
 npfctl_debug(int argc, char **argv)
@@ -463,12 +519,16 @@ npfctl(int action, int argc, char **argv)
 	case NPFCTL_START:
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
+		//npfctl_start_altq(fd);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+
 		break;
 	case NPFCTL_STOP:
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
+		//npfctl_stop_altq(fd);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+
 		break;
 	case NPFCTL_RELOAD:
 		npfctl_config_init(false);
@@ -478,12 +538,13 @@ npfctl(int action, int argc, char **argv)
 		fun = "npfctl_config_send";
 		break;
 	case NPFCTL_SHOWCONF:
-		ret = npfctl_config_show(fd);
+		ret = npfctl_config_show(fd, argc, argv);
 		fun = "npfctl_config_show";
 		break;
 	case NPFCTL_FLUSH:
-		ret = npf_config_flush(fd);
-		fun = "npf_config_flush";
+		//ret = npf_config_flush(fd);
+		ret = npfctl_config_flush(fd, argc, argv);
+		fun = "npfctl_config_flush";
 		break;
 	case NPFCTL_TABLE:
 		if ((argc -= 2) < 2) {
@@ -520,7 +581,7 @@ npfctl(int action, int argc, char **argv)
 		fun = "npfctl_config_save";
 		break;
 	case NPFCTL_STATS:
-		ret = npfctl_print_stats(fd);
+		ret = npfctl_print_stats(fd, argc, argv);
 		fun = "npfctl_print_stats";
 		break;
 	case NPFCTL_CONN_LIST:
@@ -530,7 +591,7 @@ npfctl(int action, int argc, char **argv)
 	case NPFCTL_VALIDATE:
 		npfctl_config_init(false);
 		npfctl_parse_file(argc > 2 ? argv[2] : NPF_CONF_PATH);
-		ret = npfctl_config_show(0);
+		ret = npfctl_config_show(0, argc, argv);
 		fun = "npfctl_config_show";
 		break;
 	case NPFCTL_DEBUG:
@@ -538,6 +599,7 @@ npfctl(int action, int argc, char **argv)
 		break;
 	}
 	if (ret) {
+		printf("%d\n",ret);
 		err(EXIT_FAILURE, "%s", fun);
 	}
 	if (fd) {

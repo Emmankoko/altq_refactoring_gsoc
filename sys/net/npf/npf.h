@@ -102,8 +102,10 @@ typedef uint8_t			npf_netmask_t;
 
 #define	NBUF_DATAREF_RESET	0x01
 
+struct qid;
 struct mbuf;
 struct nbuf;
+struct npf_rule;
 typedef struct nbuf nbuf_t;
 
 void		nbuf_init(npf_t *, nbuf_t *, struct mbuf *, const ifnet_t *);
@@ -124,6 +126,7 @@ bool		nbuf_cksum_barrier(nbuf_t *, int);
 int		nbuf_add_tag(nbuf_t *, uint32_t);
 int		npf_mbuf_add_tag(nbuf_t *, struct mbuf *, uint32_t);
 int		nbuf_find_tag(nbuf_t *, uint32_t *);
+void 	mbuf_altq_tag(struct qid, struct mbuf *);
 
 /*
  * Packet information cache.
@@ -201,6 +204,8 @@ npf_iscached(const npf_cache_t *npc, const int inf)
 bool		npf_autounload_p(void);
 
 #endif	/* _KERNEL */
+
+#include "npf_altq.h"
 
 #define	NPF_SRC		0
 #define	NPF_DST		1
@@ -309,6 +314,21 @@ typedef struct npf_ioctl_table {
 	} nct_data;
 } npf_ioctl_table_t;
 
+struct npfioc_altq {
+	u_int32_t	 action;
+	u_int32_t	 ticket;
+	u_int32_t	 nr;
+	struct npf_altq	 altq;
+};
+
+struct npfioc_qstats {
+	u_int32_t	 ticket;
+	u_int32_t	 nr;
+	void		*buf;
+	int		 nbytes;
+	u_int8_t	 scheduler;
+};
+
 /*
  * IOCTL operations.
  */
@@ -322,6 +342,15 @@ typedef struct npf_ioctl_table {
 #define	IOC_NPF_RULE		_IOWR('N', 107, nvlist_ref_t)
 #define	IOC_NPF_CONN_LOOKUP	_IOWR('N', 108, nvlist_ref_t)
 #define	IOC_NPF_TABLE_REPLACE	_IOWR('N', 109, nvlist_ref_t)
+#define IOC_NPF_ALTQ_STATE		_IOR('N', 110, int)
+#define IOC_NPF_ALTQ_START	_IO('N', 111)
+#define IOC_NPF_GET_ALTQS	_IOWR('N', 112, struct npfioc_altq)
+#define IOC_NPF_ADD_ALTQ	_IOWR('N', 113, struct npfioc_altq)
+#define IOC_NPF_ALTQ_STOP	_IO('N',114)
+#define IOC_NPF_GET_QSTATS  _IOWR('N', 115, struct npfioc_qstats)
+#define IOC_NPF_GET_ALTQ	_IOWR('N', 116, struct npfioc_altq)
+#define IOC_NPF_BEGIN_ALTQ  _IO('N', 117)
+#define IOC_NPF_DESTROY_ALTQ	_IO('N', 118)
 
 /*
  * NPF error report.

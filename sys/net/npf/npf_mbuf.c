@@ -43,6 +43,10 @@ __KERNEL_RCSID(0, "$NetBSD: npf_mbuf.c,v 1.25 2023/02/12 13:38:37 kardel Exp $")
 #include <netinet/in_offload.h>
 #endif
 
+#ifdef _KERNEL_OPT
+#include "opt_altq.h"
+#endif
+
 #include "npf_impl.h"
 
 #ifdef _KERNEL
@@ -365,3 +369,25 @@ nbuf_find_tag(nbuf_t *nbuf, uint32_t *val)
 	return nbuf->nb_mops->get_tag(m, val);
 #endif
 }
+
+#ifdef ALTQ
+/* tag ALTQ packets */
+void
+mbuf_altq_tag(struct qid qid, struct mbuf *mp)
+{
+	KASSERT(m_flags_p(mp, M_PKTHDR));
+
+	struct m_tag	*mtag;
+	struct altq_tag	*atag;
+
+	mtag = m_tag_get(PACKET_TAG_ALTQ_QID, sizeof(*atag), M_NOWAIT);
+	if (mtag != NULL) {
+		atag = (struct altq_tag *)(mtag + 1);
+		atag->qid = qid.qid;
+		/* add hints for ecn */
+		atag->af = AF_INET;
+		atag->hdr = mtod(mp, struct ip *);
+		m_tag_prepend(mp, mtag);
+	}
+}
+#endif /* ALTQ */
