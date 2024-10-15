@@ -202,6 +202,8 @@ bool		npf_autounload_p(void);
 
 #endif	/* _KERNEL */
 
+#include "npf_altq.h"
+
 #define	NPF_SRC		0
 #define	NPF_DST		1
 
@@ -309,6 +311,13 @@ typedef struct npf_ioctl_table {
 	} nct_data;
 } npf_ioctl_table_t;
 
+struct npfioc_altq {
+	u_int32_t	 action;
+	u_int32_t	 ticket;
+	u_int32_t	 nr;
+	struct npf_altq	 altq;
+};
+
 /*
  * IOCTL operations.
  */
@@ -322,6 +331,11 @@ typedef struct npf_ioctl_table {
 #define	IOC_NPF_RULE		_IOWR('N', 107, nvlist_ref_t)
 #define	IOC_NPF_CONN_LOOKUP	_IOWR('N', 108, nvlist_ref_t)
 #define	IOC_NPF_TABLE_REPLACE	_IOWR('N', 109, nvlist_ref_t)
+#define IOC_NPF_ALTQ_STATE		_IOR('N', 110, int)
+#define IOC_NPF_ALTQ_START	_IO('N', 111)
+#define IOC_NPF_GET_ALTQS	_IOWR('N', 112, struct npfioc_altq)
+#define IOC_NPF_ADD_ALTQ	_IOWR('N', 113, struct npfioc_altq)
+#define IOC_NPF_ALTQ_STOP	_IO('N',114)
 
 /*
  * NPF error report.

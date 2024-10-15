@@ -443,6 +443,9 @@ npfctl_debug(int argc, char **argv)
 	npf_config_destroy(ncf);
 }
 
+int altqsupport;
+
+
 static void
 npfctl(int action, int argc, char **argv)
 {
@@ -464,11 +467,19 @@ npfctl(int action, int argc, char **argv)
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+		altqsupport = npfctl_test_altqsupport(fd);
+		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START, NULL) != -1)))
+			if (errno != EEXIST)
+				err(1, "IOC_NPF_START_ALTQ");
 		break;
 	case NPFCTL_STOP:
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_STOP, NULL) != -1)))
+			if (errno != ENOENT)
+				err(1, "IOC_NPF_ALTQ_STOP");
+
 		break;
 	case NPFCTL_RELOAD:
 		npfctl_config_init(false);

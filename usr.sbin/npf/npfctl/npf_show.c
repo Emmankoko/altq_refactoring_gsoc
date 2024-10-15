@@ -690,18 +690,22 @@ npfctl_config_show(int fd)
 	npf_conf_info_t *ctx = npfctl_show_init();
 	nl_config_t *ncf;
 	bool loaded;
+	bool npf_altq_running;
 
 	if (fd) {
 		ncf = npf_config_retrieve(fd);
 		if (ncf == NULL) {
 			return errno;
 		}
+
+		ioctl(fd, IOC_NPF_ALTQ_STATE, &npf_altq_running);
 		loaded = npf_config_loaded_p(ncf);
 		ctx->validating = false;
 		ctx->fpos += fprintf(ctx->fp,
-		    "# filtering:\t%s\n# config:\t%s\n",
+		    "# filtering:\t%s\n# config:\t%s\n# altq:\t%s\n",
 		    npf_config_active_p(ncf) ? "active" : "inactive",
-		    loaded ? "loaded" : "empty");
+		    loaded ? "loaded" : "empty", npf_altq_running ? "enabled" : "disabled");
+
 		print_linesep(ctx);
 	} else {
 		ncf = npfctl_config_ref();

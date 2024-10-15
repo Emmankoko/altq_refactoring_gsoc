@@ -40,6 +40,10 @@ __KERNEL_RCSID(0, "$NetBSD: altq_cbq.c,v 1.39 2021/12/31 20:22:48 andvar Exp $")
 #include "pf.h"
 #endif
 
+#ifndef NPF
+#define NPF 1
+#endif
+
 #ifdef ALTQ_CBQ	/* cbq is enabled by ALTQ_CBQ option in opt_altq.h */
 
 #include <sys/param.h>
@@ -59,9 +63,8 @@ __KERNEL_RCSID(0, "$NetBSD: altq_cbq.c,v 1.39 2021/12/31 20:22:48 andvar Exp $")
 #include <net/if.h>
 #include <netinet/in.h>
 
-#if NPF > 0
-#include <net/pfvar.h>
-#endif
+#include <net/npf/npf_altq.h>
+
 #include <altq/altq.h>
 #include <altq/altq_cbq.h>
 #ifdef ALTQ3_COMPAT
@@ -246,9 +249,8 @@ get_class_stats(class_stats_t *statsp, struct rm_class *cl)
 #endif
 }
 
-#if NPF > 0
 int
-cbq_pfattach(struct pf_altq *a)
+cbq_npfattach(struct npf_altq *a)
 {
 	struct ifnet	*ifp;
 	int		 s, error;
@@ -263,7 +265,7 @@ cbq_pfattach(struct pf_altq *a)
 }
 
 int
-cbq_add_altq(struct pf_altq *a)
+cbq_add_altq(struct npf_altq *a)
 {
 	cbq_state_t	*cbqp;
 	struct ifnet	*ifp;
@@ -282,14 +284,14 @@ cbq_add_altq(struct pf_altq *a)
 	cbqp->cbq_qlen = 0;
 	cbqp->ifnp.ifq_ = &ifp->if_snd;	    /* keep the ifq */
 
-	/* keep the state in pf_altq */
+	/* keep the state in npf_altq */
 	a->altq_disc = cbqp;
 
 	return (0);
 }
 
 int
-cbq_remove_altq(struct pf_altq *a)
+cbq_remove_altq(struct npf_altq *a)
 {
 	cbq_state_t	*cbqp;
 
@@ -312,12 +314,12 @@ cbq_remove_altq(struct pf_altq *a)
 
 #define NSEC_TO_PSEC(s)	((uint64_t)(s) * 1000 * 1000)
 int
-cbq_add_queue(struct pf_altq *a)
+cbq_add_queue(struct npf_altq *a)
 {
 	struct rm_class	*borrow, *parent;
 	cbq_state_t	*cbqp;
 	struct rm_class	*cl;
-	struct cbq_opts	*opts;
+	struct npf_cbq_opts	*opts;
 	int		i, error;
 
 	if ((cbqp = a->altq_disc) == NULL)
@@ -419,7 +421,7 @@ cbq_add_queue(struct pf_altq *a)
 }
 
 int
-cbq_remove_queue(struct pf_altq *a)
+cbq_remove_queue(struct npf_altq *a)
 {
 	struct rm_class	*cl;
 	cbq_state_t	*cbqp;
@@ -455,7 +457,7 @@ cbq_remove_queue(struct pf_altq *a)
 }
 
 int
-cbq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
+cbq_getqstats(struct npf_altq *a, void *ubuf, int *nbytes)
 {
 	cbq_state_t	*cbqp;
 	struct rm_class	*cl;
@@ -479,7 +481,6 @@ cbq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 	*nbytes = sizeof(stats);
 	return (0);
 }
-#endif /* NPF > 0 */
 
 /*
  * int
