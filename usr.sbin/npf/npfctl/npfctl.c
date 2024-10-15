@@ -443,6 +443,22 @@ npfctl_debug(int argc, char **argv)
 	npf_config_destroy(ncf);
 }
 
+static int altqsupport;
+int
+npfctl_test_altqsupport(int dev)
+{
+	struct npfioc_altq pa;
+	if (ioctl(dev, IOC_NPF_GET_ALTQS, &pa)) {
+		if (errno == ENODEV) {
+			fprintf(stderr, "No ALTQ support in kernel\n"
+				"ALTQ related functions disabled\n");
+			return (0);
+		} else
+		err(1, "IOC_GET_ALTQS");
+	}
+	return (1);
+}
+
 static void
 npfctl(int action, int argc, char **argv)
 {
@@ -459,16 +475,26 @@ npfctl(int action, int argc, char **argv)
 		fd = npfctl_open_dev(NPF_DEV_PATH);
 	}
 
+	/* check ALTQ kernel functions are enabled*/
+	altqsupport = npfctl_test_altqsupport(fd);
+
 	switch (action) {
 	case NPFCTL_START:
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+		if (altqsupport & ioctl(fd, IOC_NPF_ALTQ_START))
+			if (errno != EEXIST)
+				err(1, "IOC_START_ALTQ");
 		break;
 	case NPFCTL_STOP:
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+/*		if (altqsupport & ioctl(fd, IOC_NPF_ALTQ_STOP))
+			if (errno != ENOENT)
+				err(1, "IOC_STOP_ALTQ");
+*/
 		break;
 	case NPFCTL_RELOAD:
 		npfctl_config_init(false);

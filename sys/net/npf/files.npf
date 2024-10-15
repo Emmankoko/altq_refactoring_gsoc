@@ -33,6 +33,9 @@ file	net/npf/npf_alg.c			npf
 file	net/npf/npf_sendpkt.c			npf
 file	net/npf/npf_worker.c			npf
 
+# queue
+file    net/npf/npf_altq.c              npf
+
 file	net/npf/npf_os.c			npf
 file	net/npf/npf_ifaddr.c			npf
 
