@@ -607,6 +607,17 @@ npfctl_build_rproc(const char *name, npfvar_t *procs)
 	npf_rproc_insert(npf_conf, rp);
 }
 
+int	npfctl_build_altq(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw bwspec, struct node_queue_opt *)
+{
+
+}
+int	npfctl_build_queue(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw, struct node_queue_opt *)
+{
+
+}
+
 /*
  * npfctl_build_maprset: create and insert a NAT ruleset.
  */
@@ -702,7 +713,7 @@ npfctl_build_group_end(void)
 void
 npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
     const npfvar_t *popts, const filt_opts_t *fopts,
-    const char *pcap_filter, const char *rproc)
+    const char *pcap_filter, const char *rproc, const char *rqueue)
 {
 	nl_rule_t *rl;
 
@@ -719,11 +730,19 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 		npf_rule_setproc(rl, rproc);
 	}
 
+	if (rqueue) {
+		npf_rule_setqueue(rl, rqueue);
+	}
+
 	if (npf_conf) {
 		nl_rule_t *cg = current_group[rule_nesting_level];
 
 		if (rproc && !npf_rproc_exists_p(npf_conf, rproc)) {
 			yyerror("rule procedure '%s' is not defined", rproc);
+		}
+
+		if (rqueue && !npf_rqueue_exists_p(npf_conf, rqueue)) {
+			yyerror("rule queue '%s' is not defined", rqueue);
 		}
 		assert(cg != NULL);
 		npf_rule_setprio(rl, NPF_PRI_LAST);
@@ -1117,3 +1136,5 @@ npfctl_dump_bpf(struct bpf_program *bf)
 		bpf_dump(bf, 0);
 	}
 }
+
+

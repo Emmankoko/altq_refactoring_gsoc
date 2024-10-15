@@ -108,6 +108,9 @@ typedef enum {
 	NPFCTL_PARSE_MAP
 } parse_entry_t;
 
+/*
+ * queueing related types
+ */
 struct node_if {
 	char			 ifname[IFNAMSIZ];
 	u_int8_t		 not;
@@ -145,6 +148,38 @@ struct node_queue_opt {
 		struct node_hfsc_opts	hfsc_opts;
 	}			 data;
 };
+
+struct queue_opts {
+	int			marker;
+#define QOM_BWSPEC	0x01
+#define QOM_SCHEDULER	0x02
+#define QOM_PRIORITY	0x04
+#define QOM_TBRSIZE	0x08
+#define QOM_QLIMIT	0x10
+	struct node_queue_bw	queue_bwspec;
+	struct node_queue_opt	scheduler;
+	int			priority;
+	int			tbrsize;
+	int			qlimit;
+} queue_opts;
+
+struct node_queue {
+	char			 queue[PF_QNAME_SIZE];
+	char			 parent[PF_QNAME_SIZE];
+	char			 ifname[IFNAMSIZ];
+	int			 scheduler;
+	struct node_queue	*next;
+	struct node_queue	*tail;
+}	*queues = NULL;
+
+typedef struct {
+	u_int32_t		 number;
+	struct node_queue	*queue;
+	struct node_queue_opt	 queue_options;
+	struct node_queue_bw	 queue_bwspec;
+	struct node_qassign	 qassign;
+	struct node_hfsc_opts	 hfsc_opts;
+} v;
 
 #define	NPF_IFNET_TABLE_PREF		".ifnet-"
 #define	NPF_IFNET_TABLE_PREFLEN		(sizeof(NPF_IFNET_TABLE_PREF) - 1)
@@ -284,7 +319,15 @@ void		npfctl_setparam(const char *, int);
  */
 int	 pfctl_show_altq(int, const char *, int, int);
 int		 check_commit_altq(int, int);
-void		 pfaltq_store(struct pf_altq *);
+void		 npfaltq_store(struct pf_altq *);
 struct pf_altq	*pfaltq_lookup(const char *);
 char		*rate2str(double);
+int	npfctl_build_altq(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw bwspec, struct node_queue_opt *);
+int	npfctl_build_queue(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw, struct node_queue_opt *);
+int	npfctl_expand_altq(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw bwspec, struct node_queue_opt *);
+int	npfctl_expand_queue(struct pf_altq *, struct node_if *, struct node_queue *,
+	    struct node_queue_bw, struct node_queue_opt *);
 #endif

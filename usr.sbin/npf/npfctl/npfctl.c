@@ -47,6 +47,7 @@ __RCSID("$NetBSD: npfctl.c,v 1.65 2021/07/14 09:15:01 christos Exp $");
 #include <errno.h>
 #include <err.h>
 
+#include "npf_altq.h"
 #include "npfctl.h"
 
 enum {
@@ -175,6 +176,9 @@ npfctl_print_stats(int fd)
 		{ -1, "Other"						},
 		{ NPF_STAT_ERROR,		"unexpected errors"	},
 	};
+
+	npfctl_show_altq(fd, 0);
+
 	uint64_t *st = ecalloc(1, NPF_STATS_SIZE);
 
 	if (ioctl(fd, IOC_NPF_STATS, &st) != 0) {
@@ -369,6 +373,46 @@ npfctl_open_dev(const char *path)
 	return fd;
 }
 
+static int altqsupport;
+int
+npfctl_test_altqsupport(int dev)
+{
+	struct npfioc_altq pa;
+
+	if (ioctl(dev, IOC_GET_ALTQS, &pa)) {
+		if (errno == ENODEV) {
+			fprintf(stderr, "No ALTQ support in kernel\n"
+				"ALTQ related functions disabled\n");
+			return (0);
+		} else
+		err(1, "IOC_GET_ALTQS");
+	}
+	return (1);
+}
+
+int
+npfctl_add_altq(struct npf_altq *a)
+{
+	struct npfioc_altq *paltq;
+	int fd = npfctl_open_dev(NPF_DEV_PATH);
+
+	if (altqsupport) {
+		memcpy(&paltq->altq, a, sizeof(struct npf_altq));
+		if (ioctl(fd, IOC_ADD_ALTQ, paltq)) {
+			if (errno == ENXIO)
+				errx(1, "qtype not configured");
+			else if (errno == ENODEV)
+				errx(1, "%s: driver does not support "
+					"altq", a->ifname);
+			else
+				err(1, "IOC_ADD_ALTQ");
+		}
+
+		npfaltq_store(&paltq->altq);
+	}
+	return (0);
+}
+
 static void
 npfctl_debug(int argc, char **argv)
 {
@@ -458,17 +502,25 @@ npfctl(int action, int argc, char **argv)
 	default:
 		fd = npfctl_open_dev(NPF_DEV_PATH);
 	}
+	/* check ALTQ kernel functions are enabled*/
+	altqsupport = npfctl_test_altqsupport(fd);
 
 	switch (action) {
 	case NPFCTL_START:
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+		if (altqsupport & ioctl(fd, IOC_ALTQ_START))
+			if (errno != EEXIST)
+				err(1, "IOC_START_ALTQ");
 		break;
 	case NPFCTL_STOP:
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+		if (altqsupport & ioctl(fd, IOC_ALTQ_STOP))
+			if (errno != ENOENT)
+				err(1, "IOC_STOP_ALTQ");
 		break;
 	case NPFCTL_RELOAD:
 		npfctl_config_init(false);

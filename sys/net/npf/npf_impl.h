@@ -90,6 +90,7 @@ struct npf_table;
 struct npf_tableset;
 struct npf_algset;
 struct npf_ifmap;
+struct npf_altq;
 
 typedef struct npf_conndb	npf_conndb_t;
 typedef struct npf_table	npf_table_t;
@@ -258,6 +259,9 @@ struct npf {
 
 	/* Statistics. */
 	percpu_t *		stats_percpu;
+
+	/*altq facility */
+	struct npfioc_altq *paltq;
 };
 
 /*

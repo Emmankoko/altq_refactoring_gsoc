@@ -88,7 +88,7 @@ void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 		     const struct node_hfsc_sc *);
 
 void
-pfaltq_store(struct npf_altq *a)
+npfaltq_store(struct npf_altq *a)
 {
 	struct npf_altq	*altq;
 
@@ -180,7 +180,7 @@ print_altq(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
 }
 
 void
-print_queue(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
+npfctl_print_queue(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
     int print_interface, struct node_queue_opt *qopts)
 {
 	unsigned	i;
@@ -216,10 +216,10 @@ print_queue(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
 }
 
 /*
- * eval_pfaltq computes the discipline parameters.
+ * eval_npfaltq computes the discipline parameters.
  */
 int
-eval_npfaltq(struct npfctl *pf, struct npf_altq *pa, struct node_queue_bw *bw,
+eval_npfaltq(struct npf_altq *pa, struct node_queue_bw *bw,
     struct node_queue_opt *opts)
 {
 	u_int	rate, size, errors = 0;
@@ -580,7 +580,7 @@ print_cbq_opts(const struct npf_altq *a)
  * PRIQ support functions
  */
 static int
-eval_pfqueue_priq(struct npfctl *pf, struct npf_altq *pa)
+eval_npfqueue_priq(struct npfctl *pf, struct npf_altq *pa)
 {
 	struct npf_altq	*altq;
 
@@ -657,7 +657,7 @@ print_priq_opts(const struct npf_altq *a)
  * HFSC support functions
  */
 static int
-eval_pfqueue_hfsc(struct npfctl *pf, struct npf_altq *pa)
+eval_npfqueue_hfsc(struct npfctl *pf, struct npf_altq *pa)
 {
 	struct npf_altq		*altq, *parent;
 	struct hfsc_opts	*opts;
@@ -1238,3 +1238,259 @@ print_hfsc_sc(const char *scname, u_int m1, u_int d, u_int m2,
 		printf(")");
 }
 
+
+int
+npfctl_expand_altq(struct npf_altq *a, struct node_if *interfaces,
+    struct node_queue *nqueues, struct node_queue_bw bwspec,
+    struct node_queue_opt *opts)
+{
+	struct npf_altq		 pa, pb;
+	char			 qname[PF_QNAME_SIZE];
+	struct node_queue	*n;
+	struct node_queue_bw	 bw;
+	int			 errs = 0;
+/*
+	if ((pf->loadopt & PFCTL_FLAG_ALTQ) == 0) {
+		FREE_LIST(struct node_if, interfaces);
+		FREE_LIST(struct node_queue, nqueues);
+		return (0);
+	}
+	*/
+
+	LOOP_THROUGH(struct node_if, interface, interfaces,
+		memcpy(&pa, a, sizeof(struct npf_altq));
+		if (strlcpy(pa.ifname, interface->ifname,
+		    sizeof(pa.ifname)) >= sizeof(pa.ifname))
+			errx(1, "expand_altq: strlcpy");
+
+		if (interface->not) {
+			yyerror("altq on ! <interface> is not supported");
+			errs++;
+		} else {
+			if (eval_npfaltq(&pa, &bwspec, opts))
+				errs++;
+			else
+				if (npfctl_add_altq(&pa))
+					errs++;
+
+			if (pf->opts & PF_OPT_VERBOSE) {
+				print_altq(&pf->paltq->altq, 0,
+				    &bwspec, opts);
+				if (nqueues && nqueues->tail) {
+					printf("queue { ");
+					LOOP_THROUGH(struct node_queue, queue,
+					    nqueues,
+						printf("%s ",
+						    queue->queue);
+					);
+					printf("}");
+				}
+				printf("\n");
+			}
+
+			if (pa.scheduler == ALTQT_CBQ ||
+			    pa.scheduler == ALTQT_HFSC) {
+				/* now create a root queue */
+				memset(&pb, 0, sizeof(struct pf_altq));
+				if (strlcpy(qname, "root_", sizeof(qname)) >=
+				    sizeof(qname))
+					errx(1, "expand_altq: strlcpy");
+				if (strlcat(qname, interface->ifname,
+				    sizeof(qname)) >= sizeof(qname))
+					errx(1, "expand_altq: strlcat");
+				if (strlcpy(pb.qname, qname,
+				    sizeof(pb.qname)) >= sizeof(pb.qname))
+					errx(1, "expand_altq: strlcpy");
+				if (strlcpy(pb.ifname, interface->ifname,
+				    sizeof(pb.ifname)) >= sizeof(pb.ifname))
+					errx(1, "expand_altq: strlcpy");
+				pb.qlimit = pa.qlimit;
+				pb.scheduler = pa.scheduler;
+				bw.bw_absolute = pa.ifbandwidth;
+				bw.bw_percent = 0;
+				if (eval_npfqueue(pf, &pb, &bw, opts))
+					errs++;
+				else
+					if (npfctl_add_altq(&pb))
+						errs++;
+			}
+
+			LOOP_THROUGH(struct node_queue, queue, nqueues,
+				n = calloc(1, sizeof(struct node_queue));
+				if (n == NULL)
+					err(1, "expand_altq: calloc");
+				if (pa.scheduler == ALTQT_CBQ ||
+				    pa.scheduler == ALTQT_HFSC)
+					if (strlcpy(n->parent, qname,
+					    sizeof(n->parent)) >=
+					    sizeof(n->parent))
+						errx(1, "expand_altq: strlcpy");
+				if (strlcpy(n->queue, queue->queue,
+				    sizeof(n->queue)) >= sizeof(n->queue))
+					errx(1, "expand_altq: strlcpy");
+				if (strlcpy(n->ifname, interface->ifname,
+				    sizeof(n->ifname)) >= sizeof(n->ifname))
+					errx(1, "expand_altq: strlcpy");
+				n->scheduler = pa.scheduler;
+				n->next = NULL;
+				n->tail = n;
+				if (queues == NULL)
+					queues = n;
+				else {
+					queues->tail->next = n;
+					queues->tail = n;
+				}
+			);
+		}
+	);
+	FREE_LIST(struct node_if, interfaces);
+	FREE_LIST(struct node_queue, nqueues);
+
+	return (errs);
+}
+
+int
+npfctl_expand_queue(struct npf_altq *a, struct node_if *interfaces,
+    struct node_queue *nqueues, struct node_queue_bw bwspec,
+    struct node_queue_opt *opts)
+{
+	struct node_queue	*n, *nq;
+	struct npf_altq		 pa;
+	u_int8_t		 found = 0;
+	u_int8_t		 errs = 0;
+
+	if ((pf->loadopt & PFCTL_FLAG_ALTQ) == 0) {
+		FREE_LIST(struct node_queue, nqueues);
+		return (0);
+	}
+
+	if (queues == NULL) {
+		yyerror("queue %s has no parent", a->qname);
+		FREE_LIST(struct node_queue, nqueues);
+		return (1);
+	}
+
+	LOOP_THROUGH(struct node_if, interface, interfaces,
+		LOOP_THROUGH(struct node_queue, tqueue, queues,
+			if (!strncmp(a->qname, tqueue->queue, PF_QNAME_SIZE) &&
+			    (interface->ifname[0] == 0 ||
+			    (!interface->not && !strncmp(interface->ifname,
+			    tqueue->ifname, IFNAMSIZ)) ||
+			    (interface->not && strncmp(interface->ifname,
+			    tqueue->ifname, IFNAMSIZ)))) {
+				/* found ourself in queues */
+				found++;
+
+				memcpy(&pa, a, sizeof(struct npf_altq));
+
+				if (pa.scheduler != ALTQT_NONE &&
+				    pa.scheduler != tqueue->scheduler) {
+					yyerror("exactly one scheduler type "
+					    "per interface allowed");
+					errs++;
+					goto out;
+				}
+				pa.scheduler = tqueue->scheduler;
+
+				/* scheduler dependent error checking */
+				switch (pa.scheduler) {
+				case ALTQT_PRIQ:
+					if (nqueues != NULL) {
+						yyerror("priq queues cannot "
+						    "have child queues");
+						errs++;
+						goto out;
+					}
+					if (bwspec.bw_absolute > 0 ||
+					    bwspec.bw_percent < 100) {
+						yyerror("priq doesn't take "
+						    "bandwidth");
+						errs++;
+						goto out;
+					}
+					break;
+				default:
+					break;
+				}
+
+				if (strlcpy(pa.ifname, tqueue->ifname,
+				    sizeof(pa.ifname)) >= sizeof(pa.ifname))
+					errx(1, "expand_queue: strlcpy");
+				if (strlcpy(pa.parent, tqueue->parent,
+				    sizeof(pa.parent)) >= sizeof(pa.parent))
+					errx(1, "expand_queue: strlcpy");
+
+				if (eval_npfqueue(pf, &pa, &bwspec, opts))
+					errs++;
+				else
+					if (npfctl_add_altq(&pa))
+						errs++;
+
+				for (nq = nqueues; nq != NULL; nq = nq->next) {
+					if (!strcmp(a->qname, nq->queue)) {
+						yyerror("queue cannot have "
+						    "itself as child");
+						errs++;
+						continue;
+					}
+					n = calloc(1,
+					    sizeof(struct node_queue));
+					if (n == NULL)
+						err(1, "expand_queue: calloc");
+					if (strlcpy(n->parent, a->qname,
+					    sizeof(n->parent)) >=
+					    sizeof(n->parent))
+						errx(1, "expand_queue strlcpy");
+					if (strlcpy(n->queue, nq->queue,
+					    sizeof(n->queue)) >=
+					    sizeof(n->queue))
+						errx(1, "expand_queue strlcpy");
+					if (strlcpy(n->ifname, tqueue->ifname,
+					    sizeof(n->ifname)) >=
+					    sizeof(n->ifname))
+						errx(1, "expand_queue strlcpy");
+					n->scheduler = tqueue->scheduler;
+					n->next = NULL;
+					n->tail = n;
+					if (queues == NULL)
+						queues = n;
+					else {
+						queues->tail->next = n;
+						queues->tail = n;
+					}
+				}
+				if ((pf->opts & PF_OPT_VERBOSE) && (
+				    (found == 1 && interface->ifname[0] == 0) ||
+				    (found > 0 && interface->ifname[0] != 0))) {
+					print_queue(&pf->paltq->altq, 0,
+					    &bwspec, interface->ifname[0] != 0,
+					    opts);
+					if (nqueues && nqueues->tail) {
+						printf("{ ");
+						LOOP_THROUGH(struct node_queue,
+						    queue, nqueues,
+							printf("%s ",
+							    queue->queue);
+						);
+						printf("}");
+					}
+					printf("\n");
+				}
+			}
+		);
+	);
+
+out:
+	FREE_LIST(struct node_queue, nqueues);
+	FREE_LIST(struct node_if, interfaces);
+
+	if (!found) {
+		yyerror("queue %s has no parent", a->qname);
+		errs++;
+	}
+
+	if (errs)
+		return (1);
+	else
+		return (0);
+}

@@ -47,6 +47,8 @@
 #include <netinet/in.h>
 #endif
 
+#include "npf_altq.h"
+
 struct npf;
 typedef struct npf npf_t;
 
@@ -322,6 +324,10 @@ typedef struct npf_ioctl_table {
 #define	IOC_NPF_RULE		_IOWR('N', 107, nvlist_ref_t)
 #define	IOC_NPF_CONN_LOOKUP	_IOWR('N', 108, nvlist_ref_t)
 #define	IOC_NPF_TABLE_REPLACE	_IOWR('N', 109, nvlist_ref_t)
+#define IOC_ALTQ_START		_IO('N', 110)
+#define IOC_ALTQ_STOP		_IO('N', 111)
+#define IOC_GET_ALTQS		_IOWR('N', 112, struct npfioc_altq)
+#define IOC_ADD_ALTQ		_IOWR('N', 113, struct npfioc_altq)
 
 /*
  * NPF error report.

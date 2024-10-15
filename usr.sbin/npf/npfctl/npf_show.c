@@ -513,7 +513,7 @@ static void
 npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 {
 	const uint32_t attr = npf_rule_getattr(rl);
-	const char *rproc, *ifname, *name;
+	const char *rproc, *ifname, *name, rqueue;
 	bool dyn_ruleset;
 
 	/* Rule attributes/flags. */
@@ -550,6 +550,11 @@ npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 	/* Rule procedure. */
 	if ((rproc = npf_rule_getproc(rl)) != NULL) {
 		ctx->fpos += fprintf(ctx->fp, "apply \"%s\" ", rproc);
+	}
+
+	/* rule queue */
+	if ((rqueue = npf_rule_getqueue(rl)) != NULL) {
+		ctx->fpos += fprintf(ctx->fp, "queue \"%s\" ", rqueue);
 	}
 out:
 	npfctl_print_id(ctx, rl);
@@ -716,6 +721,7 @@ npfctl_config_show(int fd)
 		nl_rproc_t *rp;
 		nl_nat_t *nt;
 		nl_table_t *tl;
+		nl_altq_t *al;
 		nl_iter_t i;
 		unsigned level;
 
@@ -740,6 +746,12 @@ npfctl_config_show(int fd)
 			npfctl_print_nat(ctx, nt);
 		}
 		print_linesep(ctx);
+
+		i = NPF_ITER_BEGIN;
+		while ((ql = npf_altq_iterate(ncf, &i)) != NULL) {
+			print_indent(ctx, level);
+			npfctl_print_queue(ctx, al);
+		}
 
 		i = NPF_ITER_BEGIN;
 		while ((rl = npf_rule_iterate(ncf, &i, &level)) != NULL) {

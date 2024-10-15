@@ -75,12 +75,20 @@ struct nl_ext {
 	nvlist_t *	ext_dict;
 };
 
+struct nl_altq {
+	nvlist_t * altq_dict;
+}
+
 struct nl_config {
 	nvlist_t *	ncf_dict;
 
 	/* Temporary rule list. */
 	nvlist_t **	ncf_rule_list;
 	unsigned	ncf_rule_count;
+
+	/* queue rule list and count */
+	nvlist_t ** ncf_queue_list;
+	unsigned    ncf_queue_count;
 
 	/* Iterators. */
 	unsigned	ncf_reduce[16];
@@ -89,6 +97,7 @@ struct nl_config {
 	nl_rule_t	ncf_cur_rule;
 	nl_table_t	ncf_cur_table;
 	nl_rproc_t	ncf_cur_rproc;
+	nl_altq_t   ncf_cur_altq;
 };
 
 /*
@@ -458,6 +467,10 @@ npf_config_build(nl_config_t *ncf)
 		/* Clear the temporary list. */
 		ncf->ncf_rule_list = NULL;
 		ncf->ncf_rule_count = 0;
+
+		/* clear the temporary queue list */
+		ncf->ncf_queue_list = NULL;
+		ncf->ncf_queue_count = 0;
 	}
 	assert(nvlist_error(ncf->ncf_dict) == 0);
 	return (void *)ncf->ncf_dict;
@@ -735,6 +748,13 @@ npf_rule_setproc(nl_rule_t *rl, const char *name)
 	return nvlist_error(rl->rule_dict);
 }
 
+int
+npf_rule_setqueue(nl_rule_t *rl, const char *rqname)
+{
+	nvlist_add_string(rl->rule_dict, "rqueue", rqname);
+	return nvlist_error(rl->rule_dict);
+}
+
 void *
 npf_rule_export(nl_rule_t *rl, size_t *length)
 {
@@ -841,6 +861,12 @@ const char *
 npf_rule_getproc(nl_rule_t *rl)
 {
 	return dnvlist_get_string(rl->rule_dict, "rproc", NULL);
+}
+
+const char *
+npf_rule_getqueue(nl_rule_t *rl)
+{
+	return dnvlist_get_string(rl->rule_dict, "rqueue", NULL);
 }
 
 uint64_t

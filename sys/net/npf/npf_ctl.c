@@ -593,6 +593,11 @@ npfctl_load(npf_t *npf, const nvlist_t *req, nvlist_t *resp)
 		goto fail;
 	}
 
+	error = npf_mk_queue(npf, req, resp, nc);
+	if (error) {
+		goto fail;
+	}
+
 	flush = dnvlist_get_bool(req, "flush", false);
 	nc->default_pass = flush;
 
@@ -870,6 +875,7 @@ npfctl_run_op(npf_t *npf, unsigned op, const nvlist_t *req, nvlist_t *resp)
 	case IOC_NPF_TABLE_REPLACE:
 		error = npfctl_table_replace(npf, req, resp);
 		break;
+
 	default:
 		error = ENOTTY;
 		break;
