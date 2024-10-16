@@ -444,6 +444,7 @@ npfctl_debug(int argc, char **argv)
 }
 
 static int altqsupport;
+/*
 int
 npfctl_test_altqsupport(int dev)
 {
@@ -458,6 +459,8 @@ npfctl_test_altqsupport(int dev)
 	}
 	return (1);
 }
+
+*/
 
 static void
 npfctl(int action, int argc, char **argv)
@@ -476,13 +479,14 @@ npfctl(int action, int argc, char **argv)
 	}
 
 	/* check ALTQ kernel functions are enabled*/
-	altqsupport = npfctl_test_altqsupport(fd);
+	//altqsupport = npfctl_test_altqsupport(fd);
 
 	switch (action) {
 	case NPFCTL_START:
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+		altqsupport = 1;
 		if (altqsupport & ioctl(fd, IOC_NPF_ALTQ_START))
 			if (errno != EEXIST)
 				err(1, "IOC_START_ALTQ");
@@ -491,10 +495,7 @@ npfctl(int action, int argc, char **argv)
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
-/*		if (altqsupport & ioctl(fd, IOC_NPF_ALTQ_STOP))
-			if (errno != ENOENT)
-				err(1, "IOC_STOP_ALTQ");
-*/
+
 		break;
 	case NPFCTL_RELOAD:
 		npfctl_config_init(false);
