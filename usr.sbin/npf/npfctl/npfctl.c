@@ -487,7 +487,7 @@ npfctl(int action, int argc, char **argv)
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
 		altqsupport = 1;
-		if (altqsupport & ioctl(fd, IOC_NPF_ALTQ_START))
+		if (altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START, NULL) != -1))
 			if (errno != EEXIST)
 				err(1, "IOC_START_ALTQ");
 		break;

@@ -702,7 +702,7 @@ npfctl_config_show(int fd)
 		loaded = npf_config_loaded_p(ncf);
 		ctx->validating = false;
 		ctx->fpos += fprintf(ctx->fp,
-		    "# filtering:\t%s\n# config:\t%s\n altq:\t%s\n",
+		    "# filtering:\t%s\n# config:\t%s\n# altq:\t%s\n",
 		    npf_config_active_p(ncf) ? "active" : "inactive",
 		    loaded ? "loaded" : "empty", npf_altq_running ? "enabled" : "disabled");
 
