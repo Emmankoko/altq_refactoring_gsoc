@@ -271,7 +271,7 @@ line
 	;
 
 altq : ALTQ on_ifname queue_opts QUEUE qassign {
-		struct npf_altq;
+		struct npf_altq a;
 
 		memset(&a, 0, sizeof(a));
 		if ($3.scheduler.qtype == ALTQT_NONE) {
@@ -292,7 +292,7 @@ altq : ALTQ on_ifname queue_opts QUEUE qassign {
 	;
 
 queue_opts	:	{
-			bzero(&queue_opts, sizeof queue_opts);
+			bzero(&queue_opts, sizeof(queue_opts));
 			queue_opts.priority = DEFAULT_PRIORITY;
 			queue_opts.qlimit = DEFAULT_QLIMIT;
 			queue_opts.scheduler.qtype = ALTQT_NONE;

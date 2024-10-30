@@ -70,8 +70,8 @@ struct node_hfsc_opts {
 struct node_queue_opt {
 	int			 qtype;
 	union {
-		struct cbq_opts		cbq_opts;
-		struct priq_opts	priq_opts;
+		struct npf_cbq_opts		cbq_opts;
+		struct npf_priq_opts	priq_opts;
 		struct node_hfsc_opts	hfsc_opts;
 	}			 data;
 };
