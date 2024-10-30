@@ -38,6 +38,11 @@
 #include <vis.h>
 #endif
 
+#include <altq/altq.h>
+#include <altq/altq_cbq.h>
+#include <altq/altq_priq.h>
+#include <altq/altq_hfsc.h>
+
 #include "npfctl.h"
 
 #define	YYSTACKSIZE	4096
@@ -153,6 +158,7 @@ yyerror(const char *fmt, ...)
 %token			FAMILY
 %token			FINAL
 %token			FORW
+
 %token			RETURN
 %token			RETURNICMP
 %token			RETURNRST
@@ -168,6 +174,20 @@ yyerror(const char *fmt, ...)
 %token			TO
 %token			TREE
 %token			TYPE
+%token 			ALTQ
+%token 			CBQ
+%token			PRIQ
+%token			HFSC
+%token			BANDWIDTH
+%token			TBRSIZE
+%token			LINKSHARE
+%token			REALTIME
+%token			UPPERLIMIT
+%token 			QUEUE
+%token 			PRIORITY
+%token			QLIMIT
+%token 			RTABLE
+
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
@@ -199,6 +219,14 @@ yyerror(const char *fmt, ...)
 %type	<filtopts>	filt_opts all_or_filt_opts
 %type	<optproto>	rawproto
 %type	<rulegroup>	group_opts
+%type	<queue_opts>		queue_opts queue_opt queue_opts_l
+%type	<qassign>		qname
+%type	<queue>		qassign qassign_list qassign_item
+%type	<queue_options>	scheduler
+%type	<num>		cbqflags_list cbqflags_item
+%type	<num>		priqflags_list priqflags_item
+%type	<hfsc_opts>		hfscopts_list hfscopts_item hfsc_opts
+%type	<queue_bwspec>	bandwidth
 
 %union {
 	char *		str;
@@ -209,6 +237,12 @@ yyerror(const char *fmt, ...)
 	filt_opts_t	filtopts;
 	opt_proto_t	optproto;
 	rule_group_t	rulegroup;
+	struct node_queue	*queue;
+	struct node_queue_opt	 queue_options;
+	struct node_queue_bw	 queue_bwspec;
+	struct node_qassign	 qassign;
+	struct queue_opts	 queue_opts;
+	struct node_hfsc_opts	 hfsc_opts;
 }
 
 %%
@@ -232,8 +266,337 @@ line
 	| rproc
 	| alg
 	| set
+	| altq
 	|
 	;
+
+altq : ALTQ on_ifname queue_opts QUEUE qassign {
+		struct npf_altq;
+
+		memset(&a, 0, sizeof(a));
+		if ($3.scheduler.qtype == ALTQT_NONE) {
+			yyerror("no scheduler specified!");
+			YYERROR;
+		}
+		a.scheduler = $3.scheduler.qtype;
+		a.qlimit = $3.qlimit;
+		a.tbrsize = $3.tbrsize;
+		if ($5 == NULL) {
+			yyerror("no child queues specified");
+			YYERROR;
+		}
+		if (expand_altq(&a, $2, $5, $3.queue_bwspec,
+			&$3.scheduler))
+			YYERROR;
+	}
+	;
+
+queue_opts	:	{
+			bzero(&queue_opts, sizeof queue_opts);
+			queue_opts.priority = DEFAULT_PRIORITY;
+			queue_opts.qlimit = DEFAULT_QLIMIT;
+			queue_opts.scheduler.qtype = ALTQT_NONE;
+			queue_opts.queue_bwspec.bw_percent = 100;
+		}
+		    queue_opts_l
+			{ $$ = queue_opts; }
+		| /* empty */ {
+			bzero(&queue_opts, sizeof queue_opts);
+			queue_opts.priority = DEFAULT_PRIORITY;
+			queue_opts.qlimit = DEFAULT_QLIMIT;
+			queue_opts.scheduler.qtype = ALTQT_NONE;
+			queue_opts.queue_bwspec.bw_percent = 100;
+			$$ = queue_opts;
+		}
+		;
+
+queue_opts_l	: queue_opts_l queue_opt
+		| queue_opt
+		;
+
+queue_opt	: BANDWIDTH bandwidth	{
+			if (queue_opts.marker & QOM_BWSPEC) {
+				yyerror("bandwidth cannot be respecified");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_BWSPEC;
+			queue_opts.queue_bwspec = $2;
+		}
+		| PRIORITY number	{
+			if (queue_opts.marker & QOM_PRIORITY) {
+				yyerror("priority cannot be respecified");
+				YYERROR;
+			}
+			if ($2 > 255) {
+				yyerror("priority out of range: max 255");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_PRIORITY;
+			queue_opts.priority = $2;
+		}
+		| QLIMIT number	{
+			if (queue_opts.marker & QOM_QLIMIT) {
+				yyerror("qlimit cannot be respecified");
+				YYERROR;
+			}
+			if ($2 > 65535) {
+				yyerror("qlimit out of range: max 65535");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_QLIMIT;
+			queue_opts.qlimit = $2;
+		}
+		| scheduler	{
+			if (queue_opts.marker & QOM_SCHEDULER) {
+				yyerror("scheduler cannot be respecified");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_SCHEDULER;
+			queue_opts.scheduler = $1;
+		}
+		| TBRSIZE number	{
+			if (queue_opts.marker & QOM_TBRSIZE) {
+				yyerror("tbrsize cannot be respecified");
+				YYERROR;
+			}
+			if ($2 > 65535) {
+				yyerror("tbrsize too big: max 65535");
+				YYERROR;
+			}
+			queue_opts.marker |= QOM_TBRSIZE;
+			queue_opts.tbrsize = $2;
+		}
+		;
+
+bandwidth	: STRING {
+			double	 bps;
+			char	*cp;
+
+			$$.bw_percent = 0;
+
+			bps = strtod($1, &cp);
+			if (cp != NULL) {
+				if (!strcmp(cp, "b"))
+					; /* nothing */
+				else if (!strcmp(cp, "Kb"))
+					bps *= 1000;
+				else if (!strcmp(cp, "Mb"))
+					bps *= 1000 * 1000;
+				else if (!strcmp(cp, "Gb"))
+					bps *= 1000 * 1000 * 1000;
+				else if (!strcmp(cp, "%")) {
+					if (bps < 0 || bps > 100) {
+						yyerror("bandwidth spec "
+						    "out of range");
+						free($1);
+						YYERROR;
+					}
+					$$.bw_percent = bps;
+					bps = 0;
+				} else {
+					yyerror("unknown unit %s", cp);
+					free($1);
+					YYERROR;
+				}
+			}
+			free($1);
+			$$.bw_absolute = (u_int32_t)bps;
+		}
+		;
+
+scheduler	: CBQ				{
+			$$.qtype = ALTQT_CBQ;
+			$$.data.cbq_opts.flags = 0;
+		}
+		| CBQ '(' cbqflags_list ')'	{
+			$$.qtype = ALTQT_CBQ;
+			$$.data.cbq_opts.flags = $3;
+		}
+		| PRIQ				{
+			$$.qtype = ALTQT_PRIQ;
+			$$.data.priq_opts.flags = 0;
+		}
+		| PRIQ '(' priqflags_list ')'	{
+			$$.qtype = ALTQT_PRIQ;
+			$$.data.priq_opts.flags = $3;
+		}
+		| HFSC				{
+			$$.qtype = ALTQT_HFSC;
+			bzero(&$$.data.hfsc_opts,
+			    sizeof(struct node_hfsc_opts));
+		}
+		| HFSC '(' hfsc_opts ')'	{
+			$$.qtype = ALTQT_HFSC;
+			$$.data.hfsc_opts = $3;
+		}
+		;
+
+cbqflags_list	: cbqflags_item				{ $$ |= $1; }
+		| cbqflags_list comma cbqflags_item	{ $$ |= $3; }
+		;
+
+cbqflags_item	: STRING	{
+			if (!strcmp($1, "default"))
+				$$ = CBQCLF_DEFCLASS;
+#ifdef CBQCLF_BORROW
+			else if (!strcmp($1, "borrow"))
+				$$ = CBQCLF_BORROW;
+#endif
+			else if (!strcmp($1, "red"))
+				$$ = CBQCLF_RED;
+			else if (!strcmp($1, "ecn"))
+				$$ = CBQCLF_RED|CBQCLF_ECN;
+			else if (!strcmp($1, "rio"))
+				$$ = CBQCLF_RIO;
+			else {
+				yyerror("unknown cbq flag \"%s\"", $1);
+				free($1);
+				YYERROR;
+			}
+			free($1);
+		}
+		;
+
+priqflags_list	: priqflags_item			{ $$ |= $1; }
+		| priqflags_list comma priqflags_item	{ $$ |= $3; }
+		;
+
+priqflags_item	: STRING	{
+			if (!strcmp($1, "default"))
+				$$ = PRCF_DEFAULTCLASS;
+			else if (!strcmp($1, "red"))
+				$$ = PRCF_RED;
+			else if (!strcmp($1, "ecn"))
+				$$ = PRCF_RED|PRCF_ECN;
+			else if (!strcmp($1, "rio"))
+				$$ = PRCF_RIO;
+			else {
+				yyerror("unknown priq flag \"%s\"", $1);
+				free($1);
+				YYERROR;
+			}
+			free($1);
+		}
+		;
+
+hfsc_opts	:	{
+				bzero(&hfsc_opts,
+				    sizeof(struct node_hfsc_opts));
+			}
+		    hfscopts_list				{
+			$$ = hfsc_opts;
+		}
+		;
+
+hfscopts_list	: hfscopts_item
+		| hfscopts_list comma hfscopts_item
+		;
+
+hfscopts_item	: LINKSHARE bandwidth				{
+			if (hfsc_opts.linkshare.used) {
+				yyerror("linkshare already specified");
+				YYERROR;
+			}
+			hfsc_opts.linkshare.m2 = $2;
+			hfsc_opts.linkshare.used = 1;
+		}
+		| LINKSHARE '(' bandwidth comma number comma bandwidth ')'
+		    {
+			if (hfsc_opts.linkshare.used) {
+				yyerror("linkshare already specified");
+				YYERROR;
+			}
+			hfsc_opts.linkshare.m1 = $3;
+			hfsc_opts.linkshare.d = $5;
+			hfsc_opts.linkshare.m2 = $7;
+			hfsc_opts.linkshare.used = 1;
+		}
+		| REALTIME bandwidth				{
+			if (hfsc_opts.realtime.used) {
+				yyerror("realtime already specified");
+				YYERROR;
+			}
+			hfsc_opts.realtime.m2 = $2;
+			hfsc_opts.realtime.used = 1;
+		}
+		| REALTIME '(' bandwidth comma number comma bandwidth ')'
+		    {
+			if (hfsc_opts.realtime.used) {
+				yyerror("realtime already specified");
+				YYERROR;
+			}
+			hfsc_opts.realtime.m1 = $3;
+			hfsc_opts.realtime.d = $5;
+			hfsc_opts.realtime.m2 = $7;
+			hfsc_opts.realtime.used = 1;
+		}
+		| UPPERLIMIT bandwidth				{
+			if (hfsc_opts.upperlimit.used) {
+				yyerror("upperlimit already specified");
+				YYERROR;
+			}
+			hfsc_opts.upperlimit.m2 = $2;
+			hfsc_opts.upperlimit.used = 1;
+		}
+		| UPPERLIMIT '(' bandwidth comma number comma bandwidth ')'
+		    {
+			if (hfsc_opts.upperlimit.used) {
+				yyerror("upperlimit already specified");
+				YYERROR;
+			}
+			hfsc_opts.upperlimit.m1 = $3;
+			hfsc_opts.upperlimit.d = $5;
+			hfsc_opts.upperlimit.m2 = $7;
+			hfsc_opts.upperlimit.used = 1;
+		}
+		| STRING	{
+			if (!strcmp($1, "default"))
+				hfsc_opts.flags |= HFCF_DEFAULTCLASS;
+			else if (!strcmp($1, "red"))
+				hfsc_opts.flags |= HFCF_RED;
+			else if (!strcmp($1, "ecn"))
+				hfsc_opts.flags |= HFCF_RED|HFCF_ECN;
+			else if (!strcmp($1, "rio"))
+				hfsc_opts.flags |= HFCF_RIO;
+			else {
+				yyerror("unknown hfsc flag \"%s\"", $1);
+				free($1);
+				YYERROR;
+			}
+			free($1);
+		}
+		;
+
+qassign		: /* empty */		{ $$ = NULL; }
+		| qassign_item		{ $$ = $1; }
+		| '{' qassign_list '}'	{ $$ = $2; }
+		;
+
+qassign_list	: qassign_item			{ $$ = $1; }
+		| qassign_list comma qassign_item	{
+			$1->tail->next = $3;
+			$1->tail = $3;
+			$$ = $1;
+		}
+		;
+
+qassign_item	: STRING			{
+			$$ = calloc(1, sizeof(struct node_queue));
+			if ($$ == NULL)
+				err(1, "qassign_item: calloc");
+			if (strlcpy($$->queue, $1, sizeof($$->queue)) >=
+			    sizeof($$->queue)) {
+				yyerror("queue name '%s' too long (max "
+				    "%d chars)", $1, sizeof($$->queue)-1);
+				free($1);
+				free($$);
+				YYERROR;
+			}
+			free($1);
+			$$->next = NULL;
+			$$->tail = $$;
+		}
+		;
 
 alg
 	: ALG STRING

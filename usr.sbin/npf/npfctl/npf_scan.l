@@ -174,6 +174,20 @@ icmp-type		return ICMPTYPE;
 code			return CODE;
 any			return ANY;
 
+altq			return ALTQ;
+cbq				return CBQ;
+priq			return PRIQ;
+hfsc			return HFSC;
+bandwidth		return BANDWIDTH;
+tbrsize			return TBRSIZE;
+linkshare 		return LINKSHARE;
+realtime		return REALTIME;
+uppertime		return UPPERLIMIT;
+queue			return QUEUE;
+priority		return PRIORITY;
+qlimit			return QLIMIT;
+rtable			return RTABLE
+
 "/"			return SLASH;
 "{"			return CURLY_OPEN;
 "}"			return CURLY_CLOSE;
