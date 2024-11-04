@@ -293,9 +293,8 @@ int npfctl_test_altqsupport(int);
 
 int	expand_altq(struct npf_altq *, const char *, struct node_queue *,
 	    struct node_queue_bw bwspec, struct node_queue_opt *);
-int	expand_queue(struct pf_altq *, const char *, struct node_queue *,
+int	expand_queue(struct npf_altq *, const char *, struct node_queue *,
 	    struct node_queue_bw, struct node_queue_opt *);
-int	expand_skip_interface(struct node_if *);
 u_long get_ifmtu(char *);
 u_int32_t get_ifspeed(char *);
 u_int32_t npf_eval_bwspec(struct node_queue_bw *, u_int32_t);
@@ -308,33 +307,6 @@ int eval_npfaltq(struct npf_altq *, struct node_queue_bw *,
 
 struct npf_altq	*qname_to_pfaltq(const char *, const char *);
 u_int32_t	 qname_to_qid(const char *);
-
-static int	eval_pfqueue_cbq(struct npf_altq *);
-static int	cbq_compute_idletime(struct npf_altq *);
-static int	check_commit_cbq(int, int, struct npf_altq *);
-static int	print_cbq_opts(const struct npf_altq *);
-
-static int	eval_pfqueue_priq(struct npf_altq *);
-static int	check_commit_priq(int, int, struct npf_altq *);
-static int	print_priq_opts(const struct npf_altq *);
-
-static int	eval_pfqueue_hfsc(struct npf_altq *);
-static int	check_commit_hfsc(int, int, struct npf_altq *);
-static int	print_hfsc_opts(const struct npf_altq *,
-		    const struct node_queue_opt *);
-
-static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
-static int		 is_gsc_under_sc(struct gen_sc *,
-			     struct service_curve *);
-static void		 gsc_destroy(struct gen_sc *);
-static struct segment	*gsc_getentry(struct gen_sc *, double);
-static int		 gsc_add_seg(struct gen_sc *, double, double, double,
-			     double);
-static double		 sc_x2y(struct service_curve *, double);
-
-u_int32_t	 eval_bwspec(struct node_queue_bw *, u_int32_t);
-void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
-		     const struct node_hfsc_sc *);
 
 /*
  * For the systems which do not define TH_ECE and TW_CRW.
