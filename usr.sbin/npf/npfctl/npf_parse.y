@@ -291,8 +291,47 @@ altq : ALTQ on_ifname queue_opts QUEUE qassign {
 	}
 	;
 
+queuespec	: QUEUE STRING on_ifname queue_opts qassign {
+			struct npf_altq	a;
+
+/*
+			if (check_rulestate(PFCTL_STATE_QUEUE)) {
+				free($2);
+				YYERROR;
+			}
+*/
+
+			memset(&a, 0, sizeof(a));
+
+			if (strlcpy(a.qname, $2, sizeof(a.qname)) >=
+			    sizeof(a.qname)) {
+				yyerror("queue name too long (max "
+				    "%d chars)", PF_QNAME_SIZE-1);
+				free($2);
+				YYERROR;
+			}
+			free($2);
+			if ($4.tbrsize) {
+				yyerror("cannot specify tbrsize for queue");
+				YYERROR;
+			}
+			if ($4.priority > 255) {
+				yyerror("priority out of range: max 255");
+				YYERROR;
+			}
+			a.priority = $4.priority;
+			a.qlimit = $4.qlimit;
+			a.scheduler = $4.scheduler.qtype;
+			if (expand_queue(&a, $3, $5, $4.queue_bwspec,
+			    &$4.scheduler)) {
+				yyerror("errors in queue definition");
+				YYERROR;
+			}
+		}
+		;
+
 queue_opts	:	{
-			bzero(&queue_opts, sizeof(queue_opts));
+			bzero(&queue_opts, sizeof queue_opts );
 			queue_opts.priority = DEFAULT_PRIORITY;
 			queue_opts.qlimit = DEFAULT_QLIMIT;
 			queue_opts.scheduler.qtype = ALTQT_NONE;
