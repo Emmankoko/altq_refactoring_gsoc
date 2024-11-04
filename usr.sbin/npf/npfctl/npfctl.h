@@ -47,6 +47,9 @@
 #define	NPF_DEV_PATH	"/dev/npf"
 #define	NPF_CONF_PATH	"/etc/npf.conf"
 #define	NPF_DB_PATH	"/var/db/npf.db"
+#ifndef DEFAULT_QLIMIT
+#define DEFAULT_QLIMIT		50
+#endif
 
 struct node_queue_bw {
 	u_int32_t	bw_absolute;
@@ -304,10 +307,11 @@ int npf_eval_queue_opts(struct npf_altq *, struct node_queue_opt *,
     u_int32_t);
 int eval_npfaltq(struct npf_altq *, struct node_queue_bw *,
     struct node_queue_opt *);
-
+int eval_npfqueue(struct npf_altq *, struct node_queue_bw *,
+    struct node_queue_opt *);
 struct npf_altq	*qname_to_npfaltq(const char *, const char *);
 u_int32_t	 qname_to_qid(const char *);
-
+struct npf_altq *npfaltq_lookup(const char *ifname);
 /*
  * For the systems which do not define TH_ECE and TW_CRW.
  */

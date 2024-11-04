@@ -58,7 +58,7 @@
 
 #include "npfctl.h"
 
-static int	eval_pfqueue_cbq(struct npf_altq *);
+static int	eval_npfqueue_cbq(struct npf_altq *);
 static int	cbq_compute_idletime(struct npf_altq *);
 //static int	check_commit_cbq(int, int, struct npf_altq *);
 //static int	print_cbq_opts(const struct npf_altq *);
@@ -67,10 +67,10 @@ static int	eval_npfqueue_priq(struct npf_altq *);
 //static int	check_commit_priq(int, int, struct npf_altq *);
 //static int	print_priq_opts(const struct npf_altq *);
 
-static int	eval_pfqueue_hfsc(struct npf_altq *);
+static int	eval_npfqueue_hfsc(struct npf_altq *);
 //static int	check_commit_hfsc(int, int, struct npf_altq *);
 //static int	print_hfsc_opts(const struct npf_altq *,
-		    const struct node_queue_opt *);
+//		    const struct node_queue_opt *);
 
 //static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
 //static int		 is_gsc_under_sc(struct gen_sc *,
@@ -78,11 +78,11 @@ static int	eval_pfqueue_hfsc(struct npf_altq *);
 //static void		 gsc_destroy(struct gen_sc *);
 //static struct segment	*gsc_getentry(struct gen_sc *, double);
 //static int		 gsc_add_seg(struct gen_sc *, double, double, double,
-			     double);
+//			     double);
 //static double		 sc_x2y(struct service_curve *, double);
 
-void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
-		     const struct node_hfsc_sc *);
+//void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
+//		     const struct node_hfsc_sc *);
 
 extern int npfctl_open_dev(const char *);
 
@@ -626,7 +626,7 @@ eval_npfqueue(struct npf_altq *pa, struct node_queue_bw *bw,
 		}
 	}
 
-	if (eval_queue_opts(pa, opts, parent == NULL? 0 : parent->bandwidth))
+	if (npf_eval_queue_opts(pa, opts, parent == NULL? 0 : parent->bandwidth))
 		return (1);
 
 	switch (pa->scheduler) {
@@ -645,6 +645,18 @@ eval_npfqueue(struct npf_altq *pa, struct node_queue_bw *bw,
 	return (error);
 }
 
+struct npf_altq *
+npfaltq_lookup(const char *ifname)
+{
+	struct npf_altq	*altq;
+
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (strncmp(ifname, altq->ifname, IFNAMSIZ) == 0 &&
+		    altq->qname[0] == 0)
+			return (altq);
+	}
+	return (NULL);
+}
 
 /*
  * CBQ support functions
@@ -655,7 +667,7 @@ eval_npfqueue(struct npf_altq *pa, struct node_queue_bw *bw,
 static int
 eval_npfqueue_cbq(struct npf_altq *pa)
 {
-	struct cbq_opts	*opts;
+	struct npf_cbq_opts	*opts;
 	u_int		 ifmtu;
 
 	if (pa->priority >= CBQ_MAXPRI) {
@@ -663,7 +675,7 @@ eval_npfqueue_cbq(struct npf_altq *pa)
 		return (-1);
 	}
 
-	ifmtu = getifmtu(pa->ifname);
+	ifmtu = get_ifmtu(pa->ifname);
 	opts = &pa->pq_u.cbq_opts;
 
 	if (opts->pktsize == 0) {	/* use default */
@@ -803,7 +815,7 @@ eval_npfqueue_priq(struct npf_altq *pa)
  * HFSC support functions
  */
 static int
-eval_pfqueue_hfsc(struct npf_altq *pa)
+eval_npfqueue_hfsc(struct npf_altq *pa)
 {
 	struct npf_altq		*altq, *parent;
 	struct npf_hfsc_opts	*opts;
