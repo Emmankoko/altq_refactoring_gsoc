@@ -30,6 +30,8 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/queue.h>
+
 #ifdef __NetBSD__
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -58,28 +60,27 @@
 
 static int	eval_pfqueue_cbq(struct npf_altq *);
 static int	cbq_compute_idletime(struct npf_altq *);
-static int	check_commit_cbq(int, int, struct npf_altq *);
-static int	print_cbq_opts(const struct npf_altq *);
+//static int	check_commit_cbq(int, int, struct npf_altq *);
+//static int	print_cbq_opts(const struct npf_altq *);
 
 static int	eval_npfqueue_priq(struct npf_altq *);
-static int	check_commit_priq(int, int, struct npf_altq *);
-static int	print_priq_opts(const struct npf_altq *);
+//static int	check_commit_priq(int, int, struct npf_altq *);
+//static int	print_priq_opts(const struct npf_altq *);
 
 static int	eval_pfqueue_hfsc(struct npf_altq *);
-static int	check_commit_hfsc(int, int, struct npf_altq *);
-static int	print_hfsc_opts(const struct npf_altq *,
+//static int	check_commit_hfsc(int, int, struct npf_altq *);
+//static int	print_hfsc_opts(const struct npf_altq *,
 		    const struct node_queue_opt *);
 
-static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
-static int		 is_gsc_under_sc(struct gen_sc *,
-			     struct service_curve *);
-static void		 gsc_destroy(struct gen_sc *);
-static struct segment	*gsc_getentry(struct gen_sc *, double);
-static int		 gsc_add_seg(struct gen_sc *, double, double, double,
+//static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
+//static int		 is_gsc_under_sc(struct gen_sc *,
+//			     struct service_curve *);
+//static void		 gsc_destroy(struct gen_sc *);
+//static struct segment	*gsc_getentry(struct gen_sc *, double);
+//static int		 gsc_add_seg(struct gen_sc *, double, double, double,
 			     double);
-static double		 sc_x2y(struct service_curve *, double);
+//static double		 sc_x2y(struct service_curve *, double);
 
-u_int32_t	 eval_bwspec(struct node_queue_bw *, u_int32_t);
 void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 		     const struct node_hfsc_sc *);
 
@@ -593,7 +594,7 @@ eval_npfqueue(struct npf_altq *pa, struct node_queue_bw *bw,
 		pa->qlimit = DEFAULT_QLIMIT;
 
 	if (pa->scheduler == ALTQT_CBQ || pa->scheduler == ALTQT_HFSC) {
-		pa->bandwidth = eval_bwspec(bw,
+		pa->bandwidth = npf_eval_bwspec(bw,
 		    parent == NULL ? 0 : parent->bandwidth);
 
 		if (pa->bandwidth > pa->ifbandwidth) {
@@ -805,7 +806,7 @@ static int
 eval_pfqueue_hfsc(struct npf_altq *pa)
 {
 	struct npf_altq		*altq, *parent;
-	struct hfsc_opts	*opts;
+	struct npf_hfsc_opts	*opts;
 	struct service_curve	 sc;
 
 	opts = &pa->pq_u.hfsc_opts;

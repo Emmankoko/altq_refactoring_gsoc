@@ -305,7 +305,7 @@ int npf_eval_queue_opts(struct npf_altq *, struct node_queue_opt *,
 int eval_npfaltq(struct npf_altq *, struct node_queue_bw *,
     struct node_queue_opt *);
 
-struct npf_altq	*qname_to_pfaltq(const char *, const char *);
+struct npf_altq	*qname_to_npfaltq(const char *, const char *);
 u_int32_t	 qname_to_qid(const char *);
 
 /*
