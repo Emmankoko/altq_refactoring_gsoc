@@ -108,6 +108,14 @@ struct node_qassign {
 	char		*pqname;
 } qassign;
 
+/*
+ * generalized service curve used for admission control
+ */
+struct segment {
+	LIST_ENTRY(segment)	_next;
+	double			x, y, d, m;
+};
+
 typedef struct fam_addr_mask {
 	sa_family_t	fam_family;
 	npf_addr_t	fam_addr;
