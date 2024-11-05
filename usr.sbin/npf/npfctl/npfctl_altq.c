@@ -58,6 +58,8 @@
 
 #include "npfctl.h"
 
+LIST_HEAD(gen_sc, segment) rtsc, lssc;
+
 static int	eval_npfqueue_cbq(struct npf_altq *);
 static int	cbq_compute_idletime(struct npf_altq *);
 //static int	check_commit_cbq(int, int, struct npf_altq *);
@@ -91,8 +93,6 @@ TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
 struct node_queue *queues = NULL;
-
-LIST_HEAD(gen_sc, segment) rtsc, lssc;
 
 #define FREE_LIST(T,r) \
 	do { \
@@ -468,7 +468,7 @@ int
 npfctl_add_altq(struct npf_altq *a)
 {
 	struct npfioc_altq *npaltq;
-	if (npaltq =  malloc(sizeof(*npaltq)) == NULL)
+	if ((npaltq =  malloc(sizeof(*npaltq))) == NULL)
 		err(1, "malloc");
 
 	int fd = npfctl_open_dev(NPF_DEV_PATH);
