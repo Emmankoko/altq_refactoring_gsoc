@@ -312,6 +312,7 @@ int eval_npfqueue(struct npf_altq *, struct node_queue_bw *,
 struct npf_altq	*qname_to_npfaltq(const char *, const char *);
 u_int32_t	 qname_to_qid(const char *);
 struct npf_altq *npfaltq_lookup(const char *ifname);
+char		*rate2str(double);
 /*
  * For the systems which do not define TH_ECE and TW_CRW.
  */

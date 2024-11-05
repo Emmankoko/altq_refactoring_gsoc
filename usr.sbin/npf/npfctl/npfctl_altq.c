@@ -72,14 +72,14 @@ static int	eval_npfqueue_hfsc(struct npf_altq *);
 //static int	print_hfsc_opts(const struct npf_altq *,
 //		    const struct node_queue_opt *);
 
-//static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
-//static int		 is_gsc_under_sc(struct gen_sc *,
-//			     struct service_curve *);
-//static void		 gsc_destroy(struct gen_sc *);
-//static struct segment	*gsc_getentry(struct gen_sc *, double);
-//static int		 gsc_add_seg(struct gen_sc *, double, double, double,
-//			     double);
-//static double		 sc_x2y(struct service_curve *, double);
+static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
+static int		 is_gsc_under_sc(struct gen_sc *,
+			     struct service_curve *);
+static void		 gsc_destroy(struct gen_sc *);
+static struct segment	*gsc_getentry(struct gen_sc *, double);
+static int		 gsc_add_seg(struct gen_sc *, double, double, double,
+			     double);
+static double		 sc_x2y(struct service_curve *, double);
 
 //void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 //		     const struct node_hfsc_sc *);
@@ -468,9 +468,12 @@ int
 npfctl_add_altq(struct npf_altq *a)
 {
 	struct npfioc_altq *npaltq;
+	if (npaltq =  malloc(sizeof(*npaltq)) == NULL)
+		err(1, "malloc");
+
 	int fd = npfctl_open_dev(NPF_DEV_PATH);
 	if (altqsupport ) {
-		memcpy(&npaltq->altq, a, sizeof(struct npfioc_altq));
+		memcpy(&npaltq->altq, a, sizeof(struct npf_altq));
 		if (ioctl(fd, IOC_NPF_ADD_ALTQ, npaltq)) {
 			if (errno == ENXIO)
 				errx(1, "qtype not configured");
@@ -481,7 +484,8 @@ npfctl_add_altq(struct npf_altq *a)
 				err(1, "NPFADDALTQ");
 		}
 	}
-		npfaltq_store(&npaltq->altq);
+	npfaltq_store(&npaltq->altq);
+	free(npaltq);
 	return (0);
 }
 
@@ -950,4 +954,177 @@ err_ret:
 	gsc_destroy(&rtsc);
 	gsc_destroy(&lssc);
 	return (-1);
+}
+
+/*
+ * admission control using generalized service curve
+ */
+
+/* add a new service curve to a generalized service curve */
+static void
+gsc_add_sc(struct gen_sc *gsc, struct service_curve *sc)
+{
+	if (is_sc_null(sc))
+		return;
+	if (sc->d != 0)
+		gsc_add_seg(gsc, 0.0, 0.0, (double)sc->d, (double)sc->m1);
+	gsc_add_seg(gsc, (double)sc->d, 0.0, HUGE_VAL, (double)sc->m2);
+}
+
+/*
+ * check whether all points of a generalized service curve have
+ * their y-coordinates no larger than a given two-piece linear
+ * service curve.
+ */
+static int
+is_gsc_under_sc(struct gen_sc *gsc, struct service_curve *sc)
+{
+	struct segment	*s, *last, *end;
+	double		 y;
+
+	if (is_sc_null(sc)) {
+		if (LIST_EMPTY(gsc))
+			return (1);
+		LIST_FOREACH(s, gsc, _next) {
+			if (s->m != 0)
+				return (0);
+		}
+		return (1);
+	}
+	/*
+	 * gsc has a dummy entry at the end with x = HUGE_VAL.
+	 * loop through up to this dummy entry.
+	 */
+	end = gsc_getentry(gsc, HUGE_VAL);
+	if (end == NULL)
+		return (1);
+	last = NULL;
+	for (s = LIST_FIRST(gsc); s != end; s = LIST_NEXT(s, _next)) {
+		if (s->y > sc_x2y(sc, s->x))
+			return (0);
+		last = s;
+	}
+	/* last now holds the real last segment */
+	if (last == NULL)
+		return (1);
+	if (last->m > sc->m2)
+		return (0);
+	if (last->x < sc->d && last->m > sc->m1) {
+		y = last->y + (sc->d - last->x) * last->m;
+		if (y > sc_x2y(sc, sc->d))
+			return (0);
+	}
+	return (1);
+}
+
+static void
+gsc_destroy(struct gen_sc *gsc)
+{
+	struct segment	*s;
+
+	while ((s = LIST_FIRST(gsc)) != NULL) {
+		LIST_REMOVE(s, _next);
+		free(s);
+	}
+}
+
+/*
+ * return a segment entry starting at x.
+ * if gsc has no entry starting at x, a new entry is created at x.
+ */
+static struct segment *
+gsc_getentry(struct gen_sc *gsc, double x)
+{
+	struct segment	*new, *prev, *s;
+
+	prev = NULL;
+	LIST_FOREACH(s, gsc, _next) {
+		if (s->x == x)
+			return (s);	/* matching entry found */
+		else if (s->x < x)
+			prev = s;
+		else
+			break;
+	}
+
+	/* we have to create a new entry */
+	if ((new = calloc(1, sizeof(struct segment))) == NULL)
+		return (NULL);
+
+	new->x = x;
+	if (x == HUGE_VAL || s == NULL)
+		new->d = 0;
+	else if (s->x == HUGE_VAL)
+		new->d = HUGE_VAL;
+	else
+		new->d = s->x - x;
+	if (prev == NULL) {
+		/* insert the new entry at the head of the list */
+		new->y = 0;
+		new->m = 0;
+		LIST_INSERT_HEAD(gsc, new, _next);
+	} else {
+		/*
+		 * the start point intersects with the segment pointed by
+		 * prev.  divide prev into 2 segments
+		 */
+		if (x == HUGE_VAL) {
+			prev->d = HUGE_VAL;
+			if (prev->m == 0)
+				new->y = prev->y;
+			else
+				new->y = HUGE_VAL;
+		} else {
+			prev->d = x - prev->x;
+			new->y = prev->d * prev->m + prev->y;
+		}
+		new->m = prev->m;
+		LIST_INSERT_AFTER(prev, new, _next);
+	}
+	return (new);
+}
+
+/* add a segment to a generalized service curve */
+static int
+gsc_add_seg(struct gen_sc *gsc, double x, double y, double d, double m)
+{
+	struct segment	*start, *end, *s;
+	double		 x2;
+
+	if (d == HUGE_VAL)
+		x2 = HUGE_VAL;
+	else
+		x2 = x + d;
+	start = gsc_getentry(gsc, x);
+	end = gsc_getentry(gsc, x2);
+	if (start == NULL || end == NULL)
+		return (-1);
+
+	for (s = start; s != end; s = LIST_NEXT(s, _next)) {
+		s->m += m;
+		s->y += y + (s->x - x) * m;
+	}
+
+	end = gsc_getentry(gsc, HUGE_VAL);
+	for (; s != end; s = LIST_NEXT(s, _next)) {
+		s->y += m * d;
+	}
+
+	return (0);
+}
+
+/* get y-projection of a service curve */
+static double
+sc_x2y(struct service_curve *sc, double x)
+{
+	double	y;
+
+	if (x <= (double)sc->d)
+		/* y belongs to the 1st segment */
+		y = x * (double)sc->m1;
+	else
+		/* y belongs to the 2nd segment */
+		y = (double)sc->d * (double)sc->m1
+			+ (x - (double)sc->d) * (double)sc->m2;
+	return (y);
 }
