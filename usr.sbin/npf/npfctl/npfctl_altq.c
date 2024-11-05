@@ -90,8 +90,6 @@ extern int altqsupport;
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
-LIST_HEAD(gen_sc, segment) rtsc, lssc;
-
 struct node_queue *queues = NULL;
 
 LIST_HEAD(gen_sc, segment) rtsc, lssc;
