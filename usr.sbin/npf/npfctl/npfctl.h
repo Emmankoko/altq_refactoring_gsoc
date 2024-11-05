@@ -47,8 +47,13 @@
 #define	NPF_DEV_PATH	"/dev/npf"
 #define	NPF_CONF_PATH	"/etc/npf.conf"
 #define	NPF_DB_PATH	"/var/db/npf.db"
+
 #ifndef DEFAULT_QLIMIT
 #define DEFAULT_QLIMIT		50
+#endif
+
+#ifndef DEFAULT_PRIORITY
+#define DEFAULT_PRIORITY	1
 #endif
 
 struct node_queue_bw {

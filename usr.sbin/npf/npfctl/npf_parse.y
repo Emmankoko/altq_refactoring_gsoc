@@ -306,7 +306,7 @@ queuespec	: QUEUE STRING on_ifname queue_opts qassign {
 			if (strlcpy(a.qname, $2, sizeof(a.qname)) >=
 			    sizeof(a.qname)) {
 				yyerror("queue name too long (max "
-				    "%d chars)", PF_QNAME_SIZE-1);
+				    "%d chars)", NPF_QNAME_SIZE-1);
 				free($2);
 				YYERROR;
 			}
@@ -331,7 +331,7 @@ queuespec	: QUEUE STRING on_ifname queue_opts qassign {
 		;
 
 queue_opts	:	{
-			bzero(&queue_opts, sizeof queue_opts );
+			memset(&queue_opts,0, sizeof queue_opts );
 			queue_opts.priority = DEFAULT_PRIORITY;
 			queue_opts.qlimit = DEFAULT_QLIMIT;
 			queue_opts.scheduler.qtype = ALTQT_NONE;
@@ -340,7 +340,7 @@ queue_opts	:	{
 		    queue_opts_l
 			{ $$ = queue_opts; }
 		| /* empty */ {
-			bzero(&queue_opts, sizeof queue_opts);
+			memset(&queue_opts,0, sizeof queue_opts);
 			queue_opts.priority = DEFAULT_PRIORITY;
 			queue_opts.qlimit = DEFAULT_QLIMIT;
 			queue_opts.scheduler.qtype = ALTQT_NONE;
@@ -519,7 +519,7 @@ priqflags_item	: STRING	{
 		;
 
 hfsc_opts	:	{
-				bzero(&hfsc_opts,
+				memset(&hfsc_opts, 0,
 				    sizeof(struct node_hfsc_opts));
 			}
 		    hfscopts_list				{
