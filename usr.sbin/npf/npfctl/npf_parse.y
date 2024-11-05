@@ -52,6 +52,7 @@ const char *		yyfilename;
 
 extern int		yylineno, yycolumn;
 extern int		yylex(int);
+struct node_hfsc_opts	hfsc_opts;
 
 void
 yyerror(const char *fmt, ...)
@@ -519,6 +520,7 @@ priqflags_item	: STRING	{
 		;
 
 hfsc_opts	:	{
+
 				memset(&hfsc_opts, 0,
 				    sizeof(struct node_hfsc_opts));
 			}
@@ -626,7 +628,7 @@ qassign_item	: STRING			{
 			if (strlcpy($$->queue, $1, sizeof($$->queue)) >=
 			    sizeof($$->queue)) {
 				yyerror("queue name '%s' too long (max "
-				    "%d chars)", $1, sizeof($$->queue)-1);
+				    "%d chars)", $1, sizeof($$->queue) -1);
 				free($1);
 				free($$);
 				YYERROR;
