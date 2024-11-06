@@ -186,7 +186,6 @@ uppertime		return UPPERLIMIT;
 queue			return QUEUE;
 priority		return PRIORITY;
 qlimit			return QLIMIT;
-rtable			return RTABLE
 
 "/"			return SLASH;
 "{"			return CURLY_OPEN;

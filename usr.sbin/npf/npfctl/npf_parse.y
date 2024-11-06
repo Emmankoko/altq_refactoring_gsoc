@@ -332,7 +332,7 @@ queuespec	: QUEUE STRING on_ifname queue_opts qassign {
 		;
 
 queue_opts	:	{
-			memset(&queue_opts,0, sizeof queue_opts );
+			memset(&queue_opts, 0, sizeof queue_opts );
 			queue_opts.priority = DEFAULT_PRIORITY;
 			queue_opts.qlimit = DEFAULT_QLIMIT;
 			queue_opts.scheduler.qtype = ALTQT_NONE;
@@ -341,7 +341,7 @@ queue_opts	:	{
 		    queue_opts_l
 			{ $$ = queue_opts; }
 		| /* empty */ {
-			memset(&queue_opts,0, sizeof queue_opts);
+			memset(&queue_opts, 0, sizeof queue_opts);
 			queue_opts.priority = DEFAULT_PRIORITY;
 			queue_opts.qlimit = DEFAULT_QLIMIT;
 			queue_opts.scheduler.qtype = ALTQT_NONE;
