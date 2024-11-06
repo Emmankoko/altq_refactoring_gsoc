@@ -75,6 +75,12 @@ struct nl_ext {
 	nvlist_t *	ext_dict;
 };
 
+/*
+struct nl_altq {
+	nvlist_t * altq_dict;
+}
+*/
+
 struct nl_config {
 	nvlist_t *	ncf_dict;
 
@@ -738,7 +744,10 @@ npf_rule_setproc(nl_rule_t *rl, const char *name)
 int
 npf_rule_setqueue(nl_rule_t *rl, const char *qname, const char *pqname)
 {
-	nvlist_add_binary(rl->rule_dict, "queues", qname, pqname);
+	/* keep queue and parent coupled together */
+	const char* queues[] = {qname, pqname};
+	size_t nqueues = sizeof(queues) / sizeof(queues[0]);
+	nvlist_add_string_array(rl->rule_dict, "queues", queues, nqueues);
 	return nvlist_error(rl->rule_dict);
 }
 
