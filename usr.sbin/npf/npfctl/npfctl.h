@@ -305,7 +305,7 @@ void		npfctl_build_table(const char *, u_int, const char *);
 void		npfctl_setparam(const char *, int);
 
 /* ALTQ related */
-int npfctl_test_altqsupport(int);
+extern int npfctl_test_altqsupport(int);
 
 int	expand_altq(struct npf_altq *, const char *, struct node_queue *,
 	    struct node_queue_bw bwspec, struct node_queue_opt *);

@@ -662,6 +662,24 @@ qname_to_npfaltq(const char *qname, const char *ifname)
 	return (NULL);
 }
 
+u_int32_t
+qname_to_qid(const char *qname)
+{
+	struct npf_altq	*altq;
+
+	/*
+	 * We guarantee that same named queues on different interfaces
+	 * have the same qid, so we do NOT need to limit matching on
+	 * one interface!
+	 */
+
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (strncmp(qname, altq->qname, NPF_QNAME_SIZE) == 0)
+			return (altq->qid);
+	}
+	return (0);
+}
+
 struct npf_altq *
 npfaltq_lookup(const char *ifname)
 {
