@@ -86,8 +86,6 @@ static double		 sc_x2y(struct service_curve *, double);
 //void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 //		     const struct node_hfsc_sc *);
 
-extern int npfctl_open_dev(const char *);
-
 extern int altqsupport;
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
