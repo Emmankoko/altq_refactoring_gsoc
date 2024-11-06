@@ -221,7 +221,7 @@ yyerror(const char *fmt, ...)
 %type	<optproto>	rawproto
 %type	<rulegroup>	group_opts
 %type	<queue_opts>		queue_opts queue_opt queue_opts_l
-%type	<qassign>		qname
+%type	<qassign>		rule_queue
 %type	<queue>		qassign qassign_list qassign_item
 %type	<queue_options>	scheduler
 %type	<num>		cbqflags_list cbqflags_item
@@ -628,7 +628,7 @@ qassign_item	: STRING			{
 			if (strlcpy($$->queue, $1, sizeof($$->queue)) >=
 			    sizeof($$->queue)) {
 				yyerror("queue name '%s' too long (max "
-				    "%d chars)", $1, sizeof($$->queue) -1);
+				    "%lu chars)", $1, sizeof($$->queue) -1);
 				free($1);
 				free($$);
 				YYERROR;
@@ -952,16 +952,16 @@ rule_group
 
 rule
 	: block_or_pass opt_stateful rule_dir opt_final on_ifname
-	  opt_family opt_proto all_or_filt_opts opt_apply
+	  opt_family opt_proto all_or_filt_opts opt_apply rule_queue
 	{
 		npfctl_build_rule($1 | $2 | $3 | $4, $5,
-		    $6, $7, &$8, NULL, $9);
+		    $6, $7, &$8, NULL, $9, $10);
 	}
 	| block_or_pass opt_stateful rule_dir opt_final on_ifname
-	  PCAP_FILTER STRING opt_apply
+	  PCAP_FILTER STRING opt_apply rule_queue
 	{
 		npfctl_build_rule($1 | $2 | $3 | $4, $5,
-		    AF_UNSPEC, NULL, NULL, $7, $8);
+		    AF_UNSPEC, NULL, NULL, $7, $8, $9);
 	}
 	;
 
@@ -1080,6 +1080,22 @@ opt_stateful
 opt_apply
 	: APPLY STRING	{ $$ = $2; }
 	|		{ $$ = NULL; }
+	;
+
+rule_queue
+	: QUEUE STRING
+	{
+			$$.qname = $2;
+	}
+	| QUEUE '(' STRING ')'
+	{
+			$$.qname = $3;
+	}
+	| QUEUE '(' STRING comma STRING ')'
+	{
+			$$.qname = $3;
+			$$.pqname = $5;
+	}
 	;
 
 block_opts

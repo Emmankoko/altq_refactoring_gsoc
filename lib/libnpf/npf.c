@@ -735,6 +735,13 @@ npf_rule_setproc(nl_rule_t *rl, const char *name)
 	return nvlist_error(rl->rule_dict);
 }
 
+int
+npf_rule_setqueue(nl_rule_t *rl, const char *qname, const char *pqname)
+{
+	nvlist_add_binary(rl->rule_dict, "queues", qname, pqname);
+	return nvlist_error(rl->rule_dict);
+}
+
 void *
 npf_rule_export(nl_rule_t *rl, size_t *length)
 {

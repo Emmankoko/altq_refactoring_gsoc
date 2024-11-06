@@ -702,7 +702,7 @@ npfctl_build_group_end(void)
 void
 npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
     const npfvar_t *popts, const filt_opts_t *fopts,
-    const char *pcap_filter, const char *rproc)
+    const char *pcap_filter, const char *rproc, struct node_qassign queue)
 {
 	nl_rule_t *rl;
 
@@ -717,6 +717,11 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 
 	if (rproc) {
 		npf_rule_setproc(rl, rproc);
+	}
+
+	/*set both queue and parent queue even if parent queue is null */
+	if (queue.qname != NULL ) {
+		npf_rule_setqueue(rl, queue.qname, queue.pqname);
 	}
 
 	if (npf_conf) {
