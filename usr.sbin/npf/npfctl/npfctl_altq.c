@@ -650,6 +650,19 @@ eval_npfqueue(struct npf_altq *pa, struct node_queue_bw *bw,
 }
 
 struct npf_altq *
+qname_to_npfaltq(const char *qname, const char *ifname)
+{
+	struct npf_altq	*altq;
+
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (strncmp(ifname, altq->ifname, IFNAMSIZ) == 0 &&
+		    strncmp(qname, altq->qname, NPF_QNAME_SIZE) == 0)
+			return (altq);
+	}
+	return (NULL);
+}
+
+struct npf_altq *
 npfaltq_lookup(const char *ifname)
 {
 	struct npf_altq	*altq;
@@ -954,6 +967,33 @@ err_ret:
 	gsc_destroy(&rtsc);
 	gsc_destroy(&lssc);
 	return (-1);
+}
+
+#define	R2S_BUFS	8
+#define	RATESTR_MAX	16
+
+char *
+rate2str(double rate)
+{
+	char		*buf;
+	static char	 r2sbuf[R2S_BUFS][RATESTR_MAX];  /* ring buffer */
+	static int	 idx = 0;
+	int		 i;
+	static const char unit[] = " KMG";
+
+	buf = r2sbuf[idx++];
+	if (idx == R2S_BUFS)
+		idx = 0;
+
+	for (i = 0; rate >= 1000 && i <= 3; i++)
+		rate /= 1000;
+
+	if ((int)(rate * 100) % 100)
+		snprintf(buf, RATESTR_MAX, "%.2f%cb", rate, unit[i]);
+	else
+		snprintf(buf, RATESTR_MAX, "%d%cb", (int)rate, unit[i]);
+
+	return (buf);
 }
 
 /*

@@ -53,6 +53,7 @@ const char *		yyfilename;
 extern int		yylineno, yycolumn;
 extern int		yylex(int);
 struct node_hfsc_opts	hfsc_opts;
+struct queue_opts queue_opts;
 
 void
 yyerror(const char *fmt, ...)

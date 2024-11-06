@@ -97,7 +97,7 @@ struct queue_opts {
 	int			priority;
 	int			tbrsize;
 	int			qlimit;
-} queue_opts;
+};
 
 struct node_queue {
 	char			 queue[NPF_QNAME_SIZE];
@@ -111,7 +111,7 @@ struct node_queue {
 struct node_qassign {
 	char		*qname;
 	char		*pqname;
-} qassign;
+};
 
 /*
  * generalized service curve used for admission control
