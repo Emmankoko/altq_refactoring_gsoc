@@ -62,6 +62,7 @@ __KERNEL_RCSID(0, "$NetBSD: npf_handler.c,v 1.49 2020/05/30 14:16:56 rmind Exp $
 #include <netinet/ip_var.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
+#include <altq/if_altq.h>
 #endif
 
 #include "npf_impl.h"
@@ -269,6 +270,16 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 pass:
 	decision = NPF_DECISION_PASS;
 	KASSERT(error == 0);
+
+#ifdef ALTQ
+	/*
+	 * Tag packets with altq tags
+	 */
+	npf_mbuf_altq_tag(rl, mp);
+#endif /* ALTQ */
+
+
+
 
 	/*
 	 * Perform NAT.
