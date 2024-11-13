@@ -62,17 +62,17 @@ LIST_HEAD(gen_sc, segment) rtsc, lssc;
 
 static int	eval_npfqueue_cbq(struct npf_altq *);
 static int	cbq_compute_idletime(struct npf_altq *);
-//static int	check_commit_cbq(int, int, struct npf_altq *);
-//static int	print_cbq_opts(const struct npf_altq *);
+static int	check_commit_cbq(int, int, struct npf_altq *);
+static int	print_cbq_opts(const struct npf_altq *);
 
 static int	eval_npfqueue_priq(struct npf_altq *);
-//static int	check_commit_priq(int, int, struct npf_altq *);
-//static int	print_priq_opts(const struct npf_altq *);
+static int	check_commit_priq(int, int, struct npf_altq *);
+static int	print_priq_opts(const struct npf_altq *);
 
 static int	eval_npfqueue_hfsc(struct npf_altq *);
-//static int	check_commit_hfsc(int, int, struct npf_altq *);
-//static int	print_hfsc_opts(const struct npf_altq *,
-//		    const struct node_queue_opt *);
+static int	check_commit_hfsc(int, int, struct npf_altq *);
+static int	print_hfsc_opts(const struct npf_altq *,
+		    const struct node_queue_opt *);
 
 static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
 static int		 is_gsc_under_sc(struct gen_sc *,
@@ -83,10 +83,11 @@ static int		 gsc_add_seg(struct gen_sc *, double, double, double,
 			     double);
 static double		 sc_x2y(struct service_curve *, double);
 
-//void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
-//		     const struct node_hfsc_sc *);
+void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
+		     const struct node_hfsc_sc *);
 
-extern int altqsupport;
+int altqsupport;
+int altqpresent;
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
@@ -133,6 +134,27 @@ npfctl_test_altqsupport(int dev)
 		err(1, "IOC_GET_ALTQS");
 	}
 	return (1);
+}
+
+void
+npfctl_start_altq(int fd)
+{
+		altqsupport = npfctl_test_altqsupport(fd);
+		if (altqsupport)
+			if (check_commit_altq(fd, opts) != 0)
+				ERRX("errors in altq config");
+
+		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START) != -1)))
+			if (errno != EEXIST)
+				fprintf("ALTQ enable failed\n");
+}
+
+void
+npfctl_stop_altq(int fd)
+{
+	if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_STOP) != -1)))
+		if (errno != ENOENT)
+			err(1, "IOC_NPF_ALTQ_STOP");
 }
 
 int
@@ -496,6 +518,8 @@ npfaltq_store(struct npf_altq *a)
 		err(1, "malloc");
 	memcpy(altq, a, sizeof(struct npf_altq));
 	TAILQ_INSERT_TAIL(&altqs, altq, entries);
+	/* check altq presence in config */
+	altqpresent++;
 }
 
 u_int32_t
@@ -1183,4 +1207,339 @@ sc_x2y(struct service_curve *sc, double x)
 		y = (double)sc->d * (double)sc->m1
 			+ (x - (double)sc->d) * (double)sc->m2;
 	return (y);
+}
+
+/*
+ * check_commit_altq does consistency check for each interface
+ */
+int
+check_commit_altq()
+{
+	struct npf_altq	*altq;
+	int		 error = 0;
+
+	/* call the discipline check for each interface. */
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (altq->qname[0] == 0) {
+			switch (altq->scheduler) {
+			case ALTQT_CBQ:
+				error = check_commit_cbq(altq);
+				break;
+			case ALTQT_PRIQ:
+				error = check_commit_priq(altq);
+				break;
+			case ALTQT_HFSC:
+				error = check_commit_hfsc(altq);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	return (error);
+}
+
+static int
+check_commit_cbq(int fd, int opts, struct npf_altq *pa)
+{
+	struct npf_altq	*altq;
+	int		 root_class, default_class;
+	int		 error = 0;
+
+	/*
+	 * check if cbq has one root queue and one default queue
+	 * for this interface
+	 */
+	root_class = default_class = 0;
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (strncmp(altq->ifname, pa->ifname, IFNAMSIZ) != 0)
+			continue;
+		if (altq->qname[0] == 0)  /* this is for interface */
+			continue;
+		if (altq->pq_u.cbq_opts.flags & CBQCLF_ROOTCLASS)
+			root_class++;
+		if (altq->pq_u.cbq_opts.flags & CBQCLF_DEFCLASS)
+			default_class++;
+	}
+	if (root_class != 1) {
+		warnx("should have one root queue on %s", pa->ifname);
+		error++;
+	}
+	if (default_class != 1) {
+		warnx("should have one default queue on %s", pa->ifname);
+		error++;
+	}
+	return (error);
+}
+
+
+static int
+check_commit_priq(struct npf_altq *pa)
+{
+	struct npf_altq	*altq;
+	int		 default_class;
+	int		 error = 0;
+
+	/*
+	 * check if priq has one default class for this interface
+	 */
+	default_class = 0;
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (strncmp(altq->ifname, pa->ifname, IFNAMSIZ) != 0)
+			continue;
+		if (altq->qname[0] == 0)  /* this is for interface */
+			continue;
+		if (altq->pq_u.priq_opts.flags & PRCF_DEFAULTCLASS)
+			default_class++;
+	}
+	if (default_class != 1) {
+		warnx("should have one default queue on %s", pa->ifname);
+		error++;
+	}
+	return (error);
+}
+
+static int
+check_commit_hfsc(struct npf_altq *pa)
+{
+	struct npf_altq	*altq, *def = NULL;
+	int		 default_class;
+	int		 error = 0;
+
+	/* check if hfsc has one default queue for this interface */
+	default_class = 0;
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (strncmp(altq->ifname, pa->ifname, IFNAMSIZ) != 0)
+			continue;
+		if (altq->qname[0] == 0)  /* this is for interface */
+			continue;
+		if (altq->parent[0] == 0)  /* dummy root */
+			continue;
+		if (altq->pq_u.hfsc_opts.flags & HFCF_DEFAULTCLASS) {
+			default_class++;
+			def = altq;
+		}
+	}
+	if (default_class != 1) {
+		warnx("should have one default queue on %s", pa->ifname);
+		return (1);
+	}
+	/* make sure the default queue is a leaf */
+	TAILQ_FOREACH(altq, &altqs, entries) {
+		if (strncmp(altq->ifname, pa->ifname, IFNAMSIZ) != 0)
+			continue;
+		if (altq->qname[0] == 0)  /* this is for interface */
+			continue;
+		if (strncmp(altq->parent, def->qname, NPF_QNAME_SIZE) == 0) {
+			warnx("default queue is not a leaf");
+			error++;
+		}
+	}
+	return (error);
+}
+
+void
+print_altq(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
+	struct node_queue_opt *qopts)
+{
+	if (a->qname[0] != 0) {
+		print_queue(a, level, bw, 1, qopts);
+		return;
+	}
+
+	printf("altq on %s ", a->ifname);
+
+	switch (a->scheduler) {
+	case ALTQT_CBQ:
+		if (!print_cbq_opts(a))
+			printf("cbq ");
+		break;
+	case ALTQT_PRIQ:
+		if (!print_priq_opts(a))
+			printf("priq ");
+		break;
+	case ALTQT_HFSC:
+		if (!print_hfsc_opts(a, qopts))
+			printf("hfsc ");
+		break;
+	}
+
+	if (bw != NULL && bw->bw_percent > 0) {
+		if (bw->bw_percent < 100)
+			printf("bandwidth %u%% ", bw->bw_percent);
+	} else
+		printf("bandwidth %s ", rate2str((double)a->ifbandwidth));
+
+	if (a->qlimit != DEFAULT_QLIMIT)
+		printf("qlimit %u ", a->qlimit);
+	printf("tbrsize %u ", a->tbrsize);
+}
+
+void
+print_queue(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
+    int print_interface, struct node_queue_opt *qopts)
+{
+	unsigned	i;
+
+	printf("queue ");
+	for (i = 0; i < level; ++i)
+		printf(" ");
+	printf("%s ", a->qname);
+	if (print_interface)
+		printf("on %s ", a->ifname);
+	if (a->scheduler == ALTQT_CBQ || a->scheduler == ALTQT_HFSC) {
+		if (bw != NULL && bw->bw_percent > 0) {
+			if (bw->bw_percent < 100)
+				printf("bandwidth %u%% ", bw->bw_percent);
+		} else
+			printf("bandwidth %s ", rate2str((double)a->bandwidth));
+	}
+	if (a->priority != DEFAULT_PRIORITY)
+		printf("priority %u ", a->priority);
+	if (a->qlimit != DEFAULT_QLIMIT)
+		printf("qlimit %u ", a->qlimit);
+	switch (a->scheduler) {
+	case ALTQT_CBQ:
+		print_cbq_opts(a);
+		break;
+	case ALTQT_PRIQ:
+		print_priq_opts(a);
+		break;
+	case ALTQT_HFSC:
+		print_hfsc_opts(a, qopts);
+		break;
+	}
+}
+
+static int
+print_cbq_opts(const struct npf_altq *a)
+{
+	const struct cbq_opts	*opts;
+
+	opts = &a->pq_u.cbq_opts;
+	if (opts->flags) {
+		printf("cbq(");
+		if (opts->flags & CBQCLF_RED)
+			printf(" red");
+		if (opts->flags & CBQCLF_ECN)
+			printf(" ecn");
+		if (opts->flags & CBQCLF_RIO)
+			printf(" rio");
+		if (opts->flags & CBQCLF_CLEARDSCP)
+			printf(" cleardscp");
+		if (opts->flags & CBQCLF_FLOWVALVE)
+			printf(" flowvalve");
+#ifdef CBQCLF_BORROW
+		if (opts->flags & CBQCLF_BORROW)
+			printf(" borrow");
+#endif
+		if (opts->flags & CBQCLF_WRR)
+			printf(" wrr");
+		if (opts->flags & CBQCLF_EFFICIENT)
+			printf(" efficient");
+		if (opts->flags & CBQCLF_ROOTCLASS)
+			printf(" root");
+		if (opts->flags & CBQCLF_DEFCLASS)
+			printf(" default");
+		printf(" ) ");
+
+		return (1);
+	} else
+		return (0);
+}
+
+static int
+print_priq_opts(const struct npf_altq *a)
+{
+	const struct priq_opts	*opts;
+
+	opts = &a->pq_u.priq_opts;
+
+	if (opts->flags) {
+		printf("priq(");
+		if (opts->flags & PRCF_RED)
+			printf(" red");
+		if (opts->flags & PRCF_ECN)
+			printf(" ecn");
+		if (opts->flags & PRCF_RIO)
+			printf(" rio");
+		if (opts->flags & PRCF_CLEARDSCP)
+			printf(" cleardscp");
+		if (opts->flags & PRCF_DEFAULTCLASS)
+			printf(" default");
+		printf(" ) ");
+
+		return (1);
+	} else
+		return (0);
+}
+
+static int
+print_hfsc_opts(const struct npf_altq *a, const struct node_queue_opt *qopts)
+{
+	const struct hfsc_opts		*opts;
+	const struct node_hfsc_sc	*rtsc, *lssc, *ulsc;
+
+	opts = &a->pq_u.hfsc_opts;
+	if (qopts == NULL)
+		rtsc = lssc = ulsc = NULL;
+	else {
+		rtsc = &qopts->data.hfsc_opts.realtime;
+		lssc = &qopts->data.hfsc_opts.linkshare;
+		ulsc = &qopts->data.hfsc_opts.upperlimit;
+	}
+
+	if (opts->flags || opts->rtsc_m2 != 0 || opts->ulsc_m2 != 0 ||
+	    (opts->lssc_m2 != 0 && (opts->lssc_m2 != a->bandwidth ||
+	    opts->lssc_d != 0))) {
+		printf("hfsc(");
+		if (opts->flags & HFCF_RED)
+			printf(" red");
+		if (opts->flags & HFCF_ECN)
+			printf(" ecn");
+		if (opts->flags & HFCF_RIO)
+			printf(" rio");
+		if (opts->flags & HFCF_CLEARDSCP)
+			printf(" cleardscp");
+		if (opts->flags & HFCF_DEFAULTCLASS)
+			printf(" default");
+		if (opts->rtsc_m2 != 0)
+			print_hfsc_sc("realtime", opts->rtsc_m1, opts->rtsc_d,
+			    opts->rtsc_m2, rtsc);
+		if (opts->lssc_m2 != 0 && (opts->lssc_m2 != a->bandwidth ||
+		    opts->lssc_d != 0))
+			print_hfsc_sc("linkshare", opts->lssc_m1, opts->lssc_d,
+			    opts->lssc_m2, lssc);
+		if (opts->ulsc_m2 != 0)
+			print_hfsc_sc("upperlimit", opts->ulsc_m1, opts->ulsc_d,
+			    opts->ulsc_m2, ulsc);
+		printf(" ) ");
+
+		return (1);
+	} else
+		return (0);
+}
+
+void
+print_hfsc_sc(const char *scname, u_int m1, u_int d, u_int m2,
+    const struct node_hfsc_sc *sc)
+{
+	printf(" %s", scname);
+
+	if (d != 0) {
+		printf("(");
+		if (sc != NULL && sc->m1.bw_percent > 0)
+			printf("%u%%", sc->m1.bw_percent);
+		else
+			printf("%s", rate2str((double)m1));
+		printf(" %u", d);
+	}
+
+	if (sc != NULL && sc->m2.bw_percent > 0)
+		printf(" %u%%", sc->m2.bw_percent);
+	else
+		printf(" %s", rate2str((double)m2));
+
+	if (d != 0)
+		printf(")");
 }

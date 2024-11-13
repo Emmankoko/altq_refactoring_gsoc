@@ -131,7 +131,7 @@ usage(void)
 }
 
 static int
-npfctl_print_stats(int fd)
+npfctl_print_filtering_stats(int fd)
 {
 	static const struct stats_s {
 		/* Note: -1 indicates a new section. */
@@ -194,6 +194,32 @@ npfctl_print_stats(int fd)
 
 	free(st);
 	return 0;
+}
+
+static int
+npfctl_print_stats(int fd, int argc, char* argv[])
+{
+	int ch;
+	int error;
+	argc--;
+	argv++;
+
+	while(ch = getopt(argc, argv, "fq:") != -1) {
+		switch(ch)
+		{
+			case f:
+				error =	npfctl_print_filter_stats(fd);
+				break;
+			case q:
+				error = npfctl_show_altq(fd);
+				break;
+			default:
+				errx(EXIT_FAILURE,
+					"Usage: %s stats { -f | -q }\n",
+					getprogname());
+		}
+	}
+	return error;
 }
 
 void
@@ -443,9 +469,6 @@ npfctl_debug(int argc, char **argv)
 	npf_config_destroy(ncf);
 }
 
-int altqsupport;
-
-
 static void
 npfctl(int action, int argc, char **argv)
 {
@@ -467,18 +490,14 @@ npfctl(int action, int argc, char **argv)
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
-		altqsupport = npfctl_test_altqsupport(fd);
-		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START, NULL) != -1)))
-			if (errno != EEXIST)
-				err(1, "IOC_NPF_START_ALTQ");
+
 		break;
 	case NPFCTL_STOP:
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
+		if(altqpresent)
+			npfctl_stop_altq(fd);
 		fun = "ioctl(IOC_NPF_SWITCH)";
-		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_STOP, NULL) != -1)))
-			if (errno != ENOENT)
-				err(1, "IOC_NPF_ALTQ_STOP");
 
 		break;
 	case NPFCTL_RELOAD:
@@ -486,6 +505,8 @@ npfctl(int action, int argc, char **argv)
 		npfctl_parse_file(argc < 3 ? NPF_CONF_PATH : argv[2]);
 		npfctl_preload_bpfjit();
 		errno = ret = npfctl_config_send(fd);
+		if (altqpresent)
+			npfctl_start_altq(fd);
 		fun = "npfctl_config_send";
 		break;
 	case NPFCTL_SHOWCONF:
@@ -531,7 +552,7 @@ npfctl(int action, int argc, char **argv)
 		fun = "npfctl_config_save";
 		break;
 	case NPFCTL_STATS:
-		ret = npfctl_print_stats(fd);
+		ret = npfctl_print_stats(fd, argc, argv);
 		fun = "npfctl_print_stats";
 		break;
 	case NPFCTL_CONN_LIST:
