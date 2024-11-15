@@ -490,12 +490,14 @@ npfctl(int action, int argc, char **argv)
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
 		fun = "ioctl(IOC_NPF_SWITCH)";
+		if (altqattached)
+			npfctl_start_altq(fd);
 
 		break;
 	case NPFCTL_STOP:
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
-		if(altqpresent)
+		if(npf_altq_running)
 			npfctl_stop_altq(fd);
 		fun = "ioctl(IOC_NPF_SWITCH)";
 
@@ -505,8 +507,6 @@ npfctl(int action, int argc, char **argv)
 		npfctl_parse_file(argc < 3 ? NPF_CONF_PATH : argv[2]);
 		npfctl_preload_bpfjit();
 		errno = ret = npfctl_config_send(fd);
-		if (altqpresent)
-			npfctl_start_altq(fd);
 		fun = "npfctl_config_send";
 		break;
 	case NPFCTL_SHOWCONF:

@@ -86,10 +86,11 @@ static double		 sc_x2y(struct service_curve *, double);
 void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 		     const struct node_hfsc_sc *);
 
-int altqsupport;
-int altqpresent;
+
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
+
+int altqsupport;
 
 struct node_queue *queues = NULL;
 
@@ -156,6 +157,17 @@ npfctl_stop_altq(int fd)
 		if (errno != ENOENT)
 			err(1, "IOC_NPF_ALTQ_STOP");
 }
+
+/*
+
+void
+npfctl_altq_destroy(int fd)
+{
+	if (!(altqsupport & (ioctl(fd, IOC_NPF_DESTROY_ALTQ) != -1)))
+		if (errno != ENOENT)
+			err(1, "IOC_NPF_DESTROY_ALTQ");
+}
+*/
 
 int
 expand_altq(struct npf_altq *a, const char *ifname,
@@ -519,7 +531,6 @@ npfaltq_store(struct npf_altq *a)
 	memcpy(altq, a, sizeof(struct npf_altq));
 	TAILQ_INSERT_TAIL(&altqs, altq, entries);
 	/* check altq presence in config */
-	altqpresent++;
 }
 
 u_int32_t

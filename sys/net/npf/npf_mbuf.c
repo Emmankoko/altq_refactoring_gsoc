@@ -365,3 +365,28 @@ nbuf_find_tag(nbuf_t *nbuf, uint32_t *val)
 	return nbuf->nb_mops->get_tag(m, val);
 #endif
 }
+
+/* tag ALTQ packets */
+#ifdef ALTQ
+void
+mbuf_altq_tag(npf_rule_t* rl, struct mbuf *mp)
+{
+	KASSERT(m_flags_p(mp, M_PKTHDR));
+
+	if(rl == NULL)
+		return;
+
+	struct m_tag	*mtag;
+	struct altq_tag	*atag;
+
+	mtag = m_tag_get(PACKET_TAG_ALTQ_QID, sizeof(*atag), M_NOWAIT);
+	if (mtag != NULL) {
+		atag = (struct altq_tag *)(mtag + 1);
+		atag->qid = r->qid;
+		/* add hints for ecn */
+		atag->af = AF_INET;
+		atag->hdr = mtod(mp, struct ip *);
+		m_tag_prepend(mp, mtag);
+	}
+}
+#endif /* ALTQ*/

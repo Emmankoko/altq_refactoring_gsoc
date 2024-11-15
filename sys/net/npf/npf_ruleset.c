@@ -118,6 +118,13 @@ struct npf_rule {
 	LIST_ENTRY(npf_rule)	r_aentry;
 	nvlist_t *		r_info;
 	size_t			r_info_len;
+
+	/* queues set on a rule */
+	u_int32_t		 qid;
+	u_int32_t		 pqid;
+
+	char qname[NPF_QNAME_SIZE];
+	char pqname[NPF_QNAME_SIZE];
 };
 
 #define	SKIPTO_ADJ_FLAG		(1U << 31)
@@ -724,6 +731,29 @@ npf_rule_setrproc(npf_rule_t *rl, npf_rproc_t *rp)
 {
 	npf_rproc_acquire(rp);
 	rl->r_rproc = rp;
+}
+
+/* set your rule queues by their IDs*/
+int
+npf_rule_setqueues(npf_rule_t * rl, const char * qname, const char * pqname)
+{
+	int error;
+
+	strncpy(rl->qname, qname, sizeof(qname));
+
+	strncpy(rl->pqname, pqname, sizeof(pqname));
+	/* set queue IDs */
+	if (rl->qname[0] != 0) {
+		if ((rl->qid = npf_qname2qid(rl->qname)) == 0)
+			error = EBUSY;
+		else if (rl->pqname[0] != 0) {
+			if ((rl->pqid =
+				npf_qname2qid(rl->pqname)) == 0)
+				error = EBUSY;
+		} else
+			rl->pqid = rl->qid;
+	}
+	return error;
 }
 
 /*

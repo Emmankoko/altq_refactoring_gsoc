@@ -271,16 +271,6 @@ pass:
 	decision = NPF_DECISION_PASS;
 	KASSERT(error == 0);
 
-#ifdef ALTQ
-	/*
-	 * Tag packets with altq tags
-	 */
-	npf_mbuf_altq_tag(rl, mp);
-#endif /* ALTQ */
-
-
-
-
 	/*
 	 * Perform NAT.
 	 */
@@ -318,6 +308,10 @@ out:
 
 	/* Pass the packet if decided and there is no error. */
 	if (decision == NPF_DECISION_PASS && !error) {
+#ifdef ALTQ
+		/* give them ALTQ tags */
+		mbuf_altq_tag(rl,mp);
+#endif /* ALTQ */
 		/*
 		 * XXX: Disable for now, it will be set accordingly later,
 		 * for optimisations (to reduce inspection).

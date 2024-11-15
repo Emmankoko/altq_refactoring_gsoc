@@ -29,6 +29,7 @@
 #include <sys/unistd.h>
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/mbuf.h>
 #include <sys/queue.h>
 #include <sys/tree.h>
 #include <sys/rwlock.h>
@@ -66,6 +67,8 @@ int			 npf_altqs_inactive_open;
 
 struct pool		 npf_altq_pl;
 
+int npf_altq_loaded = 0;
+
 TAILQ_HEAD(npf_tags, npf_tagname)	npf_tags = TAILQ_HEAD_INITIALIZER(npf_tags),
 				npf_qids = TAILQ_HEAD_INITIALIZER(npf_qids);
 
@@ -73,7 +76,7 @@ void tag_unref(struct npf_tags *, u_int16_t);
 u_int16_t npftagname2tag(struct npf_tags *, char *);
 
 #if (NPF_QNAME_SIZE != NPF_TAG_NAME_SIZE)
-#error PF_QNAME_SIZE must be equal to PF_TAG_NAME_SIZE
+#error NPF_QNAME_SIZE must be equal to NPF_TAG_NAME_SIZE
 #endif
 
 #ifdef ALTQ
@@ -83,6 +86,7 @@ u_int16_t npftagname2tag(struct npf_tags *, char *);
 void
 npf_altq_init(void)
 {
+
 	pool_init(&npf_altq_pl, sizeof(struct npf_altq), 0, 0, 0, "npfaltqpl",
 	    &pool_allocator_nointr, IPL_NONE);
 	TAILQ_INIT(&npf_altqs[0]);
@@ -92,15 +96,17 @@ npf_altq_init(void)
 }
 
 /* disable, destroy and stop altq routine when packet filtering disabled */
-void
+int
 npf_altq_destroy(void)
 {
-	u_int32_t		 ticket;
+	//u_int32_t		 ticket;
 
-	if (npf_begin_altq(&ticket) == 0)
-		npf_commit_altq(ticket);
+	if (npf_begin_altq() == 0)
+		npf_commit_altq();
 
 	pool_destroy(&npf_altq_pl);
+
+	return 0;
 }
 
 void
@@ -110,7 +116,7 @@ npf_qid_unref(u_int32_t qid)
 }
 
 int
-npf_begin_altq(u_int32_t *ticket)
+npf_begin_altq()
 {
 	struct npf_altq	*altq;
 	int		 error = 0;
@@ -127,19 +133,19 @@ npf_begin_altq(u_int32_t *ticket)
 	}
 	if (error)
 		return (error);
-	*ticket = ++nticket_altqs_inactive;
+	//*ticket = ++nticket_altqs_inactive;
 	npf_altqs_inactive_open = 1;
 	return (0);
 }
 
 int
-npf_commit_altq(u_int32_t ticket)
+npf_commit_altq()
 {
 	struct npf_altqqueue	*old_altqs;
 	struct npf_altq		*altq;
 	int			 s, err, error = 0;
 
-	if (!npf_altqs_inactive_open || ticket != nticket_altqs_inactive)
+	if (!npf_altqs_inactive_open)
 		return (EBUSY);
 
 	/* swap altqs, keep the old. */
@@ -225,6 +231,7 @@ npf_enable_altq(struct npf_altq *altq)
 		error = tbr_set(&ifp->if_snd, &tb);
 		splx(s);
 	}
+
 	return (error);
 }
 
@@ -256,7 +263,7 @@ npf_add_altq(void *data)
 		error = ENOMEM;
 		return error;
 	}
-	bcopy(&paa->altq, altq, sizeof(struct npf_altq));
+	memcpy(altq, &paa->altq, sizeof(struct npf_altq));
 
 	/*
 		* if this is for a queue, find the discipline and
@@ -284,7 +291,10 @@ npf_add_altq(void *data)
 	}
 
 	TAILQ_INSERT_TAIL(npf_altqs_inactive, altq, entries);
-	bcopy(altq, &paa->altq, sizeof(struct npf_altq));
+	memcpy(&paa->altq, altq, sizeof(struct npf_altq));
+
+	if (!npf_altq_loaded)
+		npf_altq_loaded = 1;
 
 	return 0;
 }
@@ -327,7 +337,7 @@ npftagname2tag(struct npf_tags *head, char *tagname)
 	    M_TEMP, M_NOWAIT);
 	if (tag == NULL)
 		return (0);
-	bzero(tag, sizeof(struct npf_tagname));
+	memset(tag, 0, sizeof(struct npf_tagname));
 	strlcpy(tag->name, tagname, sizeof(tag->name));
 	tag->tag = new_tagid;
 	tag->ref++;
@@ -408,6 +418,64 @@ tag_unref(struct npf_tags *head, u_int16_t tag)
 			break;
 		}
 	}
+}
+
+int
+npf_get_qstats(void *data)
+{
+	int error;
+	struct npfioc_qstats	*pq = (struct npfioc_qstats *)data;
+	struct npf_altq		*altq;
+	u_int32_t		 nr;
+	int			 nbytes;
+
+	if (pq->ticket != ticket_altqs_active) {
+		error = EBUSY;
+		break;
+	}
+	nbytes = pq->nbytes;
+	nr = 0;
+	altq = TAILQ_FIRST(pf_altqs_active);
+	while ((altq != NULL) && (nr < pq->nr)) {
+		altq = TAILQ_NEXT(altq, entries);
+		nr++;
+	}
+	if (altq == NULL) {
+		error = EBUSY;
+		break;
+	}
+	error = altq_getqstats(altq, pq->buf, &nbytes);
+	if (error == 0) {
+		pq->scheduler = altq->scheduler;
+		pq->nbytes = nbytes;
+	}
+	return error;
+}
+
+int
+npf_get_altq(void *data)
+{
+	int error;
+	struct npfioc_altq	*paa = (struct npfioc_altq *)data;
+	struct npf_altq		*altq;
+	u_int32_t		 nr;
+
+	if (paa->ticket != nticket_altqs_active) {
+		error = EBUSY;
+		break;
+	}
+	nr = 0;
+	altq = TAILQ_FIRST(npf_altqs_active);
+	while ((altq != NULL) && (nr < paa->nr)) {
+		altq = TAILQ_NEXT(altq, entries);
+		nr++;
+	}
+	if (altq == NULL) {
+		error = EBUSY;
+		break;
+	}
+	memcpy(&paa->altq, altq, sizeof(struct npf_altq));
+	return error;
 }
 
 #endif /* ALTQ */

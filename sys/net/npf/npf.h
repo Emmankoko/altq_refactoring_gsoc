@@ -124,6 +124,7 @@ bool		nbuf_cksum_barrier(nbuf_t *, int);
 int		nbuf_add_tag(nbuf_t *, uint32_t);
 int		npf_mbuf_add_tag(nbuf_t *, struct mbuf *, uint32_t);
 int		nbuf_find_tag(nbuf_t *, uint32_t *);
+void 	mbuf_altq_tag(npf_rule_t *, struct mbuf *);
 
 /*
  * Packet information cache.
@@ -318,6 +319,14 @@ struct npfioc_altq {
 	struct npf_altq	 altq;
 };
 
+struct npfioc_qstats {
+	u_int32_t	 ticket;
+	u_int32_t	 nr;
+	void		*buf;
+	int		 nbytes;
+	u_int8_t	 scheduler;
+};
+
 /*
  * IOCTL operations.
  */
@@ -336,6 +345,9 @@ struct npfioc_altq {
 #define IOC_NPF_GET_ALTQS	_IOWR('N', 112, struct npfioc_altq)
 #define IOC_NPF_ADD_ALTQ	_IOWR('N', 113, struct npfioc_altq)
 #define IOC_NPF_ALTQ_STOP	_IO('N',114)
+#define IOC_NPF_GET_QSTATS  _IOWR('N', 115, struct npfioc_qstats)
+#define IOC_NPF_GET_ALTQ	_IOWR('N', 116, struct npfioc_altq)
+//#define IOC_NPF_DESTROY_ALTQ	_IO('N', 117)
 
 /*
  * NPF error report.

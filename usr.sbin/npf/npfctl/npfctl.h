@@ -333,7 +333,6 @@ void print_altq(const struct npf_altq *, unsigned, struct node_queue_bw *,
 void print_queue(const struct npf_altq *, unsigned, struct node_queue_bw *,
     int , struct node_queue_opt *);
 
-extern int altqpresent;
 /*
  * For the systems which do not define TH_ECE and TW_CRW.
  */

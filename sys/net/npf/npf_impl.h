@@ -41,6 +41,7 @@
 
 #ifdef _KERNEL_OPT
 /* For INET/INET6 definitions. */
+#include "opt_altq.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #endif
@@ -433,11 +434,13 @@ int		npf_rule_conclude(const npf_rule_t *, npf_match_info_t *);
 npf_rule_t *	npf_rule_alloc(npf_t *, const nvlist_t *);
 void		npf_rule_setcode(npf_rule_t *, int, void *, size_t);
 void		npf_rule_setrproc(npf_rule_t *, npf_rproc_t *);
+int 		npf_rule_setqueues(npf_rule_t * rl, const char *, const char *);
 void		npf_rule_free(npf_rule_t *);
 uint64_t	npf_rule_getid(const npf_rule_t *);
 npf_natpolicy_t *npf_rule_getnat(const npf_rule_t *);
 void		npf_rule_setnat(npf_rule_t *, npf_natpolicy_t *);
 npf_rproc_t *	npf_rule_getrproc(const npf_rule_t *);
+struct qid npf_rule_getqueues(const npf_rule_t *);
 
 void		npf_ext_init(npf_t *);
 void		npf_ext_fini(npf_t *);

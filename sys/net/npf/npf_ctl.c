@@ -51,6 +51,8 @@ __KERNEL_RCSID(0, "$NetBSD: npf_ctl.c,v 1.60 2020/05/30 14:16:56 rmind Exp $");
 	nvlist_add_string((e), "source-file", __FILE__); \
 	nvlist_add_number((e), "source-line", __LINE__);
 
+int altqattached = 0;
+
 static int __noinline
 npf_mk_params(npf_t *npf, const nvlist_t *req, nvlist_t *resp, bool set)
 {
@@ -326,6 +328,9 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 	npf_rule_t *rl;
 	const char *rname;
 	const void *code;
+	const char * qnames[];
+
+	//struct node_qassign queue;
 	size_t clen;
 	int error = 0;
 
@@ -349,6 +354,17 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 			goto err;
 		}
 		npf_rule_setrproc(rl, rp);
+	}
+
+#ifdef ALTQ
+	/* assign the rule queues, if any */
+	if (qnames = dnvlist_get_string_array(req, "queues", NULL) != NULL) {
+		if (npf_rule_setqueues(rl, qnames[0], qnames[1])) {
+			goto err;
+		}
+		if (!altqattached)
+			altqattached = 1;
+#endif
 	}
 
 	/* Filter byte-code (binary data). */
@@ -584,10 +600,23 @@ npfctl_load(npf_t *npf, const nvlist_t *req, nvlist_t *resp)
 	if (error) {
 		goto fail;
 	}
+
 	error = npf_mk_rules(npf, req, resp, nc);
 	if (error) {
 		goto fail;
 	}
+
+#ifdef ALTQ
+	/* TODO: attach quues here */
+	if (altqattached) {
+		error = npf_commit_altq();
+		if (error) {
+			goto fail;
+		}
+	}
+
+#endif /*ALTQ */
+
 	error = npf_mk_connlist(npf, req, resp, nc, &conndb);
 	if (error) {
 		goto fail;

@@ -49,6 +49,13 @@
 #define	NPF_TAG_NAME_SIZE	 64
 #endif
 
+/* ALTQ states */
+#define NPF_ALTQ_ATTACHED	0x01
+#define NPF_ALTQ_DETACHED	0x02
+#define NPF_ALTQ_ENABLED	0x04
+#define NPF_ALTQ_DESTROYED	0x08
+#define NPF_ALTQ_LOADED		0x10
+#define NPF_ALTQ_DISABLED	0x16
 /*
  * options defined on the cbq, priq and hfsc when configuring them
  */
@@ -120,13 +127,18 @@ struct npf_tagname {
 
 TAILQ_HEAD(npf_altqqueue, npf_altq);
 
+extern int altqloaded;
+extern int altqattached;
+extern bool npf_altq_running;
+
 extern int npf_get_altqs(void *);
+extern int npf_get_qstats(void *);
 extern int npf_altq_start(void);
 extern int npf_enable_altq(struct npf_altq *);
 extern void npf_altq_init(void);
 extern void npf_altq_destroy(void);
-extern int npf_begin_altq(u_int32_t *);
-extern int npf_commit_altq(u_int32_t);
+extern int npf_begin_altq(void);
+extern int npf_commit_altq(void);
 extern int npf_add_altq(void *);
 extern u_int32_t npf_qname2qid(char *);
 extern int npf_disable_altq(struct npf_altq *);
