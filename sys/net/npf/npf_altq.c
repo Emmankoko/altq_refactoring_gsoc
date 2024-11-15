@@ -460,7 +460,7 @@ npf_get_altq(void *data)
 
 	if (paa->ticket != nticket_altqs_active) {
 		error = EBUSY;
-		break;
+		return error;
 	}
 	nr = 0;
 	altq = TAILQ_FIRST(npf_altqs_active);
@@ -470,7 +470,7 @@ npf_get_altq(void *data)
 	}
 	if (altq == NULL) {
 		error = EBUSY;
-		break;
+		return error;
 	}
 	memcpy(&paa->altq, altq, sizeof(struct npf_altq));
 	return error;
