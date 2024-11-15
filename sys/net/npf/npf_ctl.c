@@ -358,7 +358,7 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 #ifdef ALTQ
 	/* assign the rule queues, if any */
 	if (nvlist_exists_nvlist_array(req, "queues")){
-		const char ** qnames = nvlist_get_string_array(req, "queues", NULL);
+		char ** qnames = nvlist_get_string_array(req, "queues", NULL);
 		if (qnames != NULL)
 			if (npf_rule_setqueues(rl, qnames)) {
 				goto err;
