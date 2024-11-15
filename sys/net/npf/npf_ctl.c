@@ -328,7 +328,6 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 	npf_rule_t *rl;
 	const char *rname;
 	const void *code;
-	char **qnames;
 
 	//struct node_qassign queue;
 	size_t clen;
@@ -359,7 +358,7 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 #ifdef ALTQ
 	/* assign the rule queues, if any */
 	if (nvlist_exists_nvlist_array(req, "queues")){
-		if ((qnames = nvlist_get_string_array(req, "queues", NULL)) != NULL) {
+		if ((const char * qnames[] = nvlist_get_string_array(req, "queues", NULL)) != NULL) {
 			if (npf_rule_setqueues(rl, qnames)) {
 				goto err;
 			}
