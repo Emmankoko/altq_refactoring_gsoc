@@ -358,13 +358,13 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 #ifdef ALTQ
 	/* assign the rule queues, if any */
 	if (nvlist_exists_nvlist_array(req, "queues")){
-		if ((const char * qnames[] = nvlist_get_string_array(req, "queues", NULL)) != NULL) {
+		const char * qnames[] = nvlist_get_string_array(req, "queues", NULL);
+		if (qnames != NULL)
 			if (npf_rule_setqueues(rl, qnames)) {
 				goto err;
 			}
-			if (!altqattached)
-				altqattached = 1;
-		}
+		if (!altqattached)
+			altqattached = 1;
 	}
 #endif
 
