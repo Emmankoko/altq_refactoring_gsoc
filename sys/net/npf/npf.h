@@ -104,6 +104,7 @@ typedef uint8_t			npf_netmask_t;
 
 struct mbuf;
 struct nbuf;
+struct npf_rule;
 typedef struct nbuf nbuf_t;
 
 void		nbuf_init(npf_t *, nbuf_t *, struct mbuf *, const ifnet_t *);
@@ -124,7 +125,7 @@ bool		nbuf_cksum_barrier(nbuf_t *, int);
 int		nbuf_add_tag(nbuf_t *, uint32_t);
 int		npf_mbuf_add_tag(nbuf_t *, struct mbuf *, uint32_t);
 int		nbuf_find_tag(nbuf_t *, uint32_t *);
-void 	mbuf_altq_tag(npf_rule_t *, struct mbuf *);
+void 	mbuf_altq_tag(struct npf_rule *, struct mbuf *);
 
 /*
  * Packet information cache.
