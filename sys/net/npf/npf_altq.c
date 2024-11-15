@@ -96,7 +96,7 @@ npf_altq_init(void)
 }
 
 /* disable, destroy and stop altq routine when packet filtering disabled */
-int
+void
 npf_altq_destroy(void)
 {
 	//u_int32_t		 ticket;
@@ -105,8 +105,6 @@ npf_altq_destroy(void)
 		npf_commit_altq();
 
 	pool_destroy(&npf_altq_pl);
-
-	return 0;
 }
 
 void
@@ -116,7 +114,7 @@ npf_qid_unref(u_int32_t qid)
 }
 
 int
-npf_begin_altq()
+npf_begin_altq(void)
 {
 	struct npf_altq	*altq;
 	int		 error = 0;
@@ -139,7 +137,7 @@ npf_begin_altq()
 }
 
 int
-npf_commit_altq()
+npf_commit_altq(void)
 {
 	struct npf_altqqueue	*old_altqs;
 	struct npf_altq		*altq;
@@ -429,20 +427,20 @@ npf_get_qstats(void *data)
 	u_int32_t		 nr;
 	int			 nbytes;
 
-	if (pq->ticket != ticket_altqs_active) {
+	if (pq->ticket != nticket_altqs_active) {
 		error = EBUSY;
-		break;
+		return error;
 	}
 	nbytes = pq->nbytes;
 	nr = 0;
-	altq = TAILQ_FIRST(pf_altqs_active);
+	altq = TAILQ_FIRST(npf_altqs_active);
 	while ((altq != NULL) && (nr < pq->nr)) {
 		altq = TAILQ_NEXT(altq, entries);
 		nr++;
 	}
 	if (altq == NULL) {
 		error = EBUSY;
-		break;
+		return error;
 	}
 	error = altq_getqstats(altq, pq->buf, &nbytes);
 	if (error == 0) {
