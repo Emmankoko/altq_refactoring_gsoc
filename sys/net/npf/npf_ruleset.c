@@ -735,13 +735,15 @@ npf_rule_setrproc(npf_rule_t *rl, npf_rproc_t *rp)
 
 /* set your rule queues by their IDs*/
 int
-npf_rule_setqueues(npf_rule_t * rl, const char * qname, const char * pqname)
+npf_rule_setqueues(npf_rule_t * rl, char ** qnames)
 {
 	int error;
 
-	strncpy(rl->qname, qname, sizeof(qname));
-
-	strncpy(rl->pqname, pqname, sizeof(pqname));
+	for (int i = 0; qnames[i] != NULL; i++) {
+		strncpy(rl->qname, qnames[i], sizeof(qname[i]));
+		if(i == 1)
+			strncpy(rl->pqname, qnames[i], sizeof(qname[i]));
+	}
 	/* set queue IDs */
 	if (rl->qname[0] != 0) {
 		if ((rl->qid = npf_qname2qid(rl->qname)) == 0)

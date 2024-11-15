@@ -328,7 +328,7 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 	npf_rule_t *rl;
 	const char *rname;
 	const void *code;
-	const char * qnames[];
+	char **qnames;
 
 	//struct node_qassign queue;
 	size_t clen;
@@ -358,14 +358,17 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 
 #ifdef ALTQ
 	/* assign the rule queues, if any */
-	if (qnames = dnvlist_get_string_array(req, "queues", NULL) != NULL) {
-		if (npf_rule_setqueues(rl, qnames[0], qnames[1])) {
-			goto err;
+	if (nvlist_exists_nvlist_array(req, "queues")){
+		if (qnames = nvlist_get_string_array(req, "queues", NULL) != NULL) {
+			if (npf_rule_setqueues(rl, qnames)) {
+				goto err;
+			}
+			if (!altqattached)
+				altqattached = 1;
 		}
-		if (!altqattached)
-			altqattached = 1;
-#endif
 	}
+#endif
+
 
 	/* Filter byte-code (binary data). */
 	code = dnvlist_get_binary(req, "code", &clen, NULL, 0);
