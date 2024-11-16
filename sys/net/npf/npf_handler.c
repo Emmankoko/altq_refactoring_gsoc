@@ -244,8 +244,7 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	/*
 	 * get the rule queues by their ids. used for tagging after pass
 	 */
-	if (rl->qid)
-		qids = npf_rule_getqueues(rl);
+	qids = npf_rule_getqueues(rl);
 
 	/* Conclude with the rule and release the lock. */
 	error = npf_rule_conclude(rl, &mi);
@@ -319,7 +318,8 @@ out:
 		/* tag packets */
 #ifdef ALTQ
 		/* give them ALTQ tags */
-		mbuf_altq_tag(qids, *mp);
+		if (qids.qid)
+			mbuf_altq_tag(qids, *mp);
 #endif /* ALTQ */
 
 		/*

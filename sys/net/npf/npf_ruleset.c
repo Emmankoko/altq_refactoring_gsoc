@@ -817,9 +817,12 @@ struct qid
 npf_rule_getqueues(const npf_rule_t *rl)
 {
 	struct qid qids;
-	qids.qid = rl->qid;
-	qids.qid = rl->pqid;
+	if (rl != NULL && rl->qid) {
+		qids.qid = rl->qid;
+		qids.qid = rl->pqid;
+	}
 	return qids;
+
 }
 
 npf_natpolicy_t *
