@@ -200,7 +200,7 @@ static int
 npfctl_print_stats(int fd, int argc, char* argv[])
 {
 	int ch;
-	int error;
+	int error = 0;
 	argc--;
 	argv++;
 
