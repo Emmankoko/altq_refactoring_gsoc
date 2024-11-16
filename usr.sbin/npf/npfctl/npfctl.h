@@ -334,8 +334,8 @@ void print_queue(const struct npf_altq *, unsigned, struct node_queue_bw *,
     int , struct node_queue_opt *);
 
 int npfctl_show_altq(int);
-int npfctl_stop_altq(int);
-int npfctl_start_altq(int);
+void npfctl_stop_altq(int);
+void npfctl_start_altq(int);
 
 extern bool npf_altq_running;
 extern int altqattached;

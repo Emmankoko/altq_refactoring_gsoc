@@ -73,6 +73,7 @@ static int	eval_npfqueue_hfsc(struct npf_altq *);
 static int	check_commit_hfsc(struct npf_altq *);
 static int	print_hfsc_opts(const struct npf_altq *,
 		    const struct node_queue_opt *);
+int check_commit_altq(void);
 
 static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
 static int		 is_gsc_under_sc(struct gen_sc *,
@@ -143,11 +144,11 @@ npfctl_start_altq(int fd)
 		altqsupport = npfctl_test_altqsupport(fd);
 		if (altqsupport)
 			if (check_commit_altq() != 0)
-				ERRX("errors in altq config");
+				fprintf(stderr,"errors in altq config");
 
 		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START) != -1)))
 			if (errno != EEXIST)
-				ERRX("ALTQ enable failed\n");
+				fprintf(stderr, "ALTQ enable failed\n");
 }
 
 void
@@ -1489,15 +1490,15 @@ static int
 print_hfsc_opts(const struct npf_altq *a, const struct node_queue_opt *qopts)
 {
 	const struct npf_hfsc_opts		*opts;
-	const struct node_hfsc_sc	*rtsc, *lssc, *ulsc;
+	const struct node_hfsc_sc	*n_rtsc, *n_lssc, *n_ulsc;
 
 	opts = &a->pq_u.hfsc_opts;
 	if (qopts == NULL)
-		rtsc = lssc = ulsc = NULL;
+		n_rtsc = n_lssc = n_ulsc = NULL;
 	else {
-		rtsc = &qopts->data.hfsc_opts.realtime;
-		lssc = &qopts->data.hfsc_opts.linkshare;
-		ulsc = &qopts->data.hfsc_opts.upperlimit;
+		n_rtsc = &qopts->data.hfsc_opts.realtime;
+		n_lssc = &qopts->data.hfsc_opts.linkshare;
+		n_ulsc = &qopts->data.hfsc_opts.upperlimit;
 	}
 
 	if (opts->flags || opts->rtsc_m2 != 0 || opts->ulsc_m2 != 0 ||
