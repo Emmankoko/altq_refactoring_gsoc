@@ -276,6 +276,13 @@ pass:
 	 */
 	error = npf_do_nat(&npc, con, di);
 
+	/* tag packets */
+#ifdef ALTQ
+		/* give them ALTQ tags */
+		if (rl != NULL)
+			npf_rule_queue_tag(rl, *mp);
+#endif /* ALTQ */
+
 block:
 	/*
 	 * Execute the rule procedure, if any is associated.
@@ -308,11 +315,6 @@ out:
 
 	/* Pass the packet if decided and there is no error. */
 	if (decision == NPF_DECISION_PASS && !error) {
-#ifdef ALTQ
-		/* give them ALTQ tags */
-		if (rl != NULL)
-			npf_rule_queue_tag(rl, *mp);
-#endif /* ALTQ */
 
 		/*
 		 * XXX: Disable for now, it will be set accordingly later,
