@@ -114,6 +114,11 @@ struct npf_altq {
 	u_int32_t		 qid;		/* return value */
 };
 
+struct qid {
+	u_int32_t qid;
+	u_int32_t pqid;
+};
+
 struct npf_tag {
 	u_int16_t	tag;		/* tag id */
 };

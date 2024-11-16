@@ -813,6 +813,15 @@ npf_rule_getrproc(const npf_rule_t *rl)
 	return rp;
 }
 
+struct qid
+npf_rule_getqueues(const npf_rule_t *rl)
+{
+	struct qid qids;
+	qids.qid = rl->qid;
+	qids.qid = rl->pqid;
+	return qids;
+}
+
 npf_natpolicy_t *
 npf_rule_getnat(const npf_rule_t *rl)
 {
@@ -959,14 +968,6 @@ npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
 
 	KASSERT(!nbuf_flag_p(nbuf, NBUF_DATAREF_RESET));
 	return final_rl;
-}
-
-/* wrapper to use npf_rule opaque type in pkt handler*/
-void
-npf_rule_queue_tag(npf_rule_t *rl, struct mbuf *m)
-{
-	if (rl != NULL && rl->qid)
-		mbuf_altq_tag(rl, mp);
 }
 
 /*

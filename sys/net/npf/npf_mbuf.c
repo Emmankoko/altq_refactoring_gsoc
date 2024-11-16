@@ -369,7 +369,7 @@ nbuf_find_tag(nbuf_t *nbuf, uint32_t *val)
 /* tag ALTQ packets */
 #ifdef ALTQ
 void
-mbuf_altq_tag(npf_rule_t* rl, struct mbuf *mp)
+mbuf_altq_tag(struct qid qids, struct mbuf *mp)
 {
 	KASSERT(m_flags_p(mp, M_PKTHDR));
 
@@ -379,7 +379,7 @@ mbuf_altq_tag(npf_rule_t* rl, struct mbuf *mp)
 	mtag = m_tag_get(PACKET_TAG_ALTQ_QID, sizeof(*atag), M_NOWAIT);
 	if (mtag != NULL) {
 		atag = (struct altq_tag *)(mtag + 1);
-		atag->qid = r->qid;
+		atag->qid = qids.qid;
 		/* add hints for ecn */
 		atag->af = AF_INET;
 		atag->hdr = mtod(mp, struct ip *);
