@@ -1425,7 +1425,7 @@ print_queue(const struct npf_altq *a, unsigned level, struct node_queue_bw *bw,
 static int
 print_cbq_opts(const struct npf_altq *a)
 {
-	const struct cbq_opts	*opts;
+	const struct npf_cbq_opts	*opts;
 
 	opts = &a->pq_u.cbq_opts;
 	if (opts->flags) {
@@ -1462,7 +1462,7 @@ print_cbq_opts(const struct npf_altq *a)
 static int
 print_priq_opts(const struct npf_altq *a)
 {
-	const struct priq_opts	*opts;
+	const struct npf_priq_opts	*opts;
 
 	opts = &a->pq_u.priq_opts;
 
@@ -1488,7 +1488,7 @@ print_priq_opts(const struct npf_altq *a)
 static int
 print_hfsc_opts(const struct npf_altq *a, const struct node_queue_opt *qopts)
 {
-	const struct hfsc_opts		*opts;
+	const struct npf_hfsc_opts		*opts;
 	const struct node_hfsc_sc	*rtsc, *lssc, *ulsc;
 
 	opts = &a->pq_u.hfsc_opts;
