@@ -434,7 +434,7 @@ int		npf_rule_conclude(const npf_rule_t *, npf_match_info_t *);
 npf_rule_t *	npf_rule_alloc(npf_t *, const nvlist_t *);
 void		npf_rule_setcode(npf_rule_t *, int, void *, size_t);
 void		npf_rule_setrproc(npf_rule_t *, npf_rproc_t *);
-int 		npf_rule_setqueues(npf_rule_t * rl, const char **);
+int 		npf_rule_setqueues(npf_rule_t * rl, const char * const *);
 void		npf_rule_free(npf_rule_t *);
 uint64_t	npf_rule_getid(const npf_rule_t *);
 npf_natpolicy_t *npf_rule_getnat(const npf_rule_t *);
