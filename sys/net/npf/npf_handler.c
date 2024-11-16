@@ -279,7 +279,6 @@ pass:
 	/* tag packets */
 #ifdef ALTQ
 		/* give them ALTQ tags */
-		if (rl != NULL)
 			npf_rule_queue_tag(rl, *mp);
 #endif /* ALTQ */
 

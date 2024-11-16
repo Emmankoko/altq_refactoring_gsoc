@@ -965,7 +965,7 @@ npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
 void
 npf_rule_queue_tag(npf_rule_t *rl, struct mbuf *m)
 {
-	if (rl->qid)
+	if (rl != NULL && rl->qid)
 		mbuf_altq_tag(rl, mp);
 }
 
