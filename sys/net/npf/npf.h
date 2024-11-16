@@ -102,6 +102,7 @@ typedef uint8_t			npf_netmask_t;
 
 #define	NBUF_DATAREF_RESET	0x01
 
+struct qid;
 struct mbuf;
 struct nbuf;
 struct npf_rule;
