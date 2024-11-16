@@ -67,13 +67,12 @@ void			 npfctl_insert_altq_node(struct npf_altq_node **,
 struct npf_altq_node	*npfctl_find_altq_node(struct npf_altq_node *,
 			    const char *, const char *);
 void			 npfctl_print_altq_node(int, const struct npf_altq_node *,
-			     unsigned, int);
+			     unsigned);
 void			 print_cbqstats(struct queue_stats);
 void			 print_priqstats(struct queue_stats);
 void			 print_hfscstats(struct queue_stats);
 void			 npfctl_free_altq_node(struct npf_altq_node *);
-void			 npfctl_print_altq_nodestat(int,
-			    const struct npf_altq_node *);
+void			 npfctl_print_altq_nodestat(const struct npf_altq_node *);
 
 void			 update_avg(struct npf_altq_node *);
 
@@ -98,7 +97,7 @@ npfctl_show_altq(int fd)
 //			npfctl_print_title("ALTQ:");
 //			dotitle = 0;
 //		}
-		npfctl_print_altq_node(fd, node, 0);
+		npfctl_print_altq_node(fd, node);
 	}
 
     /* be verbose */
@@ -106,7 +105,7 @@ npfctl_show_altq(int fd)
 		printf("\n");
 		fflush(stdout);
 		sleep(STAT_INTERVAL);
-		if ((nodes = npfctl_update_qstats(dev, &root)) == -1)
+		if ((nodes = npfctl_update_qstats(fd, &root)) == -1)
 			return (-1);
 		for (node = root; node != NULL; node = node->next) {
 			if (node->altq.ifname == NULL)
@@ -156,7 +155,7 @@ npfctl_update_qstats(int fd, struct npf_altq_node **root)
 			pq.ticket = pa.ticket;
 			pq.buf = &qstats.data;
 			pq.nbytes = sizeof(qstats.data);
-			if (ioctl(dev, IOC_NPF_GET_QSTATS, &pq)) {
+			if (ioctl(fd, IOC_NPF_GET_QSTATS, &pq)) {
 				warn("IOC_NPF_GET_QSTATS");
 				return (-1);
 			}
@@ -256,7 +255,7 @@ npfctl_print_altq_node(int fd, const struct npf_altq_node *node, unsigned level)
 	printf("\n");
 
     /* be verbose */
-	npfctl_print_altq_nodestat(fd, node);
+	npfctl_print_altq_nodestat(node);
 
 //	if (opts & PF_OPT_DEBUG)
 //		printf("  [ qid=%u ifname=%s ifbandwidth=%s ]\n",
