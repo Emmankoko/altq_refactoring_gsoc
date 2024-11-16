@@ -740,9 +740,9 @@ npf_rule_setqueues(npf_rule_t * rl, const char * const * qnames)
 	int error;
 
 	for (int i = 0; qnames[i] != NULL; i++) {
-		strncpy(rl->qname, qnames[i], sizeof(qname[i]));
+		strncpy(rl->qname, qnames[i], sizeof(qnames[i]));
 		if(i == 1)
-			strncpy(rl->pqname, qnames[i], sizeof(qname[i]));
+			strncpy(rl->pqname, qnames[i], sizeof(qnames[i]));
 	}
 	/* set queue IDs */
 	if (rl->qname[0] != 0) {
