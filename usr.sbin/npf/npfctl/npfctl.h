@@ -44,7 +44,7 @@
 
 #include "npf_var.h"
 
-#include "npf_altq.h"
+#include "npf.h"
 
 #define	NPF_DEV_PATH	"/dev/npf"
 #define	NPF_CONF_PATH	"/etc/npf.conf"
