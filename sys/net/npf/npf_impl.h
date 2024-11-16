@@ -441,6 +441,7 @@ npf_natpolicy_t *npf_rule_getnat(const npf_rule_t *);
 void		npf_rule_setnat(npf_rule_t *, npf_natpolicy_t *);
 npf_rproc_t *	npf_rule_getrproc(const npf_rule_t *);
 struct qid npf_rule_getqueues(const npf_rule_t *);
+void  npf_rule_queue_tag(npf_rule_t *, struct mbuf *);
 
 void		npf_ext_init(npf_t *);
 void		npf_ext_fini(npf_t *);
