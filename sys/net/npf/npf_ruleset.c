@@ -962,9 +962,10 @@ npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
 }
 
 /* wrapper to use npf_rule opaque type in pkt handler*/
-void npf_rule_queue_tag(npf_rule_t *rl, struct mbuf *m)
+void
+npf_rule_queue_tag(npf_rule_t *rl, struct mbuf *m)
 {
-	if (rl != NULL, rl->qid)
+	if (rl->qid)
 		mbuf_altq_tag(rl, mp);
 }
 
