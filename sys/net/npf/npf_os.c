@@ -293,7 +293,7 @@ npf_dev_ioctl(dev_t dev, u_long cmd, void *data, int flag, lwp_t *l)
 		return npf_stop_altq();
 	case IOC_NPF_GET_ALTQS:
 		return npf_get_altqs(data);
-	case IOC_NPF_GET_ALTQS:
+	case IOC_NPF_GET_ALTQ:
 		return npf_get_altq(data);
 	case IOC_NPF_ADD_ALTQ:
 		return npf_add_altq(data);
