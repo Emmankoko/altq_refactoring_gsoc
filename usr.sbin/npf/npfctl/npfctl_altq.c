@@ -62,15 +62,15 @@ LIST_HEAD(gen_sc, segment) rtsc, lssc;
 
 static int	eval_npfqueue_cbq(struct npf_altq *);
 static int	cbq_compute_idletime(struct npf_altq *);
-static int	check_commit_cbq(int, int, struct npf_altq *);
+static int	check_commit_cbq(struct npf_altq *);
 static int	print_cbq_opts(const struct npf_altq *);
 
 static int	eval_npfqueue_priq(struct npf_altq *);
-static int	check_commit_priq(int, int, struct npf_altq *);
+static int	check_commit_priq(struct npf_altq *);
 static int	print_priq_opts(const struct npf_altq *);
 
 static int	eval_npfqueue_hfsc(struct npf_altq *);
-static int	check_commit_hfsc(int, int, struct npf_altq *);
+static int	check_commit_hfsc(struct npf_altq *);
 static int	print_hfsc_opts(const struct npf_altq *,
 		    const struct node_queue_opt *);
 
@@ -142,12 +142,12 @@ npfctl_start_altq(int fd)
 {
 		altqsupport = npfctl_test_altqsupport(fd);
 		if (altqsupport)
-			if (check_commit_altq(fd, opts) != 0)
+			if (check_commit_altq() != 0)
 				ERRX("errors in altq config");
 
 		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START) != -1)))
 			if (errno != EEXIST)
-				fprintf("ALTQ enable failed\n");
+				ERRX("ALTQ enable failed\n");
 }
 
 void
@@ -1224,7 +1224,7 @@ sc_x2y(struct service_curve *sc, double x)
  * check_commit_altq does consistency check for each interface
  */
 int
-check_commit_altq()
+check_commit_altq(void)
 {
 	struct npf_altq	*altq;
 	int		 error = 0;
@@ -1251,7 +1251,7 @@ check_commit_altq()
 }
 
 static int
-check_commit_cbq(int fd, int opts, struct npf_altq *pa)
+check_commit_cbq(struct npf_altq *pa)
 {
 	struct npf_altq	*altq;
 	int		 root_class, default_class;
