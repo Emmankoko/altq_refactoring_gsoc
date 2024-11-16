@@ -1517,14 +1517,14 @@ print_hfsc_opts(const struct npf_altq *a, const struct node_queue_opt *qopts)
 			printf(" default");
 		if (opts->rtsc_m2 != 0)
 			print_hfsc_sc("realtime", opts->rtsc_m1, opts->rtsc_d,
-			    opts->rtsc_m2, rtsc);
+			    opts->rtsc_m2, n_rtsc);
 		if (opts->lssc_m2 != 0 && (opts->lssc_m2 != a->bandwidth ||
 		    opts->lssc_d != 0))
 			print_hfsc_sc("linkshare", opts->lssc_m1, opts->lssc_d,
-			    opts->lssc_m2, lssc);
+			    opts->lssc_m2, n_lssc);
 		if (opts->ulsc_m2 != 0)
 			print_hfsc_sc("upperlimit", opts->ulsc_m1, opts->ulsc_d,
-			    opts->ulsc_m2, ulsc);
+			    opts->ulsc_m2, n_ulsc);
 		printf(" ) ");
 
 		return (1);
