@@ -131,7 +131,7 @@ usage(void)
 }
 
 static int
-npfctl_print_filtering_stats(int fd)
+npfctl_print_filter_stats(int fd)
 {
 	static const struct stats_s {
 		/* Note: -1 indicates a new section. */
@@ -204,13 +204,13 @@ npfctl_print_stats(int fd, int argc, char* argv[])
 	argc--;
 	argv++;
 
-	while(ch = getopt(argc, argv, "fq:") != -1) {
+	while((ch = getopt(argc, argv, "fq:")) != -1) {
 		switch(ch)
 		{
-			case f:
+			case 'f':
 				error =	npfctl_print_filter_stats(fd);
 				break;
-			case q:
+			case 'q':
 				error = npfctl_show_altq(fd);
 				break;
 			default:

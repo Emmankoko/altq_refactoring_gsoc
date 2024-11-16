@@ -44,6 +44,8 @@
 
 #include "npf_var.h"
 
+#include "npf_altq.h"
+
 #define	NPF_DEV_PATH	"/dev/npf"
 #define	NPF_CONF_PATH	"/etc/npf.conf"
 #define	NPF_DB_PATH	"/var/db/npf.db"
@@ -332,6 +334,10 @@ void print_altq(const struct npf_altq *, unsigned, struct node_queue_bw *,
 	struct node_queue_opt *);
 void print_queue(const struct npf_altq *, unsigned, struct node_queue_bw *,
     int , struct node_queue_opt *);
+
+int npfctl_show_altq(int);
+int npfctl_stop_altq(int);
+int npfctl_stop_altq(int);
 
 /*
  * For the systems which do not define TH_ECE and TW_CRW.
