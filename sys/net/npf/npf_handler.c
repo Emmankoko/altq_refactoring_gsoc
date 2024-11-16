@@ -310,7 +310,8 @@ out:
 	if (decision == NPF_DECISION_PASS && !error) {
 #ifdef ALTQ
 		/* give them ALTQ tags */
-		mbuf_altq_tag(rl, *mp);
+		if (rl != NULL && rl->qid)
+			mbuf_altq_tag(rl, *mp);
 #endif /* ALTQ */
 		/*
 		 * XXX: Disable for now, it will be set accordingly later,

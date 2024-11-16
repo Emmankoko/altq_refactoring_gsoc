@@ -373,9 +373,6 @@ mbuf_altq_tag(npf_rule_t* rl, struct mbuf *mp)
 {
 	KASSERT(m_flags_p(mp, M_PKTHDR));
 
-	if(rl == NULL)
-		return;
-
 	struct m_tag	*mtag;
 	struct altq_tag	*atag;
 
