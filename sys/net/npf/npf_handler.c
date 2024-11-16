@@ -310,7 +310,7 @@ out:
 	if (decision == NPF_DECISION_PASS && !error) {
 #ifdef ALTQ
 		/* give them ALTQ tags */
-		npf_rule_queue_tag(rl, *m);
+		npf_rule_queue_tag(rl, *mp);
 #endif /* ALTQ */
 
 		/*
