@@ -1555,3 +1555,35 @@ print_hfsc_sc(const char *scname, u_int m1, u_int d, u_int m2,
 	if (d != 0)
 		printf(")");
 }
+
+/* miscelenuous*/
+void
+npf_rule_qnames_exists(const char *qname, const char * pqname)
+{
+	int found = 0;
+	struct npf_altq* a;
+	TAILQ_FOREACH(a, &altqs, entries) {
+		if (a->qname[0] != 0){
+			if (strcmp(a->qname, qname) == 0){
+				found = 1;
+				break;
+			}
+		}
+	}
+	if (!found)
+		fprintf(stderr, "no qname named '%s' found \n", qname);
+
+	if (pqname != NULL) {
+		TAILQ_FOREACH(a, &altqs, entries) {
+			if (a->qname[0] != 0){
+				if (strcmp(a->qname, qname) == 0){
+					found = 1;
+					break;
+				}
+			}
+		}
+		if (!found)
+			fprintf(stderr, "no queue named '%s' found\n", pqname);
+	}
+
+}

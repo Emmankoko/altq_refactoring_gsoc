@@ -66,8 +66,7 @@ void			 npfctl_insert_altq_node(struct npf_altq_node **,
 			    const struct npf_altq, const struct queue_stats);
 struct npf_altq_node	*npfctl_find_altq_node(struct npf_altq_node *,
 			    const char *, const char *);
-void			 npfctl_print_altq_node(int, const struct npf_altq_node *,
-			     unsigned);
+void			 npfctl_print_altq_node(int, const struct npf_altq_node *);
 void			 print_cbqstats(struct queue_stats);
 void			 print_priqstats(struct queue_stats);
 void			 print_hfscstats(struct queue_stats);

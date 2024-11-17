@@ -721,6 +721,8 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 
 	/*set both queue and parent queue even if parent queue is null */
 	if (queue.qname != NULL ) {
+		/*	ensure the reference is queue is defined */
+		npf_rule_qnames_exists(queue.qname, queue.pqname);
 		npf_rule_setqueue(rl, queue.qname, queue.pqname);
 	}
 
