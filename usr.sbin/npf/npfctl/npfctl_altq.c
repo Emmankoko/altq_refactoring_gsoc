@@ -94,7 +94,7 @@ int altqsupport;
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
-
+int fd = npfctl_open_dev(NPF_DEV_PATH);
 
 struct node_queue *queues = NULL;
 
@@ -142,18 +142,19 @@ npfctl_test_altqsupport(int dev)
 	return (1);
 }
 
-altqsupport = npfctl_test_altqsupport(fd);
+
 void
 npfctl_start_altq(int fd)
 {
+	altqsupport = npfctl_test_altqsupport(fd);
 
-		if (altqsupport)
-			if (check_commit_altq() != 0)
-				fprintf(stderr,"errors in altq config");
+	if (altqsupport)
+		if (check_commit_altq() != 0)
+			fprintf(stderr,"errors in altq config");
 
-		if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START) != -1)))
-			if (errno != EEXIST)
-				fprintf(stderr, "ALTQ enable failed\n");
+	if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START) != -1)))
+		if (errno != EEXIST)
+			fprintf(stderr, "ALTQ enable failed\n");
 }
 
 void
@@ -509,7 +510,6 @@ npfctl_add_altq(struct npf_altq *a)
 	if ((npaltq =  malloc(sizeof(*npaltq))) == NULL)
 		err(1, "malloc");
 
-	int fd = npfctl_open_dev(NPF_DEV_PATH);
 	if (altqsupport ) {
 		memcpy(&npaltq->altq, a, sizeof(struct npf_altq));
 		if (ioctl(fd, IOC_NPF_ADD_ALTQ, npaltq)) {
