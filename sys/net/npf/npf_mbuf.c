@@ -43,6 +43,10 @@ __KERNEL_RCSID(0, "$NetBSD: npf_mbuf.c,v 1.25 2023/02/12 13:38:37 kardel Exp $")
 #include <netinet/in_offload.h>
 #endif
 
+#ifdef _KERNEL_OPT
+#include "opt_altq.h"
+#endif
+
 #include "npf_impl.h"
 
 #ifdef _KERNEL

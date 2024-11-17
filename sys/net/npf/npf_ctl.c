@@ -44,6 +44,10 @@ __KERNEL_RCSID(0, "$NetBSD: npf_ctl.c,v 1.60 2020/05/30 14:16:56 rmind Exp $");
 #include <net/bpf.h>
 #endif
 
+#ifdef _KERNEL_OPT
+#include "opt_altq.h"
+#endif
+
 #include "npf_impl.h"
 #include "npf_conn.h"
 
@@ -328,7 +332,6 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 	npf_rule_t *rl;
 	const char *rname;
 	const void *code;
-	const char * const * qnames;
 
 	//struct node_qassign queue;
 	size_t clen;
@@ -358,6 +361,7 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 
 #ifdef ALTQ
 	/* assign the rule queues, if any */
+	const char * const * qnames;
 	size_t qitems;
 	if (nvlist_exists_nvlist_array(req, "queues")){
 		qnames = nvlist_get_string_array(req, "queues", &qitems);

@@ -65,6 +65,10 @@ __KERNEL_RCSID(0, "$NetBSD: npf_handler.c,v 1.49 2020/05/30 14:16:56 rmind Exp $
 #include <altq/if_altq.h>
 #endif
 
+#ifdef _KERNEL_OPT
+#include "opt_altq.h"
+#endif
+
 #include "npf_impl.h"
 #include "npf_conn.h"
 
@@ -149,7 +153,6 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	npf_conn_t *con;
 	npf_rule_t *rl;
 	npf_rproc_t *rp;
-	struct qid qids;
 	int error, decision, flags;
 	npf_match_info_t mi;
 	bool mff;
@@ -241,10 +244,13 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	KASSERT(rp == NULL);
 	rp = npf_rule_getrproc(rl);
 
+#ifdef ALTQ
+	struct qid qids;
 	/*
 	 * get the rule queues by their ids. used for tagging after pass
 	 */
 	qids = npf_rule_getqueues(rl);
+#endif
 
 	/* Conclude with the rule and release the lock. */
 	error = npf_rule_conclude(rl, &mi);
