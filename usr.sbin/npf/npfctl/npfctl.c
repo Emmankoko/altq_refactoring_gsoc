@@ -204,7 +204,7 @@ npfctl_print_stats(int fd, int argc, char* argv[])
 	argc--;
 	argv++;
 
-	while((ch = getopt(argc, argv, "fq:")) != -1) {
+	while((ch = getopt(argc, argv, "fq")) != -1) {
 		switch(ch)
 		{
 			case 'f':
@@ -483,7 +483,6 @@ npfctl(int action, int argc, char **argv)
 		break;
 	default:
 		fd = npfctl_open_dev(NPF_DEV_PATH);
-
 	}
 
 	switch (action) {
