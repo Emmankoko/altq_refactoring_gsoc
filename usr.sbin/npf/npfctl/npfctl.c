@@ -483,22 +483,21 @@ npfctl(int action, int argc, char **argv)
 		break;
 	default:
 		fd = npfctl_open_dev(NPF_DEV_PATH);
+
 	}
 
 	switch (action) {
 	case NPFCTL_START:
 		boolval = true;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
+		npfctl_start_altq(fd);
 		fun = "ioctl(IOC_NPF_SWITCH)";
-		if (altqattached)
-			npfctl_start_altq(fd);
 
 		break;
 	case NPFCTL_STOP:
 		boolval = false;
 		ret = ioctl(fd, IOC_NPF_SWITCH, &boolval);
-		if(npf_altq_running)
-			npfctl_stop_altq(fd);
+		npfctl_stop_altq(fd);
 		fun = "ioctl(IOC_NPF_SWITCH)";
 
 		break;

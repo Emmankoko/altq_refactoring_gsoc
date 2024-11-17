@@ -87,11 +87,14 @@ static double		 sc_x2y(struct service_curve *, double);
 void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 		     const struct node_hfsc_sc *);
 
+bool npf_altq_running;
+int altqattached;
+int altqsupport;
 
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
-int altqsupport;
+
 
 struct node_queue *queues = NULL;
 
@@ -123,6 +126,7 @@ struct node_queue *queues = NULL;
 		} \
 	} while (0)
 
+
 int
 npfctl_test_altqsupport(int dev)
 {
@@ -138,10 +142,11 @@ npfctl_test_altqsupport(int dev)
 	return (1);
 }
 
+altqsupport = npfctl_test_altqsupport(fd);
 void
 npfctl_start_altq(int fd)
 {
-		altqsupport = npfctl_test_altqsupport(fd);
+
 		if (altqsupport)
 			if (check_commit_altq() != 0)
 				fprintf(stderr,"errors in altq config");
