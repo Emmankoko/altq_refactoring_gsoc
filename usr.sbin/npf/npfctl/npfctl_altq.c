@@ -88,13 +88,12 @@ void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 		     const struct node_hfsc_sc *);
 
 bool npf_altq_running;
+int npfdev;
 int altqattached;
 int altqsupport;
 
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
-
-int npfdev = npfctl_open_dev(NPF_DEV_PATH);
 
 struct node_queue *queues = NULL;
 
@@ -507,6 +506,7 @@ int
 npfctl_add_altq(struct npf_altq *a)
 {
 	struct npfioc_altq *npaltq;
+	npfdev = npfctl_open_dev(NPF_DEV_PATH);
 	if ((npaltq =  malloc(sizeof(*npaltq))) == NULL)
 		err(1, "malloc");
 
