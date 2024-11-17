@@ -94,7 +94,7 @@ int altqsupport;
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
 
-int fd = npfctl_open_dev(NPF_DEV_PATH);
+int npfdev = npfctl_open_dev(NPF_DEV_PATH);
 
 struct node_queue *queues = NULL;
 
@@ -512,7 +512,7 @@ npfctl_add_altq(struct npf_altq *a)
 
 	if (altqsupport ) {
 		memcpy(&npaltq->altq, a, sizeof(struct npf_altq));
-		if (ioctl(fd, IOC_NPF_ADD_ALTQ, npaltq)) {
+		if (ioctl(npfdev, IOC_NPF_ADD_ALTQ, npaltq)) {
 			if (errno == ENXIO)
 				errx(1, "qtype not configured");
 			else if (errno == ENODEV)
