@@ -949,6 +949,7 @@ rule_group
 
 /*
  * Rule and misc.
+ * Make rule with queue optional
  */
 
 rule
@@ -1084,7 +1085,8 @@ opt_apply
 	;
 
 rule_queue
-	: QUEUE STRING
+	: /* Empty */ { $$ = NULL; }
+	| QUEUE STRING
 	{
 			$$.qname = $2;
 	}
