@@ -1085,7 +1085,11 @@ opt_apply
 	;
 
 rule_queue
-	: /* Empty */ { $$ = NULL; }
+	: /* Empty */
+	 {
+		$$.qname = NULL;
+		$$.pqname = NULL;
+	 }
 	| QUEUE STRING
 	{
 			$$.qname = $2;
