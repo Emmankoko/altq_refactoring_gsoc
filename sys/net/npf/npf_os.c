@@ -252,7 +252,7 @@ npfctl_switch(void *data)
 #ifdef ALTQ
 		if (!npf_altq_running)
 			npf_altq_init();
-#ifdef ALTQ
+#endif /* ALTQ */
 
 	} else {
 		/* Disable: remove pfil hooks. */
