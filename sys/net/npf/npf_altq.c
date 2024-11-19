@@ -54,6 +54,7 @@
 #include "npf_altq.h"
 #include "npf.h"
 
+#ifdef ALTQ
 /*
  * starting point of altq kernel routines
  */
@@ -473,3 +474,4 @@ npf_get_altq(void *data)
 	memcpy(&paa->altq, altq, sizeof(struct npf_altq));
 	return error;
 }
+#endif /*ALTQ */

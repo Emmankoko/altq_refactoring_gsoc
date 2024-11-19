@@ -249,9 +249,10 @@ npfctl_switch(void *data)
 		/* Enable: add pfil hooks. */
 		error = npf_pfil_register(false);
 		/* initialize queuing*/
-
+#ifdef ALTQ
 		if (!npf_altq_running)
 			npf_altq_init();
+#ifdef ALTQ
 
 	} else {
 		/* Disable: remove pfil hooks. */

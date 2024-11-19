@@ -738,6 +738,7 @@ npf_rule_setrproc(npf_rule_t *rl, npf_rproc_t *rp)
 	rl->r_rproc = rp;
 }
 
+#ifdef ALTQ
 /* set your rule queues by their IDs*/
 int
 npf_rule_setqueues(npf_rule_t * rl, const char * const * qnames)
@@ -762,7 +763,7 @@ npf_rule_setqueues(npf_rule_t * rl, const char * const * qnames)
 	}
 	return error;
 }
-
+#endif /*ALTQ*/
 /*
  * npf_rule_free: free the specified rule.
  */
@@ -818,6 +819,7 @@ npf_rule_getrproc(const npf_rule_t *rl)
 	return rp;
 }
 
+#ifdef ALTQ
 struct qid
 npf_rule_getqueues(const npf_rule_t *rl)
 {
@@ -829,6 +831,8 @@ npf_rule_getqueues(const npf_rule_t *rl)
 	return qids;
 
 }
+
+#endif /* ALTQ*/
 
 npf_natpolicy_t *
 npf_rule_getnat(const npf_rule_t *rl)
