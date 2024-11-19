@@ -371,7 +371,7 @@ nbuf_find_tag(nbuf_t *nbuf, uint32_t *val)
 }
 
 /* tag ALTQ packets */
-#ifdef ALTQ
+
 void
 mbuf_altq_tag(struct qid qids, struct mbuf *mp)
 {
@@ -390,4 +390,3 @@ mbuf_altq_tag(struct qid qids, struct mbuf *mp)
 		m_tag_prepend(mp, mtag);
 	}
 }
-#endif /* ALTQ*/

@@ -244,13 +244,12 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	KASSERT(rp == NULL);
 	rp = npf_rule_getrproc(rl);
 
-#ifdef ALTQ
+
 	struct qid qids;
 	/*
 	 * get the rule queues by their ids. used for tagging after pass
 	 */
 	qids = npf_rule_getqueues(rl);
-#endif
 
 	/* Conclude with the rule and release the lock. */
 	error = npf_rule_conclude(rl, &mi);
@@ -321,12 +320,10 @@ out:
 	/* Pass the packet if decided and there is no error. */
 	if (decision == NPF_DECISION_PASS && !error) {
 
-		/* tag packets */
-#ifdef ALTQ
+
 		/* give them ALTQ tags */
 		if (qids.qid)
 			mbuf_altq_tag(qids, *mp);
-#endif /* ALTQ */
 
 		/*
 		 * XXX: Disable for now, it will be set accordingly later,

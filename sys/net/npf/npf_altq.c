@@ -79,8 +79,6 @@ u_int16_t npftagname2tag(struct npf_tags *, char *);
 #error NPF_QNAME_SIZE must be equal to NPF_TAG_NAME_SIZE
 #endif
 
-#ifdef ALTQ
-
 /* npf interface to start altq */
 
 void
@@ -475,5 +473,3 @@ npf_get_altq(void *data)
 	memcpy(&paa->altq, altq, sizeof(struct npf_altq));
 	return error;
 }
-
-#endif /* ALTQ */
