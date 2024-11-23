@@ -488,8 +488,8 @@ codelioctl(dev_t dev, ioctlcmd_t cmd, void *addr, int flag,
 					printf("codel: no CPU clock available!\n");
 					break;
 				}
-				q_stats->params.target = c->params.target;
-				q_stats->params.interval = c->params.interval;
+				q_stats->params.target = cd->params.target;
+				q_stats->params.interval = cd->params.interval;
 				q_stats->params.ecn = cd->params.ecn;
 
 			} while (/* CONSTCOND */ 0);
