@@ -134,9 +134,9 @@ codel_addq(struct codel *c, class_queue_t *q, struct mbuf *m)
 	uint64_t *enqueue_time;
 
 	if (qlen(q) < qlimit(q)) {
-		mtag = m_tag_find(m, PACKET_TAG_ALTQ_QID);
+		mtag = m_tag_find(m, MTAG_CODEL);
 		if (mtag == NULL) {
-			mtag = m_tag_get(PACKET_TAG_ALTQ_QID, sizeof(uint64_t),
+			mtag = m_tag_get(MTAG_CODEL, sizeof(uint64_t),
 			    M_NOWAIT);
 			if (mtag != NULL)
 				m_tag_prepend(m, mtag);
@@ -168,7 +168,7 @@ codel_should_drop(struct codel *c, class_queue_t *q, struct mbuf *m,
 		return (0);
 	}
 
-	mtag = m_tag_find(m, PACKET_TAG_ALTQ_QID);
+	mtag = m_tag_find(m, MTAG_CODEL);
 	if (mtag == NULL) {
 		/* Only one warning per second. */
 		if (ppsratecheck(&c->last_log, &c->last_pps, 1))
