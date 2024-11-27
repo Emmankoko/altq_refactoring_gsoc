@@ -198,7 +198,7 @@ qlimit			return QLIMIT;
 "="			return EQ;
 "!"			return EXCL_MARK;
 
-"{DOUBLE}""{BW_UNIT}" {
+{DOUBLE}""{BW_UNIT} {
 			yylval.str = estrndup(yytext, yyleng);
 			return BW_SPEC;
 }
