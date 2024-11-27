@@ -295,7 +295,7 @@ altq : ALTQ on_ifname queue_opts QUEUE qassign {
 	}
 	;
 
-queuespec	: QUEUE STRING on_ifname queue_opts qassign {
+queuespec	: QUEUE IDENTIFIER on_ifname queue_opts qassign {
 			struct npf_altq	a;
 
 /*
@@ -458,7 +458,7 @@ cbqflags_list	: cbqflags_item				{ $$ |= $1; }
 		| cbqflags_list comma cbqflags_item	{ $$ |= $3; }
 		;
 
-cbqflags_item	: STRING	{
+cbqflags_item	: IDENTIFIER	{
 			if (!strcmp($1, "default"))
 				$$ = CBQCLF_DEFCLASS;
 #ifdef CBQCLF_BORROW
@@ -484,7 +484,7 @@ priqflags_list	: priqflags_item			{ $$ |= $1; }
 		| priqflags_list comma priqflags_item	{ $$ |= $3; }
 		;
 
-priqflags_item	: STRING	{
+priqflags_item	: IDENTIFIER	{
 			if (!strcmp($1, "default"))
 				$$ = PRCF_DEFAULTCLASS;
 			else if (!strcmp($1, "red"))
@@ -573,7 +573,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.upperlimit.m2 = $7;
 			hfsc_opts.upperlimit.used = 1;
 		}
-		| STRING	{
+		| IDENTIFIER	{
 			if (!strcmp($1, "default"))
 				hfsc_opts.flags |= HFCF_DEFAULTCLASS;
 			else if (!strcmp($1, "red"))
@@ -604,7 +604,7 @@ qassign_list	: qassign_item			{ $$ = $1; }
 		}
 		;
 
-qassign_item	: STRING			{
+qassign_item	: IDENTIFIER			{
 			$$ = calloc(1, sizeof(struct node_queue));
 			if ($$ == NULL)
 				err(1, "qassign_item: calloc");
