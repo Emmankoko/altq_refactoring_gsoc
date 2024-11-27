@@ -233,8 +233,10 @@ expand_altq(struct npf_altq *a, const char *ifname,
 		if (eval_npfaltq(&pa, &bwspec, opts))
 			errs++;
 		else
-			if (npfctl_add_altq(&pa))
+			if (npfctl_add_altq(&pa)){
+				yyerror("cannot add parent queue");
 				errs++;
+			}
 
 		if (pa.scheduler == ALTQT_CBQ ||
 			pa.scheduler == ALTQT_HFSC) {
