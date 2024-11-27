@@ -547,17 +547,15 @@ npfctl_add_altq(struct npf_altq *a)
 	if ((npaltq =  malloc(sizeof(*npaltq))) == NULL)
 		err(1, "malloc");
 
-	if (altqsupport ) {
-		memcpy(&npaltq->altq, a, sizeof(struct npf_altq));
-		if (ioctl(npfdev, IOC_NPF_ADD_ALTQ, npaltq)) {
-			if (errno == ENXIO)
-				errx(1, "qtype not configured");
-			else if (errno == ENODEV)
-				errx(1, "%s: driver does not support "
-					"altq", a->ifname);
-			else
-				err(1, "NPFADDALTQ");
-		}
+	memcpy(&npaltq->altq, a, sizeof(struct npf_altq));
+	if (ioctl(npfdev, IOC_NPF_ADD_ALTQ, npaltq)) {
+		if (errno == ENXIO)
+			errx(1, "qtype not configured");
+		else if (errno == ENODEV)
+			errx(1, "%s: driver does not support "
+				"altq", a->ifname);
+		else
+			err(1, "NPFADDALTQ");
 	}
 	npfaltq_store(&npaltq->altq);
 	free(npaltq);
