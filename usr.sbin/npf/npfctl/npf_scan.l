@@ -96,6 +96,8 @@ DID	[a-zA-Z_][a-zA-Z_0-9-]*
 SPID	[a-zA-Z][a-zA-Z_0-9.]*
 NUMBER	[0-9]+
 HEXDIG	[0-9a-fA-F]+
+DOUBLE [0-9]+\.[0-9]+ | NUMBER
+BW_UNIT	[A-Za-z]*b
 
 %%
 %{
@@ -195,6 +197,11 @@ qlimit			return QLIMIT;
 ","			return COMMA;
 "="			return EQ;
 "!"			return EXCL_MARK;
+
+{DOUBLE}{BW_UNIT} {
+			yylval.str = estrndup(yytext, yyleng);
+			return BW_SPEC;
+}
 
 "0x"{HEXDIG} {
 			char *endp, *buf = ecalloc(1, yyleng + 1);

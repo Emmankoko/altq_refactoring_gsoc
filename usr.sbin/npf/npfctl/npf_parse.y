@@ -203,6 +203,7 @@ yyerror(const char *fmt, ...)
 %token	<str>		PARAM
 %token	<str>		TABLE_ID
 %token	<str>		VAR_ID
+%token  <str>		BW_SPEC
 
 %type	<str>		addr some_name table_store dynamic_ifaddrs
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
@@ -409,7 +410,7 @@ queue_opt	: BANDWIDTH bandwidth	{
 		}
 		;
 
-bandwidth	: STRING {
+bandwidth	: BW_SPEC {
 
 			struct node_queue_bw bw;
 
