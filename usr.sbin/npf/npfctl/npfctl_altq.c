@@ -147,10 +147,8 @@ npfctl_eval_bw(struct node_queue_bw * bw, char * bw_spec)
 {
 	double	 bps;
 	char	*cp;
-	struct node_queue_bw bw;
 
 	bw->bw_percent = 0;
-
 	bps = strtod(bw_spec, &cp);
 	if (cp != NULL) {
 		if (!strcmp(cp, "b"))
