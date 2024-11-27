@@ -485,17 +485,20 @@ altq_add(struct npf_altq *a)
 	switch (a->scheduler) {
 #ifdef ALTQ_CBQ
 	case ALTQT_CBQ:
-		error = cbq_add_altq(a);
+		if ((error = cbq_add_altq(a)) == 0)
+			printf("cbq added in kernel");
 		break;
 #endif
 #ifdef ALTQ_PRIQ
 	case ALTQT_PRIQ:
-		error = priq_add_altq(a);
+		if ((error = priq_add_altq(a)) == 0)
+			printf("priq added in kernel");
 		break;
 #endif
 #ifdef ALTQ_HFSC
 	case ALTQT_HFSC:
-		error = hfsc_add_altq(a);
+		if ((error = hfsc_add_altq(a)) == 0)
+			printf("hfsc added in kernel");
 		break;
 #endif
 	default:
