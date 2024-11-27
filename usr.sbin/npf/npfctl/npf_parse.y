@@ -203,9 +203,9 @@ yyerror(const char *fmt, ...)
 %token	<str>		PARAM
 %token	<str>		TABLE_ID
 %token	<str>		VAR_ID
-%token  <str>		BW_SPEC
+%token  <str>       BW_SPEC
 
-%type	<str>		addr some_name table_store dynamic_ifaddrs
+%type	<str>		addr some_name table_store dynamic_ifaddrs bw_spec
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
 %type	<num>		port opt_final number afamily opt_family
 %type	<num>		block_or_pass rule_dir group_dir block_opts
@@ -410,7 +410,7 @@ queue_opt	: BANDWIDTH bandwidth	{
 		}
 		;
 
-bandwidth	: BW_SPEC {
+bandwidth	: bw_spec {
 
 			struct node_queue_bw bw;
 
@@ -420,6 +420,10 @@ bandwidth	: BW_SPEC {
 			}
 			$$ = bw;
 		}
+		;
+
+bw_spec : BW_SPEC
+		{$$ = $1}
 		;
 
 scheduler	: CBQ				{

@@ -96,8 +96,7 @@ DID	[a-zA-Z_][a-zA-Z_0-9-]*
 SPID	[a-zA-Z][a-zA-Z_0-9.]*
 NUMBER	[0-9]+
 HEXDIG	[0-9a-fA-F]+
-DOUBLE [0-9]+\.[0-9]+ | NUMBER
-BW_UNIT	[A-Za-z]*b
+BW_UNIT [A-Za-z]+
 
 %%
 %{
@@ -198,7 +197,7 @@ qlimit			return QLIMIT;
 "="			return EQ;
 "!"			return EXCL_MARK;
 
-{DOUBLE}""{BW_UNIT} {
+{NUMBER}[\.]*[0-9]*{BW_UNIT} {
 			yylval.str = estrndup(yytext, yyleng);
 			return BW_SPEC;
 }
