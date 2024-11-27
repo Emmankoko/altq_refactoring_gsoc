@@ -141,6 +141,43 @@ npfctl_test_altqsupport(int dev)
 	return (1);
 }
 
+/* evaluate bandwidth */
+int
+npfctl_eval_bw(struct node_queue_bw * bw, char * bw_spec)
+{
+	double	 bps;
+	char	*cp;
+	struct node_queue_bw bw;
+
+	bw->bw_percent = 0;
+
+	bps = strtod(bw_spec, &cp);
+	if (cp != NULL) {
+		if (!strcmp(cp, "b"))
+			; /* nothing */
+		else if (!strcmp(cp, "Kb"))
+			bps *= 1000;
+		else if (!strcmp(cp, "Mb"))
+			bps *= 1000 * 1000;
+		else if (!strcmp(cp, "Gb"))
+			bps *= 1000 * 1000 * 1000;
+		else if (!strcmp(cp, "%")) {
+			if (bps < 0 || bps > 100) {
+				yyerror("bandwidth spec "
+					"out of range");
+				return (-1);
+			}
+			bw->bw_percent = bps;
+			bps = 0;
+		} else {
+			yyerror("unknown unit %s", cp);
+			return (-1);
+		}
+	}
+	bw->bw_absolute = (u_int32_t)bps;
+	return 0;
+}
+
 
 void
 npfctl_start_altq(int fd)

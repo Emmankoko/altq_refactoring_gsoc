@@ -410,38 +410,14 @@ queue_opt	: BANDWIDTH bandwidth	{
 		;
 
 bandwidth	: STRING {
-			double	 bps;
-			char	*cp;
 
-			$$.bw_percent = 0;
+			struct node_queue_bw bw;
 
-			bps = strtod($1, &cp);
-			if (cp != NULL) {
-				if (!strcmp(cp, "b"))
-					; /* nothing */
-				else if (!strcmp(cp, "Kb"))
-					bps *= 1000;
-				else if (!strcmp(cp, "Mb"))
-					bps *= 1000 * 1000;
-				else if (!strcmp(cp, "Gb"))
-					bps *= 1000 * 1000 * 1000;
-				else if (!strcmp(cp, "%")) {
-					if (bps < 0 || bps > 100) {
-						yyerror("bandwidth spec "
-						    "out of range");
-						free($1);
-						YYERROR;
-					}
-					$$.bw_percent = bps;
-					bps = 0;
-				} else {
-					yyerror("unknown unit %s", cp);
-					free($1);
-					YYERROR;
-				}
+			if (npfctl_eval_bw(&bw, $1)){
+				YYERROR;
+				free($1);
 			}
-			free($1);
-			$$.bw_absolute = (u_int32_t)bps;
+			$$ = bw;
 		}
 		;
 

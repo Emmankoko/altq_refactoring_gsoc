@@ -308,6 +308,8 @@ void		npfctl_setparam(const char *, int);
 int npfctl_test_altqsupport(int);
 extern int npfctl_open_dev(const char *);
 
+int npfctl_eval_bw(struct node_queue_bw *, char *);
+
 int	expand_altq(struct npf_altq *, const char *, struct node_queue *,
 	    struct node_queue_bw bwspec, struct node_queue_opt *);
 int	expand_queue(struct npf_altq *, const char *, struct node_queue *,
