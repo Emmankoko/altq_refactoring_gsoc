@@ -270,6 +270,7 @@ line
 	| alg
 	| set
 	| altq
+	| queuespec
 	|
 	;
 
