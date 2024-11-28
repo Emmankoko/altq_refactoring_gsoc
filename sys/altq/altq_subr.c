@@ -553,17 +553,21 @@ altq_add_queue(struct npf_altq *a)
 	switch (a->scheduler) {
 #ifdef ALTQ_CBQ
 	case ALTQT_CBQ:
-		error = cbq_add_queue(a);
+		if ((error = cbq_add_queue(a)) == 0)
+			printf("cbq queue added\n")
+
 		break;
 #endif
 #ifdef ALTQ_PRIQ
 	case ALTQT_PRIQ:
-		error = priq_add_queue(a);
+		if ((error = priq_add_queue(a)) ==)
+			printf("priq queue added\n");
 		break;
 #endif
 #ifdef ALTQ_HFSC
 	case ALTQT_HFSC:
-		error = hfsc_add_queue(a);
+		if ((error = hfsc_add_queue(a)) == 0)
+			print("hfsc queue added\n");
 		break;
 #endif
 	default:
