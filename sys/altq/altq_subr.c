@@ -559,14 +559,14 @@ altq_add_queue(struct npf_altq *a)
 #endif
 #ifdef ALTQ_PRIQ
 	case ALTQT_PRIQ:
-		if ((error = priq_add_queue(a)) ==)
+		if ((error = priq_add_queue(a)) == 0)
 			printf("priq queue added\n");
 		break;
 #endif
 #ifdef ALTQ_HFSC
 	case ALTQT_HFSC:
 		if ((error = hfsc_add_queue(a)) == 0)
-			print("hfsc queue added\n");
+			printf("hfsc queue added\n");
 		break;
 #endif
 	default:
