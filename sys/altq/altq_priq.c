@@ -178,8 +178,13 @@ priq_add_queue(struct npf_altq *a)
 	if (a->qid == 0)
 		return (EINVAL);
 	printf("priq queue about to be added\n");
-	if (pif->pif_classes[a->priority] != NULL)
+	if (pif->pif_classes[a->priority] != NULL) {
+		printf("the priority already exist\n");
 		return (EBUSY);
+	}
+
+	printf("priority set\n");
+
 	if (clh_to_clp(pif, a->qid) != NULL) {
 		printf("queue already active\n");
 		return (EBUSY);
