@@ -322,10 +322,16 @@ cbq_add_queue(struct npf_altq *a)
 	struct npf_cbq_opts	*opts;
 	int		i, error;
 
-	if ((cbqp = a->altq_disc) == NULL)
+	if ((cbqp = a->altq_disc) == NULL) {
+		printf("cbqp is null\n");
 		return (EINVAL);
-	if (a->qid == 0)
+	}
+
+	if (a->qid == 0) {
+		printf("cbqp not null\n");
 		return (EINVAL);
+	}
+
 
 	/*
 	 * find a free slot in the class table.  if the slot matching
@@ -337,14 +343,20 @@ cbq_add_queue(struct npf_altq *a)
 		for (i = 0; i < CBQ_MAX_CLASSES; i++)
 			if (cbqp->cbq_class_tbl[i] == NULL)
 				break;
-		if (i == CBQ_MAX_CLASSES)
+		if (i == CBQ_MAX_CLASSES){
+			printf("cbq max classes reached\n");
 			return (EINVAL);
+		}
+
 	}
 
 	opts = &a->pq_u.cbq_opts;
 	/* check parameters */
-	if (a->priority >= CBQ_MAXPRI)
+	if (a->priority >= CBQ_MAXPRI) {
+		printf("priority limit reached\n");
 		return (EINVAL);
+	}
+
 
 	/* Get pointers to parent and borrow classes.  */
 	parent = clh_to_clp(cbqp, a->parent_qid);
