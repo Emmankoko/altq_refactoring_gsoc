@@ -322,6 +322,7 @@ cbq_add_queue(struct npf_altq *a)
 	struct npf_cbq_opts	*opts;
 	int		i, error;
 
+	printf("cbq queue starting.....\n");
 	if ((cbqp = a->altq_disc) == NULL) {
 		printf("cbqp is null\n");
 		return (EINVAL);
@@ -331,7 +332,7 @@ cbq_add_queue(struct npf_altq *a)
 		printf("cbqp not null\n");
 		return (EINVAL);
 	}
-
+	printf("class about to be created...\n");
 
 	/*
 	 * find a free slot in the class table.  if the slot matching
@@ -350,6 +351,8 @@ cbq_add_queue(struct npf_altq *a)
 
 	}
 
+	printf("checking priority....\n");
+
 	opts = &a->pq_u.cbq_opts;
 	/* check parameters */
 	if (a->priority >= CBQ_MAXPRI) {
@@ -357,7 +360,7 @@ cbq_add_queue(struct npf_altq *a)
 		return (EINVAL);
 	}
 
-
+	printf("borrowing routines....\n");
 	/* Get pointers to parent and borrow classes.  */
 	parent = clh_to_clp(cbqp, a->parent_qid);
 	if (opts->flags & CBQCLF_BORROW)
@@ -379,22 +382,35 @@ cbq_add_queue(struct npf_altq *a)
 		return (EINVAL);
 	}
 
+	printf("checking cbq parameters.....\n");
 	/*
 	 * check parameters
 	 */
 	if ((opts->flags & CBQCLF_ROOTCLASS) != 0) {
-		if (parent != NULL)
+		if (parent != NULL) {
+			printf("parent is not null...\n");
 			return (EINVAL);
-		if (cbqp->ifnp.root_)
+		}
+
+		if (cbqp->ifnp.root_) {
+			printf("root present....\n");
 			return (EINVAL);
+		}
+
 	}
 	if ((opts->flags & CBQCLF_DEFCLASS) != 0) {
-		if (cbqp->ifnp.default_)
+		if (cbqp->ifnp.default_) {
+			printf("default class exist...\n");
 			return (EINVAL);
+		}
+
 	}
 	if ((opts->flags & CBQCLF_CLASSMASK) == 0) {
-		if (a->qid == 0)
+		if (a->qid == 0) {
+			printf("qid is equal to zero....\n");
 			return (EINVAL);
+		}
+
 	}
 
 	/*
@@ -429,6 +445,7 @@ cbq_add_queue(struct npf_altq *a)
 	if ((opts->flags & CBQCLF_DEFCLASS) != 0)
 		cbqp->ifnp.default_ = cl;
 
+	printf("cbq queue addition successful\n");
 	return (0);
 }
 
