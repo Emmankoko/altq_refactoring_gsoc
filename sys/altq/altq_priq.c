@@ -177,18 +177,21 @@ priq_add_queue(struct npf_altq *a)
 		return (EINVAL);
 	if (a->qid == 0)
 		return (EINVAL);
+	printf("priq queue about to be added\n");
 	if (pif->pif_classes[a->priority] != NULL)
 		return (EBUSY);
 	if (clh_to_clp(pif, a->qid) != NULL) {
 		printf("queue already active\n");
 		return (EBUSY);
 	}
-
+	printf("queue class created\n");
 
 	cl = priq_class_create(pif, a->priority, a->qlimit,
 	    a->pq_u.priq_opts.flags, a->qid);
 	if (cl == NULL)
 		return (ENOMEM);
+
+	printf("priq queue addition successful\n");
 
 	return (0);
 }
