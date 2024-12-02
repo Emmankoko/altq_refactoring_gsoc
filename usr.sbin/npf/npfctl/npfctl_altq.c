@@ -221,6 +221,8 @@ expand_altq(struct npf_altq *a, const char *ifname,
 	struct node_queue_bw	 bw;
 	int			 errs = 0;
 
+	npfdev = npfctl_open_dev(NPF_DEV_PATH);
+
 	memcpy(&pa, a, sizeof(struct npf_altq));
 	if (strlcpy(pa.ifname, ifname,
 		sizeof(pa.ifname)) >= sizeof(pa.ifname))
@@ -233,10 +235,13 @@ expand_altq(struct npf_altq *a, const char *ifname,
 		if (eval_npfaltq(&pa, &bwspec, opts))
 			errs++;
 		else
-			if (npfctl_add_altq(&pa)){
-				yyerror("cannot add parent queue");
-				errs++;
-			}
+			if (ioctl(npfdev, IOC_NPF_BEGIN_ALTQ) == 0)
+				if (npfctl_add_altq(&pa)){
+					yyerror("cannot add parent queue");
+					errs++;
+				}
+			else
+				errx(1, "cannot begin altq: altq_begin");
 
 		if (pa.scheduler == ALTQT_CBQ ||
 			pa.scheduler == ALTQT_HFSC) {
@@ -543,7 +548,7 @@ int
 npfctl_add_altq(struct npf_altq *a)
 {
 	struct npfioc_altq *npaltq;
-	npfdev = npfctl_open_dev(NPF_DEV_PATH);
+
 	if ((npaltq =  malloc(sizeof(*npaltq))) == NULL)
 		err(1, "malloc");
 
