@@ -268,6 +268,8 @@ cbq_add_altq(struct pf_altq *a)
 	cbq_state_t	*cbqp;
 	struct ifnet	*ifp;
 
+	printf("queue started adding...\n");
+
 	if ((ifp = ifunit(a->ifname)) == NULL)
 		return (EINVAL);
 	if (!ALTQ_IS_READY(&ifp->if_snd))
@@ -284,6 +286,8 @@ cbq_add_altq(struct pf_altq *a)
 
 	/* keep the state in pf_altq */
 	a->altq_disc = cbqp;
+
+	printf("cbq fully addee....\n");
 
 	return (0);
 }
@@ -320,6 +324,7 @@ cbq_add_queue(struct pf_altq *a)
 	struct cbq_opts	*opts;
 	int		i, error;
 
+	printf("queue addition starting.....\n");
 	if ((cbqp = a->altq_disc) == NULL)
 		return (EINVAL);
 	if (a->qid == 0)
@@ -415,6 +420,7 @@ cbq_add_queue(struct pf_altq *a)
 	if ((opts->flags & CBQCLF_DEFCLASS) != 0)
 		cbqp->ifnp.default_ = cl;
 
+	printf("queue succesfully added....\n");
 	return (0);
 }
 
