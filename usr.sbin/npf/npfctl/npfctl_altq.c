@@ -234,7 +234,7 @@ expand_altq(struct npf_altq *a, const char *ifname,
 	} else {
 		if (eval_npfaltq(&pa, &bwspec, opts))
 			errs++;
-		else
+		else {
 			if (ioctl(npfdev, IOC_NPF_BEGIN_ALTQ) == 0)
 				if (npfctl_add_altq(&pa)){
 					yyerror("cannot add parent queue");
@@ -242,6 +242,8 @@ expand_altq(struct npf_altq *a, const char *ifname,
 				}
 			else
 				errx(1, "cannot begin altq: altq_begin");
+		}
+
 
 		if (pa.scheduler == ALTQT_CBQ ||
 			pa.scheduler == ALTQT_HFSC) {
