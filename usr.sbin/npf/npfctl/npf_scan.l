@@ -96,7 +96,7 @@ DID	[a-zA-Z_][a-zA-Z_0-9-]*
 SPID	[a-zA-Z][a-zA-Z_0-9.]*
 NUMBER	[0-9]+
 HEXDIG	[0-9a-fA-F]+
-BW_UNIT [A-Za-z]+
+BW_UNIT [A-Za-z%]+
 
 %%
 %{
