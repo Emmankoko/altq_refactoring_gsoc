@@ -766,8 +766,8 @@ int
 ifdisc_lookup(struct npf_altq * altq)
 {
 	struct npf_altq *a;
-
-	if ((a = TAILQ_FIRST(altqs)) != NULL) {
+	a = TAILQ_FIRST(altqs);
+	if (a != NULL) {
 		if ((a = npfaltq_lookup(altq->ifname)) != NULL) {
 			if (a->scheduler != altq->scheduler) {
 				return -1;
