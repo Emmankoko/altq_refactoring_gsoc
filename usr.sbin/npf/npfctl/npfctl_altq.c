@@ -765,11 +765,11 @@ qname_to_qid(const char *qname)
 int
 ifdisc_lookup(struct npf_altq * altq)
 {
-	struct npf_altq *a, pa;
+	struct npf_altq *a;
 
 	if ((a = TAILQ_FIRST(altqs)) != NULL) {
-		if ((pa = npfaltq_lookup(altq->ifname)) != NULL) {
-			if (pa->scheduler != altq->scheduler) {
+		if ((a = npfaltq_lookup(altq->ifname)) != NULL) {
+			if (a->scheduler != altq->scheduler) {
 				return -1;
 			}
 		}
