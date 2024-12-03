@@ -229,8 +229,8 @@ expand_altq(struct npf_altq *a, const char *ifname,
 		sizeof(pa.ifname)) >= sizeof(pa.ifname))
 		errx(1, "expand_altq: strlcpy");
 
-	if (ifdisc_lookup(pa)) {
-		yyerror("only one scheduler per interface.\n altq already defined on %s", pa->ifname);
+	if (ifdisc_lookup(&pa)) {
+		yyerror("only one scheduler per interface.\n altq already defined on %s", pa.ifname);
 		errs++;
 	} else {
 		if (eval_npfaltq(&pa, &bwspec, opts))
