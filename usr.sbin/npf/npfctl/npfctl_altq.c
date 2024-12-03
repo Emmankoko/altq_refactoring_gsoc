@@ -86,6 +86,7 @@ static double		 sc_x2y(struct service_curve *, double);
 
 void		 print_hfsc_sc(const char *, u_int, u_int, u_int,
 		     const struct node_hfsc_sc *);
+int ifdisc_lookup(struct npf_altq *);
 
 bool npf_altq_running;
 int npfdev;
@@ -228,8 +229,8 @@ expand_altq(struct npf_altq *a, const char *ifname,
 		sizeof(pa.ifname)) >= sizeof(pa.ifname))
 		errx(1, "expand_altq: strlcpy");
 
-	if (ifname == NULL) {
-		yyerror("altq on ! <interface> is not supported");
+	if (ifdisc_lookup(pa)) {
+		yyerror("only one scheduler per interface.\n altq already defined on %s", pa->ifname);
 		errs++;
 	} else {
 		if (eval_npfaltq(&pa, &bwspec, opts))
@@ -758,6 +759,22 @@ qname_to_qid(const char *qname)
 			return (altq->qid);
 	}
 	return (0);
+}
+
+/*define only one discipline on one interface */
+int
+ifdisc_lookup(struct npf_altq * altq)
+{
+	struct npf_altq *a, pa;
+
+	if ((a = TAILQ_FIRST(altqs)) != NULL) {
+		if ((pa = npfaltq_lookup(altq->ifname)) != NULL) {
+			if (pa->scheduler != altq->scheduler) {
+				return -1;
+			}
+		}
+	}
+	return 0;
 }
 
 struct npf_altq *
