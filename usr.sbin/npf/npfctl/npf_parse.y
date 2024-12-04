@@ -159,13 +159,11 @@ yyerror(const char *fmt, ...)
 %token			FAMILY
 %token			FINAL
 %token			FORW
-
 %token			RETURN
 %token			RETURNICMP
 %token			RETURNRST
 %token			ROUNDROBIN
 %token			RULESET
-%token			DEFAULT
 %token			SEPLINE
 %token			SET
 %token			SLASH
@@ -193,7 +191,6 @@ yyerror(const char *fmt, ...)
 
 %token	<num>		ICMP
 %token	<num>		ICMP6
-
 %token	<num>		HEX
 %token	<str>		IDENTIFIER
 %token	<str>		IPV4ADDR
@@ -205,6 +202,7 @@ yyerror(const char *fmt, ...)
 %token	<str>		TABLE_ID
 %token	<str>		VAR_ID
 %token  <str>       BW_SPEC
+%token	<str>		DEFAULT
 
 %type	<str>		addr some_name table_store dynamic_ifaddrs bw_spec
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
@@ -475,7 +473,7 @@ cbqflags_item	: queue_flags	{
 				$$ = CBQCLF_RIO;
 			else {
 				yyerror("unknown cbq flag \"%s\"", $1);
-				free($1);
+				//free($1);
 				YYERROR;
 			}
 			free($1);
@@ -497,7 +495,7 @@ priqflags_item	: queue_flags	{
 				$$ = PRCF_RIO;
 			else {
 				yyerror("unknown priq flag \"%s\"", $1);
-				free($1);
+				//free($1);
 				YYERROR;
 			}
 			free($1);
@@ -586,7 +584,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 				hfsc_opts.flags |= HFCF_RIO;
 			else {
 				yyerror("unknown hfsc flag \"%s\"", $1);
-				free($1);
+				//free($1);
 				YYERROR;
 			}
 			free($1);
@@ -595,7 +593,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 
 queue_flags : /* empty */	{ $$ = NULL; }
 		| IDENTIFIER	 	{ $$ = $1; }
-		| DEFAULT			{ $$ = "default"; }
+		| DEFAULT			{ $$ = $1; }
 		;
 
 qassign		: /* empty */		{ $$ = NULL; }
