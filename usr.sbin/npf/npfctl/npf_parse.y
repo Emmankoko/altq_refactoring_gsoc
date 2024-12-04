@@ -431,7 +431,7 @@ scheduler	: CBQ				{
 			$$.qtype = ALTQT_CBQ;
 			$$.data.cbq_opts.flags = 0;
 		}
-		| CBQ '(' cbqflags_list ')'	{
+		| CBQ PAR_OPEN cbqflags_list PAR_OPEN	{
 			$$.qtype = ALTQT_CBQ;
 			$$.data.cbq_opts.flags = $3;
 		}
@@ -439,7 +439,7 @@ scheduler	: CBQ				{
 			$$.qtype = ALTQT_PRIQ;
 			$$.data.priq_opts.flags = 0;
 		}
-		| PRIQ '(' priqflags_list ')'	{
+		| PRIQ PAR_OPEN priqflags_list PAR_CLOSE	{
 			$$.qtype = ALTQT_PRIQ;
 			$$.data.priq_opts.flags = $3;
 		}
@@ -448,7 +448,7 @@ scheduler	: CBQ				{
 			bzero(&$$.data.hfsc_opts,
 			    sizeof(struct node_hfsc_opts));
 		}
-		| HFSC '(' hfsc_opts ')'	{
+		| HFSC PAR_OPEN hfsc_opts PAR_CLOSE	{
 			$$.qtype = ALTQT_HFSC;
 			$$.data.hfsc_opts = $3;
 		}
@@ -524,7 +524,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.linkshare.m2 = $2;
 			hfsc_opts.linkshare.used = 1;
 		}
-		| LINKSHARE '(' bandwidth comma number comma bandwidth ')'
+		| LINKSHARE PAR_OPEN bandwidth comma number comma bandwidth PAR_CLOSE
 		    {
 			if (hfsc_opts.linkshare.used) {
 				yyerror("linkshare already specified");
@@ -543,7 +543,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.realtime.m2 = $2;
 			hfsc_opts.realtime.used = 1;
 		}
-		| REALTIME '(' bandwidth comma number comma bandwidth ')'
+		| REALTIME PAR_OPEN bandwidth comma number comma bandwidth PAR_CLOSE
 		    {
 			if (hfsc_opts.realtime.used) {
 				yyerror("realtime already specified");
@@ -562,7 +562,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.upperlimit.m2 = $2;
 			hfsc_opts.upperlimit.used = 1;
 		}
-		| UPPERLIMIT '(' bandwidth comma number comma bandwidth ')'
+		| UPPERLIMIT PAR_OPEN bandwidth comma number comma bandwidth PAR_CLOSE
 		    {
 			if (hfsc_opts.upperlimit.used) {
 				yyerror("upperlimit already specified");
@@ -593,7 +593,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 
 qassign		: /* empty */		{ $$ = NULL; }
 		| qassign_item		{ $$ = $1; }
-		| '{' qassign_list '}'	{ $$ = $2; }
+		| CURLY_OPEN qassign_list CURLY_CLOSE	{ $$ = $2; }
 		;
 
 qassign_list	: qassign_item			{ $$ = $1; }
@@ -1076,11 +1076,11 @@ rule_queue
 	{
 			$$.qname = $2;
 	}
-	| QUEUE '(' STRING ')'
+	| QUEUE PAR_OPEN STRING PAR_CLOSE
 	{
 			$$.qname = $3;
 	}
-	| QUEUE '(' STRING comma STRING ')'
+	| QUEUE PAR_OPEN STRING comma STRING PAR_CLOSE
 	{
 			$$.qname = $3;
 			$$.pqname = $5;
