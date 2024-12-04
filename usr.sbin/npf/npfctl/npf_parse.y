@@ -459,8 +459,6 @@ cbqflags_list	: cbqflags_item				{ $$ |= $1; }
 		;
 
 cbqflags_item	: IDENTIFIER	{
-			//if (!strcmp($1, "default"))
-			//	$$ = CBQCLF_DEFCLASS;
 #ifdef CBQCLF_BORROW
 			if (!strcmp($1, "borrow"))
 				$$ = CBQCLF_BORROW;
@@ -486,8 +484,6 @@ priqflags_list	: priqflags_item			{ $$ |= $1; }
 		;
 
 priqflags_item	: IDENTIFIER	{
-			//if (!strcmp($1, "default"))
-			//	$$ = PRCF_DEFAULTCLASS;
 			if (!strcmp($1, "red"))
 				$$ = PRCF_RED;
 			else if (!strcmp($1, "ecn"))
@@ -576,8 +572,6 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.upperlimit.used = 1;
 		}
 		| IDENTIFIER	{
-			//if (!strcmp($1, "default"))
-			//	hfsc_opts.flags |= HFCF_DEFAULTCLASS;
 			if (!strcmp($1, "red"))
 				hfsc_opts.flags |= HFCF_RED;
 			else if (!strcmp($1, "ecn"))
