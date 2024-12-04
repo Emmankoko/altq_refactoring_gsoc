@@ -120,6 +120,7 @@ yyerror(const char *fmt, ...)
 %token			CODE
 %token			COLON
 %token			COMMA
+%token			DEFAULT
 %token			TDYNAMIC
 %token			TSTATIC
 %token			EQ
@@ -202,7 +203,6 @@ yyerror(const char *fmt, ...)
 %token	<str>		TABLE_ID
 %token	<str>		VAR_ID
 %token  <str>       BW_SPEC
-%token	<str>		DEFAULT
 
 %type	<str>		addr some_name table_store dynamic_ifaddrs bw_spec
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
@@ -458,11 +458,11 @@ cbqflags_list	: cbqflags_item				{ $$ |= $1; }
 		| cbqflags_list COMMA cbqflags_item	{ $$ |= $3; }
 		;
 
-cbqflags_item	: queue_flags	{
-			if (!strcmp($1, "default"))
-				$$ = CBQCLF_DEFCLASS;
+cbqflags_item	: IDENTIFIER	{
+			//if (!strcmp($1, "default"))
+			//	$$ = CBQCLF_DEFCLASS;
 #ifdef CBQCLF_BORROW
-			else if (!strcmp($1, "borrow"))
+			if (!strcmp($1, "borrow"))
 				$$ = CBQCLF_BORROW;
 #endif
 			else if (!strcmp($1, "red"))
@@ -473,21 +473,22 @@ cbqflags_item	: queue_flags	{
 				$$ = CBQCLF_RIO;
 			else {
 				yyerror("unknown cbq flag \"%s\"", $1);
-				//free($1);
+				free($1);
 				YYERROR;
 			}
-			//free($1);
+			free($1);
 		}
+		| DEFAULT { $$ = CBQCLF_DEFCLASS; }
 		;
 
 priqflags_list	: priqflags_item			{ $$ |= $1; }
 		| priqflags_list COMMA priqflags_item	{ $$ |= $3; }
 		;
 
-priqflags_item	: queue_flags	{
-			if (!strcmp($1, "default"))
-				$$ = PRCF_DEFAULTCLASS;
-			else if (!strcmp($1, "red"))
+priqflags_item	: IDENTIFIER	{
+			//if (!strcmp($1, "default"))
+			//	$$ = PRCF_DEFAULTCLASS;
+			if (!strcmp($1, "red"))
 				$$ = PRCF_RED;
 			else if (!strcmp($1, "ecn"))
 				$$ = PRCF_RED|PRCF_ECN;
@@ -495,11 +496,12 @@ priqflags_item	: queue_flags	{
 				$$ = PRCF_RIO;
 			else {
 				yyerror("unknown priq flag \"%s\"", $1);
-				//free($1);
+				free($1);
 				YYERROR;
 			}
-			//free($1);
+			free($1);
 		}
+		| DEFAULT { $$ = PRCF_DEFAULTCLASS; }
 		;
 
 hfsc_opts	:	{
@@ -573,10 +575,10 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.upperlimit.m2 = $7;
 			hfsc_opts.upperlimit.used = 1;
 		}
-		| queue_flags	{
-			if (!strcmp($1, "default"))
-				hfsc_opts.flags |= HFCF_DEFAULTCLASS;
-			else if (!strcmp($1, "red"))
+		| IDENTIFIER	{
+			//if (!strcmp($1, "default"))
+			//	hfsc_opts.flags |= HFCF_DEFAULTCLASS;
+			if (!strcmp($1, "red"))
 				hfsc_opts.flags |= HFCF_RED;
 			else if (!strcmp($1, "ecn"))
 				hfsc_opts.flags |= HFCF_RED|HFCF_ECN;
@@ -584,16 +586,12 @@ hfscopts_item	: LINKSHARE bandwidth				{
 				hfsc_opts.flags |= HFCF_RIO;
 			else {
 				yyerror("unknown hfsc flag \"%s\"", $1);
-				//free($1);
+				free($1);
 				YYERROR;
 			}
-			//free($1);
+			free($1);
 		}
-		;
-
-queue_flags : /* empty */	{ $$ = NULL; }
-		| IDENTIFIER	 	{ $$ = $1; }
-		| DEFAULT			{ $$ = $1; }
+		| DEFAULT { hfsc_opts.flags |= HFCF_DEFAULTCLASS; }
 		;
 
 qassign		: /* empty */		{ $$ = NULL; }
