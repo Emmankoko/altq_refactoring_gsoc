@@ -165,6 +165,7 @@ yyerror(const char *fmt, ...)
 %token			RETURNRST
 %token			ROUNDROBIN
 %token			RULESET
+%token			DEFAULT
 %token			SEPLINE
 %token			SET
 %token			SLASH
@@ -189,7 +190,7 @@ yyerror(const char *fmt, ...)
 %token			QLIMIT
 %token 			RTABLE
 
-%token	<str>		DEFAULT
+
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
@@ -594,7 +595,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 
 queue_flags : /* empty */	{ $$ = NULL; }
 		| IDENTIFIER	 	{ $$ = $1; }
-		| DEFAULT			{ $$ = $1; }
+		| DEFAULT			{ $$ = "default"; }
 		;
 
 qassign		: /* empty */		{ $$ = NULL; }
