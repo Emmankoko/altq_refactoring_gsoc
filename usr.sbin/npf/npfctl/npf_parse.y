@@ -230,6 +230,7 @@ yyerror(const char *fmt, ...)
 %type	<num>		priqflags_list priqflags_item
 %type	<hfsc_opts>		hfscopts_list hfscopts_item hfsc_opts
 %type	<queue_bwspec>	bandwidth
+%type   <str>			queue_flags
 
 %union {
 	char *		str;
@@ -431,7 +432,7 @@ scheduler	: CBQ				{
 			$$.qtype = ALTQT_CBQ;
 			$$.data.cbq_opts.flags = 0;
 		}
-		| CBQ PAR_OPEN cbqflags_list PAR_OPEN	{
+		| CBQ PAR_OPEN cbqflags_list PAR_CLOSE	{
 			$$.qtype = ALTQT_CBQ;
 			$$.data.cbq_opts.flags = $3;
 		}
@@ -458,7 +459,7 @@ cbqflags_list	: cbqflags_item				{ $$ |= $1; }
 		| cbqflags_list COMMA cbqflags_item	{ $$ |= $3; }
 		;
 
-cbqflags_item	: IDENTIFIER	{
+cbqflags_item	: queue_flags	{
 			if (!strcmp($1, "default"))
 				$$ = CBQCLF_DEFCLASS;
 #ifdef CBQCLF_BORROW
@@ -484,7 +485,7 @@ priqflags_list	: priqflags_item			{ $$ |= $1; }
 		| priqflags_list COMMA priqflags_item	{ $$ |= $3; }
 		;
 
-priqflags_item	: IDENTIFIER	{
+priqflags_item	: queue_flags	{
 			if (!strcmp($1, "default"))
 				$$ = PRCF_DEFAULTCLASS;
 			else if (!strcmp($1, "red"))
@@ -573,7 +574,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.upperlimit.m2 = $7;
 			hfsc_opts.upperlimit.used = 1;
 		}
-		| IDENTIFIER	{
+		| queue_flags	{
 			if (!strcmp($1, "default"))
 				hfsc_opts.flags |= HFCF_DEFAULTCLASS;
 			else if (!strcmp($1, "red"))
@@ -589,6 +590,11 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			}
 			free($1);
 		}
+		;
+
+queue_flags : /* empty */	{ $$ = NULL; }
+		| IDENTIFIER	 	{ $$ = $1; }
+		| DEFAULT			{ $$ = $1; }
 		;
 
 qassign		: /* empty */		{ $$ = NULL; }
