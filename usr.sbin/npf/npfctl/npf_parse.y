@@ -455,7 +455,7 @@ scheduler	: CBQ				{
 		;
 
 cbqflags_list	: cbqflags_item				{ $$ |= $1; }
-		| cbqflags_list comma cbqflags_item	{ $$ |= $3; }
+		| cbqflags_list COMMA cbqflags_item	{ $$ |= $3; }
 		;
 
 cbqflags_item	: IDENTIFIER	{
@@ -481,7 +481,7 @@ cbqflags_item	: IDENTIFIER	{
 		;
 
 priqflags_list	: priqflags_item			{ $$ |= $1; }
-		| priqflags_list comma priqflags_item	{ $$ |= $3; }
+		| priqflags_list COMMA priqflags_item	{ $$ |= $3; }
 		;
 
 priqflags_item	: IDENTIFIER	{
@@ -513,7 +513,7 @@ hfsc_opts	:	{
 		;
 
 hfscopts_list	: hfscopts_item
-		| hfscopts_list comma hfscopts_item
+		| hfscopts_list COMMA hfscopts_item
 		;
 
 hfscopts_item	: LINKSHARE bandwidth				{
@@ -524,7 +524,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.linkshare.m2 = $2;
 			hfsc_opts.linkshare.used = 1;
 		}
-		| LINKSHARE PAR_OPEN bandwidth comma number comma bandwidth PAR_CLOSE
+		| LINKSHARE PAR_OPEN bandwidth COMMA number COMMA bandwidth PAR_CLOSE
 		    {
 			if (hfsc_opts.linkshare.used) {
 				yyerror("linkshare already specified");
@@ -543,7 +543,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.realtime.m2 = $2;
 			hfsc_opts.realtime.used = 1;
 		}
-		| REALTIME PAR_OPEN bandwidth comma number comma bandwidth PAR_CLOSE
+		| REALTIME PAR_OPEN bandwidth COMMA number COMMA bandwidth PAR_CLOSE
 		    {
 			if (hfsc_opts.realtime.used) {
 				yyerror("realtime already specified");
@@ -562,7 +562,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 			hfsc_opts.upperlimit.m2 = $2;
 			hfsc_opts.upperlimit.used = 1;
 		}
-		| UPPERLIMIT PAR_OPEN bandwidth comma number comma bandwidth PAR_CLOSE
+		| UPPERLIMIT PAR_OPEN bandwidth COMMA number COMMA bandwidth PAR_CLOSE
 		    {
 			if (hfsc_opts.upperlimit.used) {
 				yyerror("upperlimit already specified");
@@ -597,7 +597,7 @@ qassign		: /* empty */		{ $$ = NULL; }
 		;
 
 qassign_list	: qassign_item			{ $$ = $1; }
-		| qassign_list comma qassign_item	{
+		| qassign_list COMMA qassign_item	{
 			$1->tail->next = $3;
 			$1->tail = $3;
 			$$ = $1;
@@ -1080,7 +1080,7 @@ rule_queue
 	{
 			$$.qname = $3;
 	}
-	| QUEUE PAR_OPEN STRING comma STRING PAR_CLOSE
+	| QUEUE PAR_OPEN STRING COMMA STRING PAR_CLOSE
 	{
 			$$.qname = $3;
 			$$.pqname = $5;
