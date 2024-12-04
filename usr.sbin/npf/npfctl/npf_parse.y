@@ -120,7 +120,6 @@ yyerror(const char *fmt, ...)
 %token			CODE
 %token			COLON
 %token			COMMA
-%token			DEFAULT
 %token			TDYNAMIC
 %token			TSTATIC
 %token			EQ
@@ -190,6 +189,7 @@ yyerror(const char *fmt, ...)
 %token			QLIMIT
 %token 			RTABLE
 
+%token	<str>		DEFAULT
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
