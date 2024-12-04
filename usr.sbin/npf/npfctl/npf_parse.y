@@ -476,7 +476,7 @@ cbqflags_item	: queue_flags	{
 				//free($1);
 				YYERROR;
 			}
-			free($1);
+			//free($1);
 		}
 		;
 
@@ -498,7 +498,7 @@ priqflags_item	: queue_flags	{
 				//free($1);
 				YYERROR;
 			}
-			free($1);
+			//free($1);
 		}
 		;
 
@@ -587,7 +587,7 @@ hfscopts_item	: LINKSHARE bandwidth				{
 				//free($1);
 				YYERROR;
 			}
-			free($1);
+			//free($1);
 		}
 		;
 
