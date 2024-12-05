@@ -811,7 +811,10 @@ npf_rule_getrproc(const npf_rule_t *rl)
 int
 npf_rule_getqid(const npf_rule_t *rl)
 {
-	return rl->qid;
+	int qid = 0;
+	if (rl->qid != NULL )
+		qid = rl->qid;
+	return qid;
 }
 #endif /* ALTQ*/
 
