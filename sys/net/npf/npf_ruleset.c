@@ -812,7 +812,7 @@ int
 npf_rule_getqid(const npf_rule_t *rl)
 {
 	int qid = 0;
-	if (rl->qid != NULL )
+	if (rl != NULL && rl->qid)
 		qid = rl->qid;
 	return qid;
 }
