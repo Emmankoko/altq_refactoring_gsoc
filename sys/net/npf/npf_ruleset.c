@@ -807,18 +807,6 @@ npf_rule_getrproc(const npf_rule_t *rl)
 	return rp;
 }
 
-#ifdef ALTQ
-struct qid
-npf_rule_getqid(const npf_rule_t *rl)
-{
-	struct qid qid;
-	if (rl != NULL && rl->qid) {
-		qid.qid = rl->qid;
-	}
-	return qid;
-}
-#endif /* ALTQ*/
-
 npf_natpolicy_t *
 npf_rule_getnat(const npf_rule_t *rl)
 {

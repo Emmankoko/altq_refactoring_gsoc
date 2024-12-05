@@ -440,7 +440,7 @@ uint64_t	npf_rule_getid(const npf_rule_t *);
 npf_natpolicy_t *npf_rule_getnat(const npf_rule_t *);
 void		npf_rule_setnat(npf_rule_t *, npf_natpolicy_t *);
 npf_rproc_t *	npf_rule_getrproc(const npf_rule_t *);
-struct qid 		npf_rule_getqid(const npf_rule_t *);
+//struct qid 		npf_rule_getqid(const npf_rule_t *);
 
 void		npf_ext_init(npf_t *);
 void		npf_ext_fini(npf_t *);
