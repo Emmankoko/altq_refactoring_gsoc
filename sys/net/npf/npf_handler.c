@@ -323,7 +323,7 @@ out:
 
 #ifdef ALTQ
 		/* give them ALTQ tags */
-		if (qid)
+		if (qid != NULL)
 			mbuf_altq_tag(qid, *mp);
 #endif /*ALTQ */
 		/*
