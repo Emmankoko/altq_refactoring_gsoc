@@ -812,8 +812,9 @@ struct qid
 npf_rule_getqid(const npf_rule_t *rl)
 {
 	struct qid qid;
-	if (rl != NULL && rl->qid)
+	if (rl != NULL && rl->qid) {
 		qid.qid = rl->qid;
+	}
 	return qid;
 }
 #endif /* ALTQ*/
