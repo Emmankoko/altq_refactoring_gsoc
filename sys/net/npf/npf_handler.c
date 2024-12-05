@@ -249,8 +249,8 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	/*
 	 * get the rule queues by their ids. used for tagging after pass
 	 */
-	if (rl != NULL && rl->qid)
-		qid.qid = rl->qid;
+	if (rl != NULL)
+		qid = npf_rule_getqid(rl);
 #endif /*ALTQ */
 
 	/* Conclude with the rule and release the lock. */
