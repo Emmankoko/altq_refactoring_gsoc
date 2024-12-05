@@ -126,10 +126,8 @@ struct npf_rule {
 
 	/* queues set on a rule */
 	u_int32_t		 qid;
-	u_int32_t		 pqid;
 
 	char qname[NPF_QNAME_SIZE];
-	char pqname[NPF_QNAME_SIZE];
 };
 
 #define	SKIPTO_ADJ_FLAG		(1U << 31)
@@ -741,25 +739,15 @@ npf_rule_setrproc(npf_rule_t *rl, npf_rproc_t *rp)
 #ifdef ALTQ
 /* set your rule queues by their IDs*/
 int
-npf_rule_setqids(npf_rule_t * rl, const char * const * qnames)
+npf_rule_setqid(npf_rule_t * rl, char *qname)
 {
-	int error;
+	int error = 0;
 
-	for (int i = 0; qnames[i] != NULL; i++) {
-		strncpy(rl->qname, qnames[i], sizeof(qnames[i]));
-		if(i == 1)
-			strncpy(rl->pqname, qnames[i], sizeof(qnames[i]));
-	}
+	strncpy(rl->qname, qname, sizeof(qname));
 	/* set queue IDs */
 	if (rl->qname[0] != 0) {
 		if ((rl->qid = npf_qname2qid(rl->qname)) == 0)
 			error = EBUSY;
-		else if (rl->pqname[0] != 0) {
-			if ((rl->pqid =
-				npf_qname2qid(rl->pqname)) == 0)
-				error = EBUSY;
-		} else
-			rl->pqid = rl->qid;
 	}
 	return error;
 }
@@ -820,18 +808,11 @@ npf_rule_getrproc(const npf_rule_t *rl)
 }
 
 #ifdef ALTQ
-struct qid
-npf_rule_getqueues(const npf_rule_t *rl)
+int
+npf_rule_getqid(const npf_rule_t *rl)
 {
-	struct qid qids;
-	if (rl != NULL && rl->qid) {
-		qids.qid = rl->qid;
-		qids.qid = rl->pqid;
-	}
-	return qids;
-
+	return rl->qid;
 }
-
 #endif /* ALTQ*/
 
 npf_natpolicy_t *

@@ -245,11 +245,11 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	rp = npf_rule_getrproc(rl);
 
 #ifdef ALTQ
-	struct qid qids;
+	int qid;
 	/*
 	 * get the rule queues by their ids. used for tagging after pass
 	 */
-	qids = npf_rule_getqueues(rl);
+	qid = npf_rule_getqid(rl);
 #endif /*ALTQ */
 
 	/* Conclude with the rule and release the lock. */
@@ -323,8 +323,8 @@ out:
 
 #ifdef ALTQ
 		/* give them ALTQ tags */
-		if (qids.qid)
-			mbuf_altq_tag(qids, *mp);
+		if (qid)
+			mbuf_altq_tag(qid, *mp);
 #endif /*ALTQ */
 		/*
 		 * XXX: Disable for now, it will be set accordingly later,
