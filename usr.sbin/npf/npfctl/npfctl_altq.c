@@ -1635,7 +1635,7 @@ npf_rule_qnames_exists(const char *qname, const char * pqname)
 		}
 	}
 	if (!found)
-		fprintf(stderr, "no qname named '%s' found \n", qname);
+		yyerror("no qname named '%s' defined\n", qname);
 
 	if (pqname != NULL) {
 		found = 0;
@@ -1648,7 +1648,7 @@ npf_rule_qnames_exists(const char *qname, const char * pqname)
 			}
 		}
 		if (!found)
-			fprintf(stderr, "no queue named '%s' found\n", pqname);
+			yyerror("no queue named '%s' defined\n", pqname);
 	}
 	return found;
 }
