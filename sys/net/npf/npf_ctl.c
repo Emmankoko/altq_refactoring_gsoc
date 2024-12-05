@@ -364,9 +364,9 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 	/* assign the rule queues, if any */
 	const char * const * qnames;
 	size_t qitems;
-	printf("finding queues......\n")
+	printf("finding queues......\n");
 	if (nvlist_exists_nvlist_array(req, "queues")){
-		printf("the queues are found...\n")
+		printf("the queues are found...\n");
 		qnames = nvlist_get_string_array(req, "queues", &qitems);
 		if (qnames != NULL)
 			if (npf_rule_setqids(rl, qnames)) {
