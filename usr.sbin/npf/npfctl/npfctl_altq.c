@@ -183,9 +183,10 @@ npfctl_start_altq(int fd)
 {
 	altqsupport = npfctl_test_altqsupport(fd);
 
-	if (altqsupport)
+/*	if (altqsupport)
 		if (check_commit_altq() != 0)
 			fprintf(stderr,"errors in altq config");
+*/
 
 	if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START) != -1)))
 		if (errno != EEXIST)

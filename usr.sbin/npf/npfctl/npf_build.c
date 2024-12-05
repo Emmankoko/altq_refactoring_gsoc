@@ -719,7 +719,7 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 		npf_rule_setproc(rl, rproc);
 	}
 
-	/*set both queue and parent queue even if parent queue is null */
+	/*ensure first queue exist */
 	if (queue.qname != NULL ) {
 		/*	ensure the reference is queue is defined */
 		if (npf_rule_qnames_exists(queue.qname, queue.pqname))
