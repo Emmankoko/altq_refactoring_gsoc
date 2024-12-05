@@ -245,7 +245,7 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	rp = npf_rule_getrproc(rl);
 
 #ifdef ALTQ
-	int qid;
+	int qid = 0;
 	/*
 	 * get the rule queues by their ids. used for tagging after pass
 	 */
