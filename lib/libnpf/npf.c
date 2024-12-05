@@ -743,12 +743,12 @@ npf_rule_setproc(nl_rule_t *rl, const char *name)
 }
 
 int
-npf_rule_setqueue(nl_rule_t *rl, const char *qname, const char *pqname)
+npf_rule_setqueue(nl_rule_t *rl, const char *qname)
 {
 	/* keep queue and parent coupled together */
-	const char* queues[] = {qname, pqname};
-	size_t nqueues = sizeof(queues) / sizeof(queues[0]);
-	nvlist_add_string_array(rl->rule_dict, "queues", queues, nqueues);
+	//const char* queues[] = {qname, pqname};
+	//size_t nqueues = sizeof(queues) / sizeof(queues[0]);
+	nvlist_add_string(rl->rule_dict, "queue", qname);
 	return nvlist_error(rl->rule_dict);
 }
 
