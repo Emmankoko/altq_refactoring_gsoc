@@ -805,15 +805,15 @@ npf_rule_getrproc(const npf_rule_t *rl)
 		npf_rproc_acquire(rp);
 	}
 	return rp;
-}
+}y
 
 #ifdef ALTQ
-int
+struct qid
 npf_rule_getqid(const npf_rule_t *rl)
 {
-	int qid = 0;
+	struct qid qid;
 	if (rl != NULL && rl->qid)
-		qid = rl->qid;
+		qid.qid = rl->qid;
 	return qid;
 }
 #endif /* ALTQ*/

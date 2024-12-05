@@ -116,7 +116,6 @@ struct npf_altq {
 
 struct qid {
 	u_int32_t qid;
-	u_int32_t pqid;
 };
 
 struct npf_tag {
