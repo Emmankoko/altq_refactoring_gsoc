@@ -55,6 +55,7 @@ __KERNEL_RCSID(0, "$NetBSD: npf_ctl.c,v 1.60 2020/05/30 14:16:56 rmind Exp $");
 	nvlist_add_string((e), "source-file", __FILE__); \
 	nvlist_add_number((e), "source-line", __LINE__);
 
+/* condition to verify queue assigned for rules */
 int altqattached = 0;
 
 static int __noinline
@@ -366,7 +367,7 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 	if (nvlist_exists_nvlist_array(req, "queues")){
 		qnames = nvlist_get_string_array(req, "queues", &qitems);
 		if (qnames != NULL)
-			if (npf_rule_setqueues(rl, qnames)) {
+			if (npf_rule_setqids(rl, qnames)) {
 				goto err;
 			}
 		if (!altqattached)

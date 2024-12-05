@@ -197,8 +197,11 @@ altq_enable(struct ifaltq *ifq)
 
 	if (!ALTQ_IS_READY(ifq))
 		return ENXIO;
-	if (ALTQ_IS_ENABLED(ifq))
+	if (ALTQ_IS_ENABLED(ifq)){
+		printf("altq is enabled\n");
 		return 0;
+	}
+
 
 	s = splnet();
 	IFQ_PURGE(ifq);
@@ -207,7 +210,7 @@ altq_enable(struct ifaltq *ifq)
 	if (ifq->altq_clfier != NULL)
 		ifq->altq_flags |= ALTQF_CLASSIFY;
 	splx(s);
-
+	printf("altq is enabled\n");
 	return 0;
 }
 
@@ -216,14 +219,19 @@ altq_disable(struct ifaltq *ifq)
 {
 	int s;
 
-	if (!ALTQ_IS_ENABLED(ifq))
+	if (!ALTQ_IS_ENABLED(ifq)){
+		printf("altq is disabled\n");
 		return 0;
+	}
+
 
 	s = splnet();
 	IFQ_PURGE(ifq);
 	ASSERT(ifq->ifq_len == 0);
 	ifq->altq_flags &= ~(ALTQF_ENABLED|ALTQF_CLASSIFY);
 	splx(s);
+
+	printf("altq is disabled\n");
 	return 0;
 }
 
@@ -418,17 +426,20 @@ altq_npfattach(struct npf_altq *a)
 		break;
 #ifdef ALTQ_CBQ
 	case ALTQT_CBQ:
-		error = cbq_npfattach(a);
+		if ((error = cbq_npfattach(a)) == 0 )
+			printf("cbq attached\n");
 		break;
 #endif
 #ifdef ALTQ_PRIQ
 	case ALTQT_PRIQ:
-		error = priq_npfattach(a);
+		if ((error = priq_npfattach(a)) == 0)
+			printf("priq attached\n");
 		break;
 #endif
 #ifdef ALTQ_HFSC
 	case ALTQT_HFSC:
-		error = hfsc_npfattach(a);
+		if ((error = hfsc_npfattach(a)) == 0)
+			printf("hfsc attahced\n");
 		break;
 #endif
 	default:
