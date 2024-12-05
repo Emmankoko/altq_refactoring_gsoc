@@ -739,7 +739,7 @@ npf_rule_setrproc(npf_rule_t *rl, npf_rproc_t *rp)
 #ifdef ALTQ
 /* set your rule queues by their IDs*/
 int
-npf_rule_setqid(npf_rule_t * rl, char *qname)
+npf_rule_setqid(npf_rule_t * rl, const char *qname)
 {
 	int error = 0;
 

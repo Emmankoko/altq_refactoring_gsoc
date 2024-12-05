@@ -362,7 +362,7 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 
 #ifdef ALTQ
 	/* assign the rule queues, if any */
-	char *qname;
+	const char *qname;
 	printf("finding queues......\n");
 
 	printf("the queues are found...\n");
