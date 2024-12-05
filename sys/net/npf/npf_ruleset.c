@@ -805,7 +805,7 @@ npf_rule_getrproc(const npf_rule_t *rl)
 		npf_rproc_acquire(rp);
 	}
 	return rp;
-}y
+}
 
 #ifdef ALTQ
 struct qid
