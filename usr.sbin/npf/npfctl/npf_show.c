@@ -513,7 +513,7 @@ static void
 npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 {
 	const uint32_t attr = npf_rule_getattr(rl);
-	const char *rproc, *ifname, *name;
+	const char *rproc, *ifname, *name, *qname;
 	bool dyn_ruleset;
 
 	/* Rule attributes/flags. */
@@ -550,6 +550,10 @@ npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 	/* Rule procedure. */
 	if ((rproc = npf_rule_getproc(rl)) != NULL) {
 		ctx->fpos += fprintf(ctx->fp, "apply \"%s\" ", rproc);
+	}
+
+	if ((qname = npf_rule_getqueue(rl)) != NULL) {
+		ctx->fpos += fprintf(ctx->fp, "queue \"%s\" ", qname);
 	}
 out:
 	npfctl_print_id(ctx, rl);

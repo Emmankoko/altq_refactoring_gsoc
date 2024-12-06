@@ -860,6 +860,12 @@ npf_rule_getproc(nl_rule_t *rl)
 	return dnvlist_get_string(rl->rule_dict, "rproc", NULL);
 }
 
+const char *
+npf_rule_getqueue(nl_rule_t *rl)
+{
+	return dnvlist_get_string(rl->rule_dict, "queue", NULL);
+}
+
 uint64_t
 npf_rule_getid(nl_rule_t *rl)
 {
