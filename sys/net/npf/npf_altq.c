@@ -463,16 +463,20 @@ npf_get_altq(void *data)
 		return error;
 	}
 */
+
+	printf("getting altq....\n");
 	nr = 0;
 	altq = TAILQ_FIRST(npf_altqs_active);
 	while ((altq != NULL) && (nr < paa->nr)) {
 		altq = TAILQ_NEXT(altq, entries);
 		nr++;
 	}
+	printf("checking if altq is null...\n");
 	if (altq == NULL) {
 		error = EBUSY;
 		return error;
 	}
+	printf("altq valid....\n");
 	memcpy(&paa->altq, altq, sizeof(struct npf_altq));
 	return error;
 }
