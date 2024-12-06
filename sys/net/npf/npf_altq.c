@@ -453,7 +453,7 @@ npf_get_qstats(void *data)
 int
 npf_get_altq(void *data)
 {
-	int error;
+	int error = 0;
 	struct npfioc_altq	*paa = (struct npfioc_altq *)data;
 	struct npf_altq		*altq;
 	u_int32_t		 nr;
