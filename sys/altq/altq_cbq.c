@@ -544,8 +544,10 @@ cbq_enqueue(struct ifaltq *ifq, struct mbuf *m)
 		return (ENOBUFS);
 	}
 	cl = NULL;
-	if ((t = m_tag_find(m, PACKET_TAG_ALTQ_QID)) != NULL)
+	if ((t = m_tag_find(m, PACKET_TAG_ALTQ_QID)) != NULL){
 		cl = clh_to_clp(cbqp, ((struct altq_tag *)(t+1))->qid);
+		printf("packet class for qid found/created..\n");
+	}
 #ifdef ALTQ3_COMPAT
 	else if (ifq->altq_flags & ALTQF_CLASSIFY)
 		cl = m->m_pkthdr.pattr_class;
@@ -575,6 +577,7 @@ cbq_enqueue(struct ifaltq *ifq, struct mbuf *m)
 	}
 
 	/* successfully queued. */
+	printf(" packet successfuly queueued...\n");
 	++cbqp->cbq_qlen;
 	IFQ_INC_LEN(ifq);
 	return (0);
