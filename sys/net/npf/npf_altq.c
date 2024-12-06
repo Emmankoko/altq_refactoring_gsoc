@@ -426,10 +426,11 @@ npf_get_qstats(void *data)
 	u_int32_t		 nr;
 	int			 nbytes;
 
-	if (pq->ticket != nticket_altqs_active) {
+/*	if (pq->ticket != nticket_altqs_active) {
 		error = EBUSY;
 		return error;
 	}
+*/
 	nbytes = pq->nbytes;
 	nr = 0;
 	altq = TAILQ_FIRST(npf_altqs_active);
@@ -457,10 +458,11 @@ npf_get_altq(void *data)
 	struct npf_altq		*altq;
 	u_int32_t		 nr;
 
-	if (paa->ticket != nticket_altqs_active) {
+/*	if (paa->ticket != nticket_altqs_active) {
 		error = EBUSY;
 		return error;
 	}
+*/
 	nr = 0;
 	altq = TAILQ_FIRST(npf_altqs_active);
 	while ((altq != NULL) && (nr < paa->nr)) {
