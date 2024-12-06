@@ -706,6 +706,9 @@ npf_rule_export(npf_t *npf, const npf_rule_t *rl)
 		nvlist_add_string(rule, "rproc", rname);
 		npf_rproc_release(rp);
 	}
+	if (rl->qname[0]) {
+		nvlist_add_string(rule, "queue", rl->qname);
+	}
 	return rule;
 }
 
