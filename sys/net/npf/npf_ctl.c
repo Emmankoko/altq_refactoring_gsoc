@@ -365,12 +365,12 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 	const char *qname;
 	printf("finding queues......\n");
 
+	printf("the queues are found...\n");
 	qname = dnvlist_get_string(req, "queue", NULL);
 	if (qname != NULL)
 		if (npf_rule_setqid(rl, qname)) {
 			goto err;
 		}
-	printf("the queues are found...\n");
 	if (!altqattached)
 		altqattached = 1;
 #endif
