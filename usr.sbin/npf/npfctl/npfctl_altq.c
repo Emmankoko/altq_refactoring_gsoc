@@ -92,6 +92,7 @@ bool npf_altq_running;
 int npfdev;
 int altqattached;
 int altqsupport;
+int altqadded;
 
 TAILQ_HEAD(altqs, npf_altq) altqs = TAILQ_HEAD_INITIALIZER(altqs);
 #define is_sc_null(sc)	(((sc) == NULL) || ((sc)->m1 == 0 && (sc)->m2 == 0))
@@ -301,6 +302,8 @@ expand_altq(struct npf_altq *a, const char *ifname,
 		);
 	}
 	FREE_LIST(struct node_queue, nqueues);
+	if (!altqadded)
+		altqadded = 1;
 
 	return (errs);
 }

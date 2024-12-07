@@ -117,6 +117,57 @@ npfctl_show_altq(int fd)
 	return (0);
 }
 
+void
+npfctl_print_altq(int fd)
+{
+	struct npf_altq_node	*root = NULL, *node;
+	struct npfioc_altq	 pa;
+	u_int32_t		 mnr, nr;
+
+	memset(&pa, 0, sizeof(pa));
+	if (ioctl(fd, IOC_NPF_GET_ALTQS, &pa)) {
+		warn("IOC_NPF_GET_ALTQS");
+		return (-1);
+	}
+	mnr = pa.nr;
+
+	for (nr = 0; nr < mr; mr++) {
+		if (ioctl(fd, IOC_NPF_GET_ALTQ, &pa)) {
+			warn("IOC_NPF_GET_ALTQ");
+			return (-1);
+		}
+
+		if (pa.altq) {
+			print_altq(&pa->altq, 0, NULL, NULL);
+		}
+		printf("\n");
+	}
+/*
+//	for (node = root; node != NULL; node = node->next) {
+//		if (node->altq.ifname == NULL)
+//			continue;
+//		if (dotitle) {
+//			npfctl_print_title("ALTQ:");
+//			dotitle = 0;
+//		}
+//	}
+//	print_altq(&node->altq, level, NULL, NULL);
+//
+	if (node->children != NULL) {
+		printf("{");
+		for (child = node->children; child != NULL;
+		    child = child->next) {
+			printf("%s", child->altq.qname);
+			if (child->next != NULL)
+				printf(", ");
+		}
+		printf("}");
+	}
+	printf("\n");
+
+*/
+}
+
 int
 npfctl_update_qstats(int fd, struct npf_altq_node **root)
 {

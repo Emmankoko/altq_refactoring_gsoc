@@ -749,6 +749,11 @@ npfctl_config_show(int fd)
 		}
 		print_linesep(ctx);
 
+		if (altqadded)
+			npfctl_print_altq(fd);
+
+		print_linesep(ctx);
+
 		i = NPF_ITER_BEGIN;
 		while ((rl = npf_rule_iterate(ncf, &i, &level)) != NULL) {
 			print_indent(ctx, level);
