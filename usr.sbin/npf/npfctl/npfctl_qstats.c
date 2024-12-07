@@ -137,9 +137,7 @@ npfctl_print_altq(int fd)
 			return;
 		}
 
-		if (pa.altq != NULL) {
-			print_altq(&pa.altq, 0, NULL, NULL);
-		}
+		print_altq(&pa.altq, 0, NULL, NULL);
 		printf("\n");
 	}
 /*
