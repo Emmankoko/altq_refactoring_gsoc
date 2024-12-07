@@ -120,25 +120,25 @@ npfctl_show_altq(int fd)
 void
 npfctl_print_altq(int fd)
 {
-	struct npf_altq_node	*root = NULL, *node;
+	//struct npf_altq_node	*root = NULL, *node;
 	struct npfioc_altq	 pa;
 	u_int32_t		 mnr, nr;
 
 	memset(&pa, 0, sizeof(pa));
 	if (ioctl(fd, IOC_NPF_GET_ALTQS, &pa)) {
 		warn("IOC_NPF_GET_ALTQS");
-		return (-1);
+		return;
 	}
 	mnr = pa.nr;
 
-	for (nr = 0; nr < mr; mr++) {
+	for (nr = 0; nr < mnr; mnr++) {
 		if (ioctl(fd, IOC_NPF_GET_ALTQ, &pa)) {
 			warn("IOC_NPF_GET_ALTQ");
-			return (-1);
+			return;
 		}
 
-		if (pa.altq) {
-			print_altq(&pa->altq, 0, NULL, NULL);
+		if (pa.altq != NULL) {
+			print_altq(&pa.altq, 0, NULL, NULL);
 		}
 		printf("\n");
 	}
