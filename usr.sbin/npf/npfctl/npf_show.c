@@ -46,6 +46,7 @@ __RCSID("$NetBSD: npf_show.c,v 1.33 2023/08/01 20:09:12 andvar Exp $");
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include <inttypes.h>
 #include <errno.h>
 #include <err.h>
@@ -750,7 +751,6 @@ npfctl_config_show(int fd, int argc, char* argv[])
 			default:
 				 errx(EXIT_FAILURE,
 				 "usage: %s show { -q }\n", getprogname());
-
 		}
 	}
 	npf_conf_info_t *ctx = npfctl_show_init();
