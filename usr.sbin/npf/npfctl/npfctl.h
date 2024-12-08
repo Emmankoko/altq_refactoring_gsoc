@@ -279,7 +279,7 @@ void		npfctl_config_init(bool);
 void		npfctl_config_build(void);
 int		npfctl_config_send(int);
 nl_config_t *	npfctl_config_ref(void);
-int		npfctl_config_show(int);
+int		npfctl_config_show(int, int, char **);
 void		npfctl_config_save(nl_config_t *, const char *);
 int		npfctl_ruleset_show(int, const char *);
 

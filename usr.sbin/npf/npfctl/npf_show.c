@@ -509,6 +509,56 @@ npfctl_print_filter(npf_conf_info_t *ctx, nl_rule_t *rl)
 	return seenf;
 }
 
+int
+npfctl_print_altq(int fd)
+{
+	//struct npf_altq_node	*root = NULL, *node;
+	struct npfioc_altq	 pa;
+	u_int32_t		 mnr, nr;
+
+	memset(&pa, 0, sizeof(pa));
+	if (ioctl(fd, IOC_NPF_GET_ALTQS, &pa)) {
+		warn("IOC_NPF_GET_ALTQS");
+		return;
+	}
+	mnr = pa.nr;
+
+	for (nr = 0; nr < mnr; mnr++) {
+		if (ioctl(fd, IOC_NPF_GET_ALTQ, &pa)) {
+			warn("IOC_NPF_GET_ALTQ");
+			return;
+		}
+
+		print_altq(&pa.altq, 0, NULL, NULL);
+		printf("\n");
+	}
+	return 0;
+/*
+//	for (node = root; node != NULL; node = node->next) {
+//		if (node->altq.ifname == NULL)
+//			continue;
+//		if (dotitle) {
+//			npfctl_print_title("ALTQ:");
+//			dotitle = 0;
+//		}
+//	}
+//	print_altq(&node->altq, level, NULL, NULL);
+//
+	if (node->children != NULL) {
+		printf("{");
+		for (child = node->children; child != NULL;
+		    child = child->next) {
+			printf("%s", child->altq.qname);
+			if (child->next != NULL)
+				printf(", ");
+		}
+		printf("}");
+	}
+	printf("\n");
+
+*/
+}
+
 static void
 npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 {
@@ -689,8 +739,20 @@ npfctl_print_params(npf_conf_info_t *ctx, nl_config_t *ncf)
 }
 
 int
-npfctl_config_show(int fd)
+npfctl_config_show(int fd, int argc, char* argv[])
 {
+	int ch;
+	while((ch = getopt(argc, argv, "q")) != -1) {
+		switch (ch) {
+			case 'q':
+				if (altqadded)
+					return npfctl_print_altq(fd);
+			default:
+				 errx(EXIT_FAILURE,
+				 "usage: %s show { -q }\n", getprogname());
+
+		}
+	}
 	npf_conf_info_t *ctx = npfctl_show_init();
 	nl_config_t *ncf;
 	bool loaded;
@@ -747,10 +809,6 @@ npfctl_config_show(int fd)
 		while ((nt = npf_nat_iterate(ncf, &i)) != NULL) {
 			npfctl_print_nat(ctx, nt);
 		}
-		print_linesep(ctx);
-
-		if (altqadded)
-			npfctl_print_altq(fd);
 
 		print_linesep(ctx);
 
