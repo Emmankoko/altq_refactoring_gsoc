@@ -749,6 +749,8 @@ int
 npfctl_config_show(int fd, int argc, char* argv[])
 {
 	int ch;
+	argc--;
+	argv++;
 	while((ch = getopt(argc, argv, "q")) != -1) {
 		switch (ch) {
 			case 'q':
