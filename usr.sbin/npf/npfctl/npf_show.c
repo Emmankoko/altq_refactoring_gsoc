@@ -517,17 +517,23 @@ npfctl_print_altq(int fd)
 	struct npfioc_altq	 pa;
 	u_int32_t		 mnr, nr;
 
+	if (!altqadded) {
+		warn("ALTQ not added in configuration");
+		return -1;
+	}
+
+
 	memset(&pa, 0, sizeof(pa));
 	if (ioctl(fd, IOC_NPF_GET_ALTQS, &pa)) {
 		warn("IOC_NPF_GET_ALTQS");
-		return;
+		return -1;
 	}
 	mnr = pa.nr;
 
 	for (nr = 0; nr < mnr; mnr++) {
 		if (ioctl(fd, IOC_NPF_GET_ALTQ, &pa)) {
 			warn("IOC_NPF_GET_ALTQ");
-			return;
+			return -1;
 		}
 
 		print_altq(&pa.altq, 0, NULL, NULL);
@@ -746,13 +752,19 @@ npfctl_config_show(int fd, int argc, char* argv[])
 	while((ch = getopt(argc, argv, "q")) != -1) {
 		switch (ch) {
 			case 'q':
-				if (altqadded)
-					return npfctl_print_altq(fd);
+				return npfctl_print_altq(fd);
 			default:
 				 errx(EXIT_FAILURE,
 				 "usage: %s show { -q }\n", getprogname());
 		}
+		return -1;
 	}
+	return npfctl_config_print(fd);
+}
+
+int
+npfctl_config_print(int fd)
+{
 	npf_conf_info_t *ctx = npfctl_show_init();
 	nl_config_t *ncf;
 	bool loaded;
