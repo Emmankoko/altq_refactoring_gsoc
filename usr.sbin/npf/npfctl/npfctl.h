@@ -331,7 +331,7 @@ u_int32_t	 qname_to_qid(const char *);
 struct npf_altq *npfaltq_lookup(const char *ifname);
 char		*rate2str(double);
 int npf_rule_qnames_exists(const char *);
-void npfctl_print_altq(int);
+int npfctl_print_altq(int);
 void print_altq(const struct npf_altq *, unsigned, struct node_queue_bw *,
 	struct node_queue_opt *);
 void print_queue(const struct npf_altq *, unsigned, struct node_queue_bw *,
