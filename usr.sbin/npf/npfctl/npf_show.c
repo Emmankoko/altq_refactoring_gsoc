@@ -517,11 +517,11 @@ npfctl_print_altq(int fd)
 	struct npfioc_altq	 pa;
 	u_int32_t		 mnr, nr;
 
-	if (!altqadded) {
+/*	if (!altqadded) {
 		warn("ALTQ not added in configuration");
 		return -1;
 	}
-
+*/
 
 	memset(&pa, 0, sizeof(pa));
 	if (ioctl(fd, IOC_NPF_GET_ALTQS, &pa)) {
