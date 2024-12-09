@@ -531,6 +531,7 @@ npfctl_print_altq(int fd)
 	mnr = pa.nr;
 
 	for (nr = 0; nr < mnr; mnr++) {
+		pa.nr = nr;
 		if (ioctl(fd, IOC_NPF_GET_ALTQ, &pa)) {
 			warn("IOC_NPF_GET_ALTQ");
 			return -1;
