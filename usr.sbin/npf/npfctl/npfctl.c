@@ -401,20 +401,18 @@ npfctl_config_flush(int fd, int argc, char* argv[])
 	int ch;
 	argc--;
 	argv++;
-	while((ch = getopt(argc, argv, "fq")) != -1) {
+	while((ch = getopt(argc, argv, "q")) != -1) {
 		switch(ch) {
-			case 'f':
-				return npf_config_flush(fd);
 			case 'q':
 				return npf_altq_destroy(fd);
 			default:
 				errx(EXIT_FAILURE,
-					"Usage: %s flush { -f | -q }\n",
+					"Usage: %s flush -q }\n",
 					getprogname());
 		}
 		return -1;
 	}
-	return 0;
+	return npf_config_flush(fd);
 }
 
 static void
