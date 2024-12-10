@@ -281,7 +281,6 @@ int		npfctl_config_send(int);
 nl_config_t *	npfctl_config_ref(void);
 int		npfctl_config_show(int, int, char **);
 int npfctl_config_flush(int, int, char **);
-int npf_config_flush(int);
 int npfctl_config_print(int);
 void		npfctl_config_save(nl_config_t *, const char *);
 int		npfctl_ruleset_show(int, const char *);
