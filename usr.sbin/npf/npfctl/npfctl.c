@@ -396,7 +396,7 @@ npfctl_open_dev(const char *path)
 }
 
 int
-npfctl_config_flush(fd, int argc, char* argv[])
+npfctl_config_flush(int fd, int argc, char* argv[])
 {
 	int ch;
 	argc--;
