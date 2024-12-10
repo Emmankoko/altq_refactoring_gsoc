@@ -103,8 +103,12 @@ npf_altq_destroy(void)
 	if (npf_begin_altq() == 0)
 		npf_commit_altq();
 
-	pool_destroy(&npf_altq_pl);
-	npf_altq_pl = {0};
+	if (npf_altq_loaded) {
+		pool_destroy(&npf_altq_pl);
+		npf_altq_loaded = 0;
+	}
+
+
 	return 0;
 }
 
