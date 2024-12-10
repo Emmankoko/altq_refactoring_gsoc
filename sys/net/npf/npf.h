@@ -350,7 +350,7 @@ struct npfioc_qstats {
 #define IOC_NPF_GET_QSTATS  _IOWR('N', 115, struct npfioc_qstats)
 #define IOC_NPF_GET_ALTQ	_IOWR('N', 116, struct npfioc_altq)
 #define IOC_NPF_BEGIN_ALTQ  _IO('N', 117)
-//#define IOC_NPF_DESTROY_ALTQ	_IO('N', 117)
+#define IOC_NPF_DESTROY_ALTQ	_IO('N', 118)
 
 /*
  * NPF error report.
