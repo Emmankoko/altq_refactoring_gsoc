@@ -140,7 +140,7 @@ extern int npf_get_qstats(void *);
 extern int npf_altq_start(void);
 extern int npf_enable_altq(struct npf_altq *);
 extern void npf_altq_init(void);
-extern void npf_altq_destroy(void);
+extern int npf_altq_destroy(void);
 extern int npf_begin_altq(void);
 extern int npf_commit_altq(void);
 extern int npf_add_altq(void *);

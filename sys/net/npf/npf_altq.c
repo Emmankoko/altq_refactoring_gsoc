@@ -95,7 +95,7 @@ npf_altq_init(void)
 }
 
 /* disable, destroy and stop altq routine when packet filtering disabled */
-void
+int
 npf_altq_destroy(void)
 {
 	//u_int32_t		 ticket;
@@ -104,6 +104,7 @@ npf_altq_destroy(void)
 		npf_commit_altq();
 
 	pool_destroy(&npf_altq_pl);
+	return 0;
 }
 
 void
