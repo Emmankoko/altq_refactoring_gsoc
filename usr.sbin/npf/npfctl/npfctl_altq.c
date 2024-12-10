@@ -202,16 +202,15 @@ npfctl_stop_altq(int fd)
 			err(1, "IOC_NPF_ALTQ_STOP");
 }
 
-/*
-
-void
-npfctl_altq_destroy(int fd)
+int
+npf_altq_destroy(int fd)
 {
 	if (!(altqsupport & (ioctl(fd, IOC_NPF_DESTROY_ALTQ) != -1)))
 		if (errno != ENOENT)
 			err(1, "IOC_NPF_DESTROY_ALTQ");
+	return 0;
 }
-*/
+
 
 int
 expand_altq(struct npf_altq *a, const char *ifname,

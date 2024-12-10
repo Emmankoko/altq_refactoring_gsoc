@@ -280,6 +280,8 @@ void		npfctl_config_build(void);
 int		npfctl_config_send(int);
 nl_config_t *	npfctl_config_ref(void);
 int		npfctl_config_show(int, int, char **);
+int npfctl_config_flush(int, int, char **);
+int npf_config_flush(int);
 int npfctl_config_print(int);
 void		npfctl_config_save(nl_config_t *, const char *);
 int		npfctl_ruleset_show(int, const char *);
@@ -340,6 +342,7 @@ void print_queue(const struct npf_altq *, unsigned, struct node_queue_bw *,
 int npfctl_show_altq(int);
 void npfctl_stop_altq(int);
 void npfctl_start_altq(int);
+int  npf_altq_destroy(int);
 
 extern bool npf_altq_running;
 extern int altqattached;

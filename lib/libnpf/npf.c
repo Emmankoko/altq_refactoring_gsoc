@@ -473,7 +473,6 @@ void
 npf_config_destroy(nl_config_t *ncf)
 {
 	nvlist_destroy(ncf->ncf_dict);
-	//	npf_altq_destroy();
 	free(ncf);
 }
 

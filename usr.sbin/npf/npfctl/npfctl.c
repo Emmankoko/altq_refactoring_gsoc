@@ -395,6 +395,28 @@ npfctl_open_dev(const char *path)
 	return fd;
 }
 
+int
+npfctl_config_flush(fd, int argc, char* argv[])
+{
+	int ch;
+	argc--;
+	argv++;
+	while((ch = getopt(argc, argv, "fq")) != -1) {
+		switch(ch) {
+			case 'f':
+				return npf_config_flush(fd);
+			case 'q':
+				return npf_altq_destroy(fd);
+			default:
+				errx(EXIT_FAILURE,
+					"Usage: %s flush { -f | -q }\n",
+					getprogname());
+		}
+		return -1;
+	}
+	return 0;
+}
+
 static void
 npfctl_debug(int argc, char **argv)
 {
@@ -512,8 +534,8 @@ npfctl(int action, int argc, char **argv)
 		fun = "npfctl_config_show";
 		break;
 	case NPFCTL_FLUSH:
-		ret = npf_config_flush(fd);
-		fun = "npf_config_flush";
+		ret = npfctl_config_flush(fd, argc, argv);
+		fun = "npfctl_config_flush";
 		break;
 	case NPFCTL_TABLE:
 		if ((argc -= 2) < 2) {
