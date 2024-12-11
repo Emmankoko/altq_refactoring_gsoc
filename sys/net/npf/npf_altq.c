@@ -164,7 +164,7 @@ npf_commit_altq(void)
 		if (altq->qname[0] == 0) {
 			/* attach the discipline */
 			error = altq_npfattach(altq);
-			if (error == 0 && npf_altq_running)
+			if (error == 0 && !npf_altq_running)
 				error = npf_enable_altq(altq);
 			if (error != 0) {
 				splx(s);

@@ -309,6 +309,8 @@ cbq_remove_altq(struct npf_altq *a)
 	/* deallocate cbq_state_t */
 	free(cbqp, M_DEVBUF);
 
+	printf("altq removed..\n");
+
 	return (0);
 }
 
@@ -481,7 +483,7 @@ cbq_remove_queue(struct npf_altq *a)
 				cbqp->ifnp.default_ = NULL;
 			break;
 		}
-
+	printf("cbq queue removed...\n");
 	return (0);
 }
 
