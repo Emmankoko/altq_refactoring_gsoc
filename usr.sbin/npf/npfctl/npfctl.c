@@ -538,7 +538,7 @@ npfctl(int action, int argc, char **argv)
 		fun = "npfctl_config_show";
 		break;
 	case NPFCTL_FLUSH:
-		npf_config_flush(fd);
+		ret = npf_config_flush(fd);
 		//ret = npfctl_config_flush(fd, argc, argv);
 		fun = "npfctl_config_flush";
 		break;
