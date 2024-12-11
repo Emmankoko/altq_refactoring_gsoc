@@ -85,7 +85,6 @@ u_int16_t npftagname2tag(struct npf_tags *, char *);
 void
 npf_altq_init(void)
 {
-
 	pool_init(&npf_altq_pl, sizeof(struct npf_altq), 0, 0, 0, "npfaltqpl",
 	    &pool_allocator_nointr, IPL_NONE);
 	TAILQ_INIT(&npf_altqs[0]);
@@ -103,11 +102,10 @@ npf_altq_destroy(void)
 	if (npf_begin_altq() == 0)
 		npf_commit_altq();
 
-/*	if (npf_altq_loaded) {
+	if (npf_altq_loaded) {
 		pool_destroy(&npf_altq_pl);
 		npf_altq_loaded = 0;
 	}
-*/
 	return 0;
 }
 
@@ -260,6 +258,9 @@ npf_add_altq(void *data)
 		error = EBUSY;
 		return error;
 	}
+	if (!npf_altq_loaded)
+		npf_altq_init();
+
 	altq = pool_get(&npf_altq_pl, PR_NOWAIT);
 	if (altq == NULL) {
 		error = ENOMEM;

@@ -250,11 +250,14 @@ npfctl_switch(void *data)
 		error = npf_pfil_register(false);
 		/* initialize queuing*/
 #ifdef ALTQ
-		if (!npf_altq_running)
-			npf_altq_init();
+		if (!npf_altq_running && npf_altq_loaded)
+			error = npf_altq_start();
 #endif /* ALTQ */
-
 	} else {
+#ifdef ALTQ
+		if (npf_altq_running)
+			error = npf_stop_altq();
+#endif /* ALTQ */
 		/* Disable: remove pfil hooks. */
 		npf_pfil_unregister(false);
 		error = 0;
@@ -288,10 +291,10 @@ npf_dev_ioctl(dev_t dev, u_long cmd, void *data, int flag, lwp_t *l)
 		return npfctl_table(npf, data);
 	case IOC_NPF_STATS:
 		return npf_stats_export(npf, data);
-	case IOC_NPF_ALTQ_START:
-		return npf_altq_start();
-	case IOC_NPF_ALTQ_STOP:
-		return npf_stop_altq();
+//	case IOC_NPF_ALTQ_START:
+//		return npf_altq_start();
+//	case IOC_NPF_ALTQ_STOP:
+//		return npf_stop_altq();
 	case IOC_NPF_GET_ALTQS:
 		return npf_get_altqs(data);
 	case IOC_NPF_GET_ALTQ:
