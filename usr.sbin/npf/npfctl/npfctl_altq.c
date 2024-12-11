@@ -178,16 +178,16 @@ npfctl_eval_bw(struct node_queue_bw * bw, char * bw_spec)
 	return 0;
 }
 
-
+/*
 void
 npfctl_start_altq(int fd)
 {
 	altqsupport = npfctl_test_altqsupport(fd);
 
-/*	if (altqsupport)
+	if (altqsupport)
 		if (check_commit_altq() != 0)
 			fprintf(stderr,"errors in altq config");
-*/
+
 
 	if (!(altqsupport & (ioctl(fd, IOC_NPF_ALTQ_START) != -1)))
 		if (errno != EEXIST)
@@ -202,6 +202,7 @@ npfctl_stop_altq(int fd)
 			err(1, "IOC_NPF_ALTQ_STOP");
 }
 
+*/
 int
 npf_altq_destroy(int fd)
 {
