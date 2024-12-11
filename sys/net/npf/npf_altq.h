@@ -131,7 +131,7 @@ struct npf_tagname {
 
 TAILQ_HEAD(npf_altqqueue, npf_altq);
 
-extern int altqloaded;
+extern int npf_altq_loaded;
 extern int altqattached;
 extern bool npf_altq_running;
 
