@@ -121,6 +121,10 @@ npf_begin_altq(void)
 	struct npf_altq	*altq;
 	int		 error = 0;
 
+	/* initialize all queueing components on the first attempt*/
+	if (!npf_altq_loaded)
+		npf_altq_init();
+
 	/* Purge the old altq list */
 	while ((altq = TAILQ_FIRST(npf_altqs_inactive)) != NULL) {
 		TAILQ_REMOVE(npf_altqs_inactive, altq, entries);
@@ -258,8 +262,6 @@ npf_add_altq(void *data)
 		error = EBUSY;
 		return error;
 	}
-	if (!npf_altq_loaded)
-		npf_altq_init();
 
 	altq = pool_get(&npf_altq_pl, PR_NOWAIT);
 	if (altq == NULL) {
