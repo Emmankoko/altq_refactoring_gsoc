@@ -211,8 +211,6 @@ npf_altq_start(void)
                 break;
         }
     }
-    if (error == 0)
-        npf_altq_running = true;
     //DPFPRINTF(PF_DEBUG_MISC, ("altq: started\n"));
 	return error;
 }
@@ -235,6 +233,8 @@ npf_enable_altq(struct npf_altq *altq)
 		error = tbr_set(&ifp->if_snd, &tb);
 		splx(s);
 	}
+	if (error == 0)
+		npf_altq_running = true;
 
 	return (error);
 }
