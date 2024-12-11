@@ -382,6 +382,9 @@ npf_disable_altq(struct npf_altq *altq)
 		splx(s);
 	}
 
+	if (error == 0)
+		npf_altq_running = 0;
+
 	return (error);
 }
 
@@ -399,8 +402,6 @@ npf_stop_altq(void)
 				break;
 		}
 	}
-	if (error == 0)
-		npf_altq_running = 0;
 	//DPFPRINTF(PF_DEBUG_MISC, ("altq: stopped\n"));
 	return error;
 }
