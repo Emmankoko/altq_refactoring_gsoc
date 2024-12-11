@@ -399,20 +399,22 @@ int
 npfctl_config_flush(int fd, int argc, char* argv[])
 {
 	int ch;
+	int error;
 	argc--;
 	argv++;
-	while((ch = getopt(argc, argv, "q")) != -1) {
+	while((ch = getopt(argc, argv, "fq")) != -1) {
 		switch(ch) {
 			case 'q':
-				return npf_altq_destroy(fd);
+				error = npf_altq_destroy(fd);
+			case 'f':
+				error = npf_config_flush(fd);
 			default:
 				errx(EXIT_FAILURE,
 					"Usage: %s flush -q }\n",
 					getprogname());
 		}
-		return -1;
 	}
-	return npf_config_flush(fd);
+	return error;
 }
 
 static void
