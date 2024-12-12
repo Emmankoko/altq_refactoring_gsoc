@@ -121,10 +121,6 @@ npf_begin_altq(void)
 	struct npf_altq	*altq;
 	int		 error = 0;
 
-	/* initialize all queueing components on the first attempt*/
-	if (!npf_altq_loaded)
-		npf_altq_init();
-
 	/* Purge the old altq list */
 	while ((altq = TAILQ_FIRST(npf_altqs_inactive)) != NULL) {
 		TAILQ_REMOVE(npf_altqs_inactive, altq, entries);
