@@ -372,10 +372,9 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 				goto err;
 			}
 			printf("the queues are found...\n");
+			if (!altqattached)
+				altqattached = 1;
 		}
-
-		if (!altqattached)
-			altqattached = 1;
 	}
 #endif
 
@@ -619,7 +618,6 @@ npfctl_load(npf_t *npf, const nvlist_t *req, nvlist_t *resp)
 		goto fail;
 	}
 
-/*
 #ifdef ALTQ
 	 TODO: attach quues here
 	if (altqattached) {
@@ -629,8 +627,8 @@ npfctl_load(npf_t *npf, const nvlist_t *req, nvlist_t *resp)
 		}
 	}
 
-#endif
-*/
+#endif /* ALTQ */
+
 
 	error = npf_mk_connlist(npf, req, resp, nc, &conndb);
 	if (error) {
