@@ -628,9 +628,9 @@ npfctl_load(npf_t *npf, const nvlist_t *req, nvlist_t *resp)
 			goto fail;
 		}
 	}
-*/
 
-#endif /*ALTQ */
+#endif
+*/
 
 	error = npf_mk_connlist(npf, req, resp, nc, &conndb);
 	if (error) {
