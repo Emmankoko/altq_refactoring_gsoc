@@ -73,7 +73,6 @@ static int	eval_npfqueue_hfsc(struct npf_altq *);
 static int	check_commit_hfsc(struct npf_altq *);
 static int	print_hfsc_opts(const struct npf_altq *,
 		    const struct node_queue_opt *);
-int check_commit_altq(void);
 
 static void		 gsc_add_sc(struct gen_sc *, struct service_curve *);
 static int		 is_gsc_under_sc(struct gen_sc *,
@@ -206,6 +205,8 @@ npfctl_stop_altq(int fd)
 int
 npf_altq_destroy(int fd)
 {
+	altqsupport = npfctl_test_altqsupport(fd);
+
 	if (!(altqsupport & (ioctl(fd, IOC_NPF_DESTROY_ALTQ) != -1)))
 		if (errno != ENOENT)
 			err(1, "IOC_NPF_DESTROY_ALTQ");
