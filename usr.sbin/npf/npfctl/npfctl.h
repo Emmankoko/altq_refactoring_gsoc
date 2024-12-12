@@ -337,6 +337,7 @@ void print_altq(const struct npf_altq *, unsigned, struct node_queue_bw *,
 	struct node_queue_opt *);
 void print_queue(const struct npf_altq *, unsigned, struct node_queue_bw *,
     int , struct node_queue_opt *);
+int check_commit_altq(void);
 
 int npfctl_show_altq(int);
 void npfctl_stop_altq(int);
