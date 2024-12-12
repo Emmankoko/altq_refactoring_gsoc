@@ -619,7 +619,7 @@ npfctl_load(npf_t *npf, const nvlist_t *req, nvlist_t *resp)
 	}
 
 #ifdef ALTQ
-	 TODO: attach quues here
+	 /*TODO: attach quues here */
 	if (altqattached) {
 		error = npf_commit_altq();
 		if (error) {
