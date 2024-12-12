@@ -597,6 +597,7 @@ npfctl(int action, int argc, char **argv)
 		break;
 	}
 	if (ret) {
+		printf("%d\n",ret);
 		err(EXIT_FAILURE, "%s", fun);
 	}
 	if (fd) {
