@@ -403,12 +403,14 @@ npfctl_config_flush(int fd, int argc, char* argv[])
 	int error = 0;
 	argc--;
 	argv++;
-	while((ch = getopt(argc, argv, "fq")) != -1) {
+	while((ch = getopt(argc, argv, "q")) != -1) {
 		switch(ch) {
 			case 'q':
 				return npf_altq_destroy(fd);
-			case 'f':
-				return npf_config_flush(fd);
+//				break;
+//			case 'f':
+//				error = npf_config_flush(fd);
+//				break;
 			default:
 				errx(EXIT_FAILURE,
 					"Usage: %s flush -q }\n",

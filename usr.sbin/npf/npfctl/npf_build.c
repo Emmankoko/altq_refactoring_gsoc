@@ -721,6 +721,10 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 
 	/*ensure first queue exist */
 	if (queue.qname != NULL ) {
+
+		/* ensure altq config obeys best practices */
+		if (check_commit_altq() != 0)
+			ERRX("error in altq config");
 		/*	ensure the reference is queue is defined */
 		if (npf_rule_qnames_exists(queue.qname))
 			if (npf_rule_setqueue(rl, queue.qname))
