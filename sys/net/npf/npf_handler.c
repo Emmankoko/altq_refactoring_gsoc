@@ -341,7 +341,6 @@ out:
 	 * ICMP destination unreachable.
 	 */
 	if (mi.mi_retfl && npf_return_block(&npc, mi.mi_retfl)) {
-		printf("returning RST...... return flag is %d\n", (int)mi.mi_retfl);
 		*mp = NULL;
 	}
 
@@ -350,7 +349,6 @@ out:
 	}
 
 	if (*mp) {
-		printf("silently dropping...... return flag is %d\n", (int)mi.mi_retfl);
 		/* Free the mbuf chain. */
 		m_freem(*mp);
 		*mp = NULL;
