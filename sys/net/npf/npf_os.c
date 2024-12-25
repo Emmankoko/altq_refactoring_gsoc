@@ -84,7 +84,7 @@ MODULE(MODULE_CLASS_MISC, npf, "bpf");
 MODULE(MODULE_CLASS_DRIVER, npf, "bpf");
 #endif
 
-#define	NPF_IOCTL_DATA_LIMIT	(4 * 1024 * 1024)
+#define	NPF_IOCTL_DATA_LIMIT	(5 * 1024 * 1024)
 extern bool npf_altq_running;
 
 static int	npf_pfil_register(bool);
@@ -322,7 +322,7 @@ npf_dev_ioctl(dev_t dev, u_long cmd, void *data, int flag, lwp_t *l)
 		return EINVAL;
 	}
 
-	printf("data size is ..%d", (int)sizeof(data));
+	printf("data size is ..%d\n", (int)sizeof(data));
 	error = nvlist_copyin(data, &req, NPF_IOCTL_DATA_LIMIT);
 	if (__predict_false(error)) {
 #ifdef __NetBSD__
