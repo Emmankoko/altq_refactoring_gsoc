@@ -322,6 +322,7 @@ npf_dev_ioctl(dev_t dev, u_long cmd, void *data, int flag, lwp_t *l)
 		return EINVAL;
 	}
 
+	printf("data size is ..%d", int(sizeof(data)));
 	error = nvlist_copyin(data, &req, NPF_IOCTL_DATA_LIMIT);
 	if (__predict_false(error)) {
 #ifdef __NetBSD__
