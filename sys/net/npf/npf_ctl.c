@@ -210,6 +210,7 @@ npf_mk_tables(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc)
 	if (nvlist_exists_nvlist_array(req, "tables")) {
 		tables = nvlist_get_nvlist_array(req, "tables", &nitems);
 		if (nitems > NPF_MAX_TABLES) {
+			printf("nitem is ..%d", (int)nitems);
 			NPF_ERR_DEBUG(resp);
 			return E2BIG;
 		}
