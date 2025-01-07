@@ -84,7 +84,7 @@ MODULE(MODULE_CLASS_MISC, npf, "bpf");
 MODULE(MODULE_CLASS_DRIVER, npf, "bpf");
 #endif
 
-#define	NPF_IOCTL_DATA_LIMIT	(4 * 1024 * 1024)
+#define	NPF_IOCTL_DATA_LIMIT	(5 * 1024 * 1024)
 
 static int	npf_pfil_register(bool);
 static void	npf_pfil_unregister(bool);
