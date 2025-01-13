@@ -159,10 +159,12 @@ pf_find_anchor(const char *path)
 {
 	struct pf_anchor	*key, *found;
 
+	printf("%s\n", path);
 	key = (struct pf_anchor *)rs_malloc(sizeof(*key));
 	memset(key, 0, sizeof(*key));
 	strlcpy(key->path, path, sizeof(key->path));
 	found = RB_FIND(pf_anchor_global, &pf_anchors, key);
+	printf("key->path is .... %s\n", path);
 	rs_free(key);
 	return (found);
 }
@@ -176,6 +178,7 @@ pf_find_ruleset(const char *path)
 		path++;
 	if (!*path)
 		return (&pf_main_ruleset);
+	printf("%s\n", path);
 	anchor = pf_find_anchor(path);
 	if (anchor == NULL)
 		return (NULL);
@@ -191,10 +194,13 @@ pf_find_or_create_ruleset(const char *path)
 	struct pf_anchor	*anchor = NULL /* XXX gcc */;
 	struct pf_anchor	*dup, *parent = NULL;
 
+	printf("%s\n", path);
+
 	if (path[0] == 0)
 		return (&pf_main_ruleset);
 	while (*path == '/')
 		path++;
+	printf("%s\n", path);
 	ruleset = pf_find_ruleset(path);
 	if (ruleset != NULL)
 		return (ruleset);
@@ -310,6 +316,8 @@ pf_anchor_setup(struct pf_rule *r, const struct pf_ruleset *s,
 {
 	char			*p, *path;
 	struct pf_ruleset	*ruleset;
+
+	printf("%s\n", name);
 
 	r->anchor = NULL;
 	r->anchor_relative = 0;
