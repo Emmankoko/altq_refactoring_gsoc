@@ -204,6 +204,7 @@ pf_find_or_create_ruleset(const char *path)
 	ruleset = pf_find_ruleset(path);
 	if (ruleset != NULL)
 		return (ruleset);
+	printf("ruleset not found...\n");
 	p = (char *)rs_malloc(MAXPATHLEN);
 	bzero(p, MAXPATHLEN);
 	strlcpy(p, path, MAXPATHLEN);
