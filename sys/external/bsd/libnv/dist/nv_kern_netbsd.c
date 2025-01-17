@@ -61,7 +61,7 @@ extern void dealloc(void *, unsigned int);
 #ifndef _STANDALONE
 #ifdef _KERNEL
 
-void 
+void
 nv_free(void *buf)
 {
 	if (!buf) {
@@ -149,6 +149,7 @@ nvlist_xfer_ioctl(int fd, unsigned long cmd, const nvlist_t *nvl,
 
 	memset(&nref, 0, sizeof(nvlist_ref_t));
 
+	printf("serializing the name value list...\n");
 	if (nvl) {
 		/*
 		 * Sending: serialize the name-value list.
@@ -162,6 +163,7 @@ nvlist_xfer_ioctl(int fd, unsigned long cmd, const nvlist_t *nvl,
 		nref.flags = nvlist_flags(nvl);
 	}
 
+	printf("ioctl: sending serializing the name value list...\n");
 	/*
 	 * Exchange the nvlist reference data.
 	 */
@@ -170,7 +172,9 @@ nvlist_xfer_ioctl(int fd, unsigned long cmd, const nvlist_t *nvl,
 		return -1;
 	}
 	free(buf);
+	printf("ioctl done: sending serializing the name value list...\n");
 
+	printf("ioctl: unpacking the name value list...\n");
 	if (nvlp) {
 		nvlist_t *retnvl;
 
@@ -190,6 +194,7 @@ nvlist_xfer_ioctl(int fd, unsigned long cmd, const nvlist_t *nvl,
 			return -1;
 		}
 		*nvlp = retnvl;
+		printf("ioctl : done unpacking..\n");
 	}
 	return 0;
 }
@@ -249,7 +254,7 @@ nv_malloc(size_t len)
 	return alloc(len);
 }
 
-void 
+void
 nv_free(void *buf)
 {
 	if (buf == NULL)
