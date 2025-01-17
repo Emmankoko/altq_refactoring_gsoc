@@ -15,7 +15,7 @@ RUMPTOP=${.CURDIR}/../../sys/rump
 
 LDADD+=	${RUMPDEVLDADD} ${RUMPFSLDADD} ${RUMPKERNLDADD} ${RUMPNETLDADD}
 LDADD+=	-lrumpdev -lrumpnet -lrumpvfs -lrumpvfs_nofifofs
-LDADD+=	-lrump -lrumpuser -lpthread -lrumpnet_altq
+LDADD+=	-lrump -lrumpuser -lpthread
 
 .if ${RUMP_SANITIZE:Uno} != "no"
 LDADD+=	-fsanitize=${RUMP_SANITIZE}
