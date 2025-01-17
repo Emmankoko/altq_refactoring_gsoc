@@ -30,7 +30,7 @@ SRCS+=	npf_ext_log.c npf_ext_normalize.c npf_ext_rndblock.c
 
 SRCS+=	npf_component.c
 
-LDADD+= lrumpnet_altq
+LDADD+= -lrumpnet_altq
 
 .include <bsd.own.mk>
 
