@@ -358,10 +358,13 @@ npf_config_submit(nl_config_t *ncf, int fd, npf_error_t *errinfo)
 	/* Ensure the config is built. */
 	(void)npf_config_build(ncf);
 
+	printf("about to load into kernel...\n");
+
 	error = _npf_xfer_fd(fd, IOC_NPF_LOAD, ncf->ncf_dict, &resp);
 	if (error) {
 		return _npf_init_error(errno, errinfo);
 	}
+	printf("finish loading into kernel..\n");
 	error = _npf_extract_error(resp, errinfo);
 	nvlist_destroy(resp);
 	return error;
