@@ -11,6 +11,8 @@ SRCS+=	altq_subr.c altq_conf.c
 SRCS+=	altq_cbq.c altq_rmclass.c
 SRCS+=	altq_component.c
 
+CPPFLAGS+=	-DNNPF
+
 .include <bsd.init.mk>
 
 .include <bsd.lib.mk>
