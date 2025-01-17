@@ -5,7 +5,7 @@
 
 MOUNTNAME=	lfs
 
-LDADD+=		-lrumpfs_ffs
+LDADD+=		-lrumpfs_ffs -lrumpnet_altq
 DPADD+=		${LIBRUMPFS_FFS}
 
 ISRUMP=		# don't deny it
