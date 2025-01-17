@@ -58,7 +58,7 @@ __KERNEL_RCSID(0, "$NetBSD: altq_priq.c,v 1.28 2021/09/21 14:30:15 christos Exp 
 
 //#if NNPF > 0
 #include <net/npf/npf_altq.h>
-#endif
+//#endif
 #include <altq/altq.h>
 #include <altq/altq_conf.h>
 #include <altq/altq_priq.h>
