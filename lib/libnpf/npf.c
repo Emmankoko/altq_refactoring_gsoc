@@ -256,7 +256,6 @@ _npf_xfer_fd(int fd, unsigned long cmd, nvlist_t *req, nvlist_t **resp)
 	struct stat st;
 	int kernver;
 
-	printf("set npf version...\n");
 	/*
 	 * Set the NPF version and operation.
 	 */
@@ -264,7 +263,6 @@ _npf_xfer_fd(int fd, unsigned long cmd, nvlist_t *req, nvlist_t **resp)
 		nvlist_add_number(req, "version", NPF_VERSION);
 	}
 	nvlist_add_number(req, "operation", cmd);
-	printf("done setting npf version...\n");
 
 	/*
 	 * Determine the type of file descriptor:
@@ -295,11 +293,9 @@ _npf_xfer_fd(int fd, unsigned long cmd, nvlist_t *req, nvlist_t **resp)
 			errno = EPROGMISMATCH;
 			goto err;
 		}
-		printf("setting transfering nvlist for req and res...\n");
 		if (nvlist_xfer_ioctl(fd, cmd, req, resp) == -1) {
 			goto err;
 		}
-		printf("done setting transfering nvlist for req and res...\n");
 		break;
 #else
 		(void)kernver;
@@ -362,13 +358,10 @@ npf_config_submit(nl_config_t *ncf, int fd, npf_error_t *errinfo)
 	/* Ensure the config is built. */
 	(void)npf_config_build(ncf);
 
-	printf("about to load into kernel...\n");
-
 	error = _npf_xfer_fd(fd, IOC_NPF_LOAD, ncf->ncf_dict, &resp);
 	if (error) {
 		return _npf_init_error(errno, errinfo);
 	}
-	printf("finish loading into kernel..\n");
 	error = _npf_extract_error(resp, errinfo);
 	nvlist_destroy(resp);
 	return error;
