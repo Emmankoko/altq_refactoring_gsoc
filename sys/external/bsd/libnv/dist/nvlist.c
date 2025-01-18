@@ -926,7 +926,7 @@ nvlist_xpack(const nvlist_t *nvl, int64_t *fdidxp, size_t *sizep)
 	while (nvp != NULL) {
 
 		counter++;
-		printf("serializing each data...number of loops is %llu\n", counter);
+		printf("serializing each data...number of loops is %u\n", counter);
 		NVPAIR_ASSERT(nvp);
 
 		nvpair_init_datasize(nvp);
