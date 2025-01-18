@@ -923,6 +923,8 @@ nvlist_xpack(const nvlist_t *nvl, int64_t *fdidxp, size_t *sizep)
 
 	nvp = nvlist_first_nvpair(nvl);
 	while (nvp != NULL) {
+
+		printf("serializing each data...\n");
 		NVPAIR_ASSERT(nvp);
 
 		nvpair_init_datasize(nvp);
