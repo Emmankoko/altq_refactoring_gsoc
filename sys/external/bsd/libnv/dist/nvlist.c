@@ -903,6 +903,7 @@ nvlist_xpack(const nvlist_t *nvl, int64_t *fdidxp, size_t *sizep)
 	const nvlist_t *tmpnvl;
 	nvpair_t *nvp, *tmpnvp;
 	void *cookie;
+	int counter = 0;
 
 	NVLIST_ASSERT(nvl);
 
@@ -924,7 +925,9 @@ nvlist_xpack(const nvlist_t *nvl, int64_t *fdidxp, size_t *sizep)
 	nvp = nvlist_first_nvpair(nvl);
 	while (nvp != NULL) {
 
+		counter++;
 		printf("serializing each data...\n");
+		printf("number of loops is %d\n", counter);
 		NVPAIR_ASSERT(nvp);
 
 		nvpair_init_datasize(nvp);
