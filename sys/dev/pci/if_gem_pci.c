@@ -153,6 +153,7 @@ gem_pci_attach(device_t parent, device_t self, void *aux)
 	prop_data_t data;
 	uint8_t enaddr[ETHER_ADDR_LEN];
 	bus_space_handle_t	romh;
+/* the buf to read that data here: pointer to a byte integer */
 	uint8_t			*buf;
 	int			dataoff, vpdoff, serdes;
 	int i, got_addr = 0;
@@ -261,6 +262,12 @@ gem_pci_attach(device_t parent, device_t self, void *aux)
 		    (bus_space_subregion(sc->sc_bustag, sc->sc_h1,
 		    GEM_PCI_ROM_OFFSET, GEM_PCI_ROM_SIZE, &romh)) == 0) {
 
+			/*
+			 * the below function seems to read PCI Expansion PROM Header
+			 * the number of count of bytes to read is passed as sizeof buf,
+			 * which is a static 8 bytes (sizeof pointer)(i don't know if that was their true intention)
+			 * is it ideal that data can be read up to 8 bytes from the bus space?
+			 */
 			/* read PCI Expansion PROM Header */
 			bus_space_read_region_1(sc->sc_bustag,
 			    romh, 0, buf, sizeof buf);
