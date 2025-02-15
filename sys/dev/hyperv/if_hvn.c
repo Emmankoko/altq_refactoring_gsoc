@@ -4836,7 +4836,7 @@ hvn_rxeof(struct hvn_rx_ring *rxr, uint8_t *buf, uint32_t len)
 
 			evl = mtod(m, struct ether_vlan_header *);
 			memcpy(evl->evl_dhost, eh.ether_dhost,
-			    ETHER_ADDR_LEN * 2);
+			    ETHER_ADDR_LEN);
 			evl->evl_encap_proto = htons(ETHERTYPE_VLAN);
 			evl->evl_tag = htons(t);
 			evl->evl_proto = eh.ether_type;
