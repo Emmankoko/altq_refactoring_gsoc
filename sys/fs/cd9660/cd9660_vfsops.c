@@ -158,13 +158,9 @@ cd9660_modcmd(modcmd_t cmd, void *arg)
 	switch (cmd) {
 	case MODULE_CMD_INIT:
 		error = vfs_attach(&cd9660_vfsops);
-		if (error != 0)
-			break;
 		break;
 	case MODULE_CMD_FINI:
 		error = vfs_detach(&cd9660_vfsops);
-		if (error != 0)
-			break;
 		break;
 	default:
 		error = ENOTTY;
@@ -242,7 +238,7 @@ cd9660_mountroot(void)
 	return (0);
 }
 
-    
+
 /*
  * VFS Operations.
  *

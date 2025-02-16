@@ -355,13 +355,9 @@ umap_modcmd(modcmd_t cmd, void *arg)
 	switch (cmd) {
 	case MODULE_CMD_INIT:
 		error = vfs_attach(&umapfs_vfsops);
-		if (error != 0)
-			break;
 		break;
 	case MODULE_CMD_FINI:
 		error = vfs_detach(&umapfs_vfsops);
-		if (error != 0)
-			break;
 		break;
 	default:
 		error = ENOTTY;

@@ -139,13 +139,9 @@ mfs_modcmd(modcmd_t cmd, void *arg)
 	switch (cmd) {
 	case MODULE_CMD_INIT:
 		error = vfs_attach(&mfs_vfsops);
-		if (error != 0)
-			break;
 		break;
 	case MODULE_CMD_FINI:
 		error = vfs_detach(&mfs_vfsops);
-		if (error != 0)
-			break;
 		break;
 	default:
 		error = ENOTTY;

@@ -291,13 +291,9 @@ overlay_modcmd(modcmd_t cmd, void *arg)
 	switch (cmd) {
 	case MODULE_CMD_INIT:
 		error = vfs_attach(&overlay_vfsops);
-		if (error != 0)
-			break;
 		break;
 	case MODULE_CMD_FINI:
 		error = vfs_detach(&overlay_vfsops);
-		if (error != 0)
-			break;
 		break;
 	default:
 		error = ENOTTY;
