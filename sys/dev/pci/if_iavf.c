@@ -2518,6 +2518,7 @@ iavf_rxfill(struct iavf_softc *sc, struct iavf_rx_ring *rxr)
 	if (slots == 0)
 		return 0;
 
+	post = 0;
 	error = 0;
 	prod = rxr->rxr_prod;
 
