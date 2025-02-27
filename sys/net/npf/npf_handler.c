@@ -148,9 +148,10 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	npf_conn_t *con;
 	npf_rule_t *rl;
 	npf_rproc_t *rp;
-	int error, decision, flags;
+	int error, decision, flags, id_match;
 	npf_match_info_t mi;
 	bool mff;
+
 
 	KASSERT(ifp != NULL);
 
@@ -239,9 +240,17 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	KASSERT(rp == NULL);
 	rp = npf_rule_getrproc(rl);
 
+	/* check for matching process uid/gid before concluding */
+	id_match = npf_rule_match_rid(rl, &npc, di);
+
 	/* Conclude with the rule and release the lock. */
 	error = npf_rule_conclude(rl, &mi);
 	npf_config_read_exit(npf, slock);
+
+	/* reverse between pass and block conditions */
+	if (id_match != -1 && !id_match) {
+		error = npf_rule_reverse(&npc, &mi, error);
+	}
 
 	if (error) {
 		npf_stats_inc(npf, NPF_STAT_BLOCK_RULESET);
@@ -267,6 +276,7 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	}
 
 pass:
+
 	decision = NPF_DECISION_PASS;
 	KASSERT(error == 0);
 
@@ -312,6 +322,7 @@ out:
 		 * for optimisations (to reduce inspection).
 		 */
 		m_clear_flag(*mp, M_CANFASTFWD);
+
 		return 0;
 	}
 

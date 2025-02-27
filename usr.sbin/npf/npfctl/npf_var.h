@@ -81,6 +81,7 @@ npfvar_t *	npfvar_add_elements(npfvar_t *, npfvar_t *);
 void		npfvar_destroy(npfvar_t *);
 
 char *		npfvar_expand_string(const npfvar_t *);
+uint32_t	npfvar_expand_number(const npfvar_t *);
 size_t		npfvar_get_count(const npfvar_t *);
 int		npfvar_get_type(const npfvar_t *, size_t);
 void *		npfvar_get_data(const npfvar_t *, unsigned, size_t);
