@@ -89,7 +89,8 @@ ieee1394_output(struct ifnet *ifp, struct mbuf *m0, const struct sockaddr *dst,
 	struct mbuf *m;
 	int hdrlen, error = 0;
 	struct mbuf *mcopy = NULL;
-	struct ieee1394_hwaddr *hwdst, baddr;
+	/* baddr, i assume it stands for broadcast address right ? */
+	struct ieee1394_hwaddr *hwdst, baddr;/* NB: baddr is uninitialized */
 	const struct ieee1394_hwaddr *myaddr;
 #ifdef INET
 	struct arphdr *ah;
@@ -128,8 +129,8 @@ ieee1394_output(struct ifnet *ifp, struct mbuf *m0, const struct sockaddr *dst,
 			m_tag_prepend(m0, mtag);
 		}
 		hwdst = (struct ieee1394_hwaddr *)(mtag + 1);
-	} else {
-		hwdst = &baddr;
+	} else { /*for multicast */
+		hwdst = &baddr; /* possible garbage value assigned to hwdst */
 	}
 
 	switch (dst->sa_family) {
@@ -213,7 +214,9 @@ ieee1394_output(struct ifnet *ifp, struct mbuf *m0, const struct sockaddr *dst,
 		hwdst->iha_speed = 0;	/* XXX */
 	} else
 		hdrlen = 0;
-
+	/* for multicast ARP broadcast, hwdst is used here  */
+	/* remember: it points to a possible garbga unitialized broadcast address */
+	/* might lead to innacurate comparisons here */
 	if (hwdst->iha_speed > myaddr->iha_speed)
 		hwdst->iha_speed = myaddr->iha_speed;
 	if (hwdst->iha_maxrec > myaddr->iha_maxrec)
