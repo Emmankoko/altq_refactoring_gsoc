@@ -127,6 +127,7 @@ protoprhdr(void)
 		width, width, "Foreign Address",
 		"State");
 }
+starting...
 
 static void
 protopr0(intptr_t ppcb, u_long rcv_sb_cc, u_long snd_sb_cc,
