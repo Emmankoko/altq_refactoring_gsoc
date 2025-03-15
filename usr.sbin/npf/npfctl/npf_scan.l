@@ -240,6 +240,7 @@ any			return ANY;
 			return IDENTIFIER;
 		}
 
+/* string allocates here into yylval.str" */
 \"[^\"]*\"	{
 			yylval.str = estrndup(yytext + 1, yyleng - 2);
 			return STRING;

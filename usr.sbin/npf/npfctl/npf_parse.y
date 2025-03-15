@@ -75,6 +75,8 @@ yyerror(const char *fmt, ...)
 		fprintf(stderr, " near '%s'", context);
 	}
 	fprintf(stderr, "\n");
+
+	/* see here, yyerror terminates program when called */
 	exit(EXIT_FAILURE);
 }
 
@@ -238,7 +240,10 @@ line
 alg
 	: ALG STRING
 	{
+		/* use of ALG here passing STRING(allocated)
 		npfctl_build_alg($2);
+
+		/* no free after use */
 	}
 	;
 

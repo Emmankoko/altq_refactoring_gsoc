@@ -1088,9 +1088,14 @@ npfctl_ifnet_table(const char *ifname)
 void
 npfctl_build_alg(const char *al_name)
 {
+	/* build_alg function */
 	if (npf_alg_load(npf_conf, al_name) != 0) {
+		/* cannot free before exiting because yyerror uses the al_name memory */
 		yyerror("ALG '%s' is already loaded", al_name);
+		/* cannot free after use as yyerror also terminates by calling exit(EXIT_FAILURE) */
 	}
+
+	/* besides cannot generally free here because no transfer of al_name ownership to this function  */
 }
 
 void
