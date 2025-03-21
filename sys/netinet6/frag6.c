@@ -184,8 +184,11 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	IP6_EXTHDR_GET(ip6f, struct ip6_frag *, m, offset, sizeof(*ip6f));
-	if (ip6f == NULL)
+	if (ip6f == NULL) {
+		printf)"ending reassembly\n");
 		return IPPROTO_DONE;
+	}
+
 
 	dstifp = NULL;
 	/* find the destination interface of the packet. */
@@ -238,6 +241,7 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 		in6_ifstat_inc(dstifp, ifs6_reass_ok);
 		*offp = offset;
 		rtcache_unref(rt, &ro);
+		printf("ending reassembly\n");
 		return ip6f->ip6f_nxt;
 	}
 
@@ -372,6 +376,7 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 	}
 
 	ip6af = kmem_intr_zalloc(sizeof(struct ip6asfrag), KM_NOSLEEP);
+	printf("mallocing\n");
 	if (ip6af == NULL) {
 		goto dropfrag;
 	}
@@ -407,6 +412,7 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 			- ip6af->ip6af_off;
 		if (i > 0) {
 			kmem_intr_free(ip6af, sizeof(struct ip6asfrag));
+			printf("freeing\n");
 			goto dropfrag;
 		}
 	}
@@ -414,6 +420,7 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 		i = (ip6af->ip6af_off + ip6af->ip6af_frglen) - af6->ip6af_off;
 		if (i > 0) {
 			kmem_intr_free(ip6af, sizeof(struct ip6asfrag));
+			printf("freeing\n");
 			goto dropfrag;
 		}
 	}
@@ -459,12 +466,14 @@ insert:
 		m_adj(t->m_next, af6->ip6af_offset);
 		m_remove_pkthdr(t->m_next);
 		kmem_intr_free(af6, sizeof(struct ip6asfrag));
+		printf("freeing\n";)
 		af6 = af6dwn;
 	}
 
 	/* adjust offset to point where the original next header starts */
 	offset = ip6af->ip6af_offset - sizeof(struct ip6_frag);
 	kmem_intr_free(ip6af, sizeof(struct ip6asfrag));
+	printf("freeing\n");
 	next += offset - sizeof(struct ip6_hdr);
 	if ((u_int)next > IPV6_MAXPACKET) {
 		frag6_dropfrag(q6);
@@ -530,6 +539,7 @@ insert:
 	 */
 	*mp = m;
 	*offp = offset;
+	printf("ending reassembly\n");
 	return nxt;
 
  dropfrag:
@@ -539,6 +549,7 @@ insert:
 	m_freem(m);
  done:
 	rtcache_unref(rt, &ro);
+	printf("ending reassembly\n");
 	return IPPROTO_DONE;
 }
 
