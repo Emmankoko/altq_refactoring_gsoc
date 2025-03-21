@@ -466,7 +466,7 @@ insert:
 		m_adj(t->m_next, af6->ip6af_offset);
 		m_remove_pkthdr(t->m_next);
 		kmem_intr_free(af6, sizeof(struct ip6asfrag));
-		printf("freeing\n";)
+		printf("freeing\n");
 		af6 = af6dwn;
 	}
 
