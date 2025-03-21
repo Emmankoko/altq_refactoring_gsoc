@@ -185,7 +185,7 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 	ip6 = mtod(m, struct ip6_hdr *);
 	IP6_EXTHDR_GET(ip6f, struct ip6_frag *, m, offset, sizeof(*ip6f));
 	if (ip6f == NULL) {
-		printf)"ending reassembly\n");
+		printf("ending reassembly\n");
 		return IPPROTO_DONE;
 	}
 
