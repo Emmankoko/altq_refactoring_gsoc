@@ -1789,6 +1789,7 @@ iavf_setup_interrupts(struct iavf_softc *sc)
 	if (sc->sc_ihs == NULL) {
 		IAVF_LOG(sc, LOG_ERR,
 		    "couldn't allocate memory for interrupts\n");
+		// cannot allocate memory for interrupt so let's go to fail block
 		goto fail;
 	}
 
@@ -1870,12 +1871,21 @@ iavf_setup_interrupts(struct iavf_softc *sc)
 fail:
 	if (affinity != NULL)
 		kcpuset_destroy(affinity);
-	for (vector = 0; vector < num; vector++) {
-		if (sc->sc_ihs[vector] == NULL)
-			continue;
-		pci_intr_disestablish(pa->pa_pc, sc->sc_ihs[vector]);
+
+	if (sc->sc_ihs != NULL) {
+		for (vector = 0; vector < num; vector++) {
+			//remember sc->sc_ihs was NULL//
+			// deferecning here == crash
+			// NB : num has already been initialized and doesn't reach here if 0 or less
+			// so defintely this loop will execute
+			// so i suggest :
+			if (sc->sc_ihs[vector] == NULL)
+				continue;
+			pci_intr_disestablish(pa->pa_pc, sc->sc_ihs[vector]);
+		}
+		kmem_free(sc->sc_ihs, sizeof(sc->sc_ihs[0]) * num);
 	}
-	kmem_free(sc->sc_ihs, sizeof(sc->sc_ihs[0]) * num);
+
 	pci_intr_release(pa->pa_pc, sc->sc_ihp, num);
 
 	return -1;
