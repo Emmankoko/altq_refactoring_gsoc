@@ -123,6 +123,7 @@ frag6_init(void)
 static void
 frag6_dropfrag(struct ip6q *q6)
 {
+	printf("freeing q6\n");
 	frag6_remque(q6);
 	frag6_nfrags -= q6->ip6q_nfrag;
 	kmem_intr_free(q6, sizeof(*q6));
