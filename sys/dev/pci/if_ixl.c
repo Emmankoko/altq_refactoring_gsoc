@@ -3538,18 +3538,19 @@ ixl_other_intr(void *xsc)
 {
 	struct ixl_softc *sc = xsc;
 	uint32_t icr, mask, reg;
-	int rv;
+	int rv; // uninitialized rv
 
 	icr = ixl_rd(sc, I40E_PFINT_ICR0);
 	mask = ixl_rd(sc, I40E_PFINT_ICR0_ENA);
 
+	// if this takes false branch
 	if (ISSET(icr, I40E_PFINT_ICR0_ADMINQ_MASK)) {
 		atomic_inc_64(&sc->sc_event_atq.ev_count);
 		ixl_atq_done(sc);
 		ixl_work_add(sc->sc_workq, &sc->sc_arq_task);
 		rv = 1;
 	}
-
+	// if this takes false branch
 	if (ISSET(icr, I40E_PFINT_ICR0_LINK_STAT_CHANGE_MASK)) {
 		if (ISSET(sc->sc_ec.ec_if.if_flags, IFF_DEBUG))
 			device_printf(sc->sc_dev, "link stat changed\n");
@@ -3594,7 +3595,7 @@ ixl_other_intr(void *xsc)
 	ixl_wr(sc, I40E_PFINT_ICR0_ENA, mask);
 	ixl_flush(sc);
 	ixl_enable_other_intr(sc);
-	return rv;
+	return rv; // then we return a garbage value
 }
 
 static void
