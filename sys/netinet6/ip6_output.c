@@ -3144,6 +3144,7 @@ ip6_setpktopt(int optname, u_char *buf, int len, struct ip6_pktopts *opt,
 #endif
 	case IPV6_RTHDR:
 	{
+		/* considering setting routing header option in ipv6 packet */
 		struct ip6_rthdr *rth;
 		int rthlen;
 
@@ -3159,12 +3160,15 @@ ip6_setpktopt(int optname, u_char *buf, int len, struct ip6_pktopts *opt,
 		rthlen = (rth->ip6r_len + 1) << 3;
 		if (len != rthlen)
 			return (EINVAL);
+		/* evaluating the routing header type */
 		switch (rth->ip6r_type) {
 		case IPV6_RTHDR_TYPE_0:
-			/* Dropped, RFC5095. */
+			/* Dropped, RFC5095. */ /* falls through to default */
 		default:
-			return (EINVAL);	/* not supported */
+			return (EINVAL);	/* not supported */ /* returns */
 		}
+
+		/* clearing the previous option is dead code */
 		/* turn off the previous option */
 		ip6_clearpktopts(opt, IPV6_RTHDR);
 		opt->ip6po_rthdr = malloc(rthlen, M_IP6OPT, M_NOWAIT);
