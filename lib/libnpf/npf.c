@@ -736,9 +736,9 @@ npf_rule_setproc(nl_rule_t *rl, const char *name)
 }
 
 int
-npf_rule_setrid(nl_rule_t *rl, rid_t *rid, const char *name)
+npf_rule_setrid(nl_rule_t *rl, rid_t rid, const char *name)
 {
-	uint64_t uid_element[3] = { rid->id[0], rid->id[1], rid->op };
+	uint64_t uid_element[3] = { rid.id[0], rid.id[1], rid.op };
 	nvlist_add_number_array(rl->rule_dict, name, uid_element, 3);
 	return nvlist_error(rl->rule_dict);
 }

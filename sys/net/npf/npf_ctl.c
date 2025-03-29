@@ -380,11 +380,11 @@ npf_mk_singlerule(npf_t *npf, const nvlist_t *req, nvlist_t *resp,
 
 	/* user and group ids filt option if set */
 	if (nvlist_exists_number_array(req, "r_user")) {
-		npf_rule_setuid(req, rl, "r_user");
+		npf_rule_setrid(req, rl, "r_user");
 	}
 
 	if (nvlist_exists_number_array(req, "r_group")) {
-		npf_rule_setgid(req, rl, "r_group");
+		npf_rule_setrid(req, rl, "r_group");
 	}
 
 	*rlret = rl;

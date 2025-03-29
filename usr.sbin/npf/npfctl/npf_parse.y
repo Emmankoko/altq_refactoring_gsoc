@@ -215,8 +215,8 @@ yyerror(const char *fmt, ...)
 	filt_opts_t	filtopts;
 	opt_proto_t	optproto;
 	rule_group_t	rulegroup;
-	rid_t 	*uid;
-	rid_t 	*gid;
+	rid_t 	uid;
+	rid_t 	gid;
 }
 
 %%

@@ -722,41 +722,22 @@ npf_rule_setcode(npf_rule_t *rl, const int type, void *code, size_t size)
 	rl->r_jcode = npf_bpf_compile(code, size);
 }
 
-/* again, use a single rule getid function both uid and gids */
-static rid_t
-npf_rule_getrid(const nvlist_t *req, const char *name)
+void
+npf_rule_setrid(const nvlist_t *req, npf_rule_t *rl, const char *name)
 {
 	size_t nitems;
 	rid_t id;
 	const uint64_t *rid = nvlist_get_number_array(req, name, &nitems);
 	KASSERT(nitems == 3);
 
-	id.id[0] = (uint32_t)rid[0];
-	id.id[1] = (uint32_t)rid[1];
-	id.op = (uint8_t)rid[2];
+	id.id[0] = (uint32_t)r_id[0];
+	id.id[1] = (uint32_t)r_id[1];
+	id.op = (uint8_t)r_id[2];
 
-	return id;
-}
-
-static void
-npf_rule_setrid(const nvlist_t *req, rid_t* rid, const char *name)
-{
-	rid_t id;
-
-	id = npf_rule_getrid(req, name);
-	memcpy(rid, &id, sizeof(*rid));
-}
-
-void
-npf_rule_setuid(const nvlist_t *req, npf_rule_t *rl, const char *name)
-{
-	npf_rule_setrid(req, &rl->uid, name);
-}
-
-void
-npf_rule_setgid(const nvlist_t *req, npf_rule_t *rl, const char *name)
-{
-	npf_rule_setrid(req, &rl->gid, name);
+	if (!strcmp(name, "r_user"))
+		rl->uid = rid;
+	else if (!strcmp(name, "r_group"))
+		rl->gid = rid;
 }
 
 /*
@@ -1015,58 +996,30 @@ npf_rule_reverse(npf_cache_t *npc, npf_match_info_t *mi, int ret)
 	return (ret == 0) ? ENETUNREACH : 0;
 }
 
-/* only perform uid/gid checks when set */
-int
-npf_uid_gid_match(npf_rule_t *rl, npf_cache_t *npc, int dir)
-{
-	int matched;
-	if (rl->uid.op == NPF_OP_NONE && rl->gid.op == NPF_OP_NONE)
-		return -1;
-
-	matched = 0;
-	if (rl->uid.op == NPF_OP_NONE)
-		matched |= npf_rule_match_user(rl, npc, dir);
-	if (rl->gid.op == NPF_OP_NONE)
-		matched |= npf_rule_match_usrgrp(rl, npc, dir);
-
-	return matched;
-}
-
 /*
-* lookup process sockets and match rule ids to socket user id
-* if socket id doesn't match any of rule ids, reverse action
+* lookup process sockets and match rule ids to socket ids
+* check if there's any match
 */
 int
-npf_rule_match_user(npf_rule_t *rl, npf_cache_t *npc, int dir)
+npf_rule_match_rid(npf_rule_t *rl, npf_cache_t *npc, int dir)
 {
-	int error;
-	uid_t sk_uid;
-
+	uint32_t sock_gid, sock_uid;
+	int matched = 0, error = 0;
 	KASSERT(npf_iscached(npc, NPC_IP46));
 	KASSERT(npf_iscached(npc, NPC_LAYER4));
 
-	error = npf_socket_lookup_uid(npc, dir, &sk_uid);
-	if (error == -1) {
-		return ENOTCONN;
+	if (rl->gid.op != NPF_OP_NONE) {
+		if (npf_socket_lookup_rid(npc, kauth_cred_getegid, &sock_gid) == -1)
+			return ENOTCONN;
+		matched |= npf_match_rid(rl->gid, sock_gid);
 	}
 
-	return npf_match_rid(rl->uid, sk_uid);
-}
-
-int
-npf_rule_match_grp(npf_rule_t *rl, npf_cache_t *npc, int dir)
-{
-	uid_t sk_gid;
-	int error;
-
-	KASSERT(npf_iscached(npc, NPC_IP46)); /* assert layer3 cache info*/
-	KASSERT(npf_iscached(npc, NPC_LAYER4)); /* assert layer4 cache info */
-
-	error = npf_socket_lookup_gid(npc, dir, &sk_gid);
-	if (error == -1)
-		return ENOTCONN;
-
-	return npf_match_rid(rl->gid, sk_gid);
+	if (rl->uid.op != NPF_OP_NONE) {
+		if (npf_socket_lookup_rid(npc, kauth_cred_geteuid, &sock_uid) == -1)
+			return ENOTCONN;
+		matched |= npf_match_rid(rl->uid, sock_uid);
+	}
+	return matched;
 }
 
 /*

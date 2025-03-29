@@ -97,6 +97,8 @@ typedef struct npf_table	npf_table_t;
 typedef struct npf_tableset	npf_tableset_t;
 typedef struct npf_algset	npf_algset_t;
 
+typedef uint32_t (*get_rid_t)(kauth_cred_t);
+
 #ifdef __NetBSD__
 typedef void			ebr_t;
 #endif
@@ -437,8 +439,6 @@ int		npf_rule_conclude(const npf_rule_t *, npf_match_info_t *);
 /* Rule interface. */
 npf_rule_t *	npf_rule_alloc(npf_t *, const nvlist_t *);
 void		npf_rule_setcode(npf_rule_t *, int, void *, size_t);
-void		npf_rule_setuid(const nvlist_t *, npf_rule_t *, const char *);
-void		npf_rule_setgid(const nvlist_t *, npf_rule_t *, const char *);
 void		npf_rule_setrproc(npf_rule_t *, npf_rproc_t *);
 void		npf_rule_free(npf_rule_t *);
 uint64_t	npf_rule_getid(const npf_rule_t *);
@@ -483,8 +483,7 @@ void		npf_portmap_sysinit(void);
 void		npf_portmap_sysfini(void);
 
 /* uid/gid process matching */
-int		npf_socket_lookup_uid(npf_cache_t *, int, uint32_t *);
-int		npf_socket_lookup_gid(npf_cache_t *, int, uint32_t *);
+int		npf_socket_lookup_rid(npf_cache_t *, get_rid_t, uint32_t *);
 int		npf_match_rid(rid_t *, uint32_t);
 
 void		npf_portmap_init(npf_t *);

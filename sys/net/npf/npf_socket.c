@@ -41,19 +41,14 @@
 extern	struct inpcbtable tcbtable;	/* head of queue of active tcpcb's */
 extern	struct inpcbtable udbtable;
 
-static struct socket *	npf_lookup_socket(npf_cache_t *, int);
-static struct socket *	npf_ip6_socket(npf_cache_t *, int);
-static struct socket *	npf_ip_socket(npf_cache_t *, int);
-static int		npf_match(uint8_t, uint32_t, uint32_t, uint32_t);
-
  /*
  * NPF process socket module
  */
 
 int
-npf_match_rid(rid_t *rid, uint32_t uid_lookup)
+npf_match_rid(rid_t rid, uint32_t uid_lookup)
 {
-	return npf_match(rid->op, rid->id[0], rid->id[1], uid_lookup);
+	return npf_match(rid.op, rid.id[0], rid.id[1], uid_lookup);
 }
 
 static int
@@ -97,7 +92,7 @@ npf_lookup_socket(npf_cache_t *npc, int dir)
 }
 
 int
-npf_socket_lookup_uid(npf_cache_t *npc, int dir, uint32_t *uid)
+npf_socket_lookup_rid(npf_cache_t *npc, get_rid_t get_rid, uint32_t *rid)
 {
 	struct socket		*so;
 
@@ -105,20 +100,7 @@ npf_socket_lookup_uid(npf_cache_t *npc, int dir, uint32_t *uid)
 	if (so == NULL || so->so_cred == NULL)
 		return -1;
 
-	*uid = kauth_cred_geteuid(so->so_cred);
-	return 0;
-}
-
-int
-npf_socket_lookup_gid(npf_cache_t *npc, int dir, uint32_t *gid)
-{
-	struct socket		*so;
-
-	so = npf_lookup_socket(npc, dir);
-	if (so == NULL || so->so_cred == NULL)
-		return -1;
-
-	*gid = kauth_cred_getegid(so->so_cred);
+	*rid = get_rid(so->so_cred);
 	return 0;
 }
 
