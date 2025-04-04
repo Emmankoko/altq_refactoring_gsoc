@@ -4287,11 +4287,13 @@ ixgbe_init_locked(struct ixgbe_softc *sc)
 	/* OK to schedule workqueues. */
 	sc->schedule_wqs_ok = true;
 
+	/* DEAD CODE ? but looks important */
+
 	/* Enable the use of the MBX by the VF's */
-	if (sc->feat_en & IXGBE_FEATURE_SRIOV) {
+	if (sc->feat_en & IXGBE_FEATURE_SRIOV) { /* no matter the case for feat_en, this is false. */
 		ctrl_ext = IXGBE_READ_REG(hw, IXGBE_CTRL_EXT);
 		ctrl_ext |= IXGBE_CTRL_EXT_PFRSTD;
-		IXGBE_WRITE_REG(hw, IXGBE_CTRL_EXT, ctrl_ext);
+		IXGBE_WRITE_REG(hw, IXGBE_CTRL_EXT, ctrl_ext); /* hw points to the software interrupt hw field so obvs used */
 	}
 
 	/* Update saved flags. See ixgbe_ifflags_cb() */

@@ -69,7 +69,7 @@
 /* Check for OS support.  Undefine features if not included in the OS */
 #ifndef PCI_IOV
 #undef  IXGBE_FEATURE_SRIOV
-#define IXGBE_FEATURE_SRIOV                     0
+#define IXGBE_FEATURE_SRIOV                     0 /* this macro is 0 */
 #endif
 
 #ifndef RSS
