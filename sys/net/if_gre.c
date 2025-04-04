@@ -465,13 +465,18 @@ gre_socreate(struct gre_softc *sc, const struct gre_soparm *sp, int *fdout)
 	}
 	sounlock(so);
 
+
+	/* if setting our socket options fail, shouldn't we return the non-zero
+	rc value to indicate socket creation failure ? */
 	/* XXX convert to a (new) SOL_SOCKET call */
   	KASSERT(so->so_proto != NULL);
  	rc = so_setsockopt(curlwp, so, IPPROTO_IP, IP_TTL,
 	    &ip_gre_ttl, sizeof(ip_gre_ttl));
   	if (rc != 0) {
  		GRE_DPRINTF(sc, "so_setsockopt ttl failed\n");
-  		rc = 0;
+		rc = 0; /* why resetting rc = 0 if it gets overwritten and not used directly ? */
+		/* are we supposed to return rc due to the above failure ?*/
+		/* or are we supposed to continue execution */
   	}
 
  	val = 1;
@@ -479,7 +484,7 @@ gre_socreate(struct gre_softc *sc, const struct gre_soparm *sp, int *fdout)
 	    &val, sizeof(val));
   	if (rc != 0) {
  		GRE_DPRINTF(sc, "so_setsockopt SO_NOHEADER failed\n");
-		rc = 0;
+		rc = 0; /* same applies here */
 	}
 out:
 	if (rc != 0) {
