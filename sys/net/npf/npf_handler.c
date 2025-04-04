@@ -205,6 +205,10 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 
 	/* If "passing" connection found - skip the ruleset inspection. */
 	if (con && npf_conn_pass(con, &mi, &rp)) {
+
+		/* handle blind reset attack using SYN : RFC 5961 */
+		if (check_bad_syn(&npc, &mi.mi_retfl))
+			goto block;
 		npf_stats_inc(npf, NPF_STAT_PASS_CONN);
 		KASSERT(error == 0);
 		goto pass;

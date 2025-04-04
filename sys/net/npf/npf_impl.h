@@ -367,6 +367,7 @@ int		npf_tcpsaw(const npf_cache_t *, tcp_seq *, tcp_seq *,
 bool		npf_fetch_tcpopts(npf_cache_t *, uint16_t *, int *);
 bool		npf_set_mss(npf_cache_t *, uint16_t, uint16_t *, uint16_t *,
 		    bool *);
+int		check_bad_syn(npf_cache_t *npc, int *retfl)
 bool		npf_return_block(npf_cache_t *, const int);
 
 /* BPF interface. */

@@ -86,10 +86,10 @@ npf_ip6_setscope(const npf_cache_t *npc, struct ip6_hdr *ip6)
 #endif
 
 /*
- * npf_return_tcp: return a TCP reset (RST) packet.
+ * npf_return_tcp: return a TCP control packet based on flag.
  */
 static int
-npf_return_tcp(npf_cache_t *npc)
+npf_return_tcp(npf_cache_t *npc, uint8_t tcp_flag)
 {
 	npf_t *npf = npc->npc_ctx;
 	struct mbuf *m;
@@ -106,7 +106,8 @@ npf_return_tcp(npf_cache_t *npc)
 	tcpdlen = npf_tcpsaw(npc, &seq, &ack, &win);
 	oth = npc->npc_l4.tcp;
 
-	if (oth->th_flags & TH_RST) {
+	/* quickly return when you receive RST on a block rule */
+	if ((oth->th_flags & TH_RST) && (tcp_flag & (TH_ACK | TH_RST))) {
 		return 0;
 	}
 
@@ -168,12 +169,13 @@ npf_return_tcp(npf_cache_t *npc)
 	th->th_sport = oth->th_dport;
 	th->th_dport = oth->th_sport;
 	th->th_seq = htonl(ack);
-	if (oth->th_flags & TH_SYN) {
+	/* only conusme one byte in sequence space for a legit introductory SYN */
+	if ((oth->th_flags & TH_SYN) && (tcp_flag & (TH_ACK | TH_RST)))) {
 		tcpdlen++;
 	}
 	th->th_ack = htonl(seq + tcpdlen);
 	th->th_off = sizeof(struct tcphdr) >> 2;
-	th->th_flags = TH_ACK | TH_RST;
+	th->th_flags = tcp_flag;
 
 	if (npf_iscached(npc, NPC_IP4)) {
 		th->th_sum = in_cksum(m, len);
@@ -208,6 +210,23 @@ npf_return_tcp(npf_cache_t *npc)
 bad:
 	m_freem(m);
 	return EINVAL;
+}
+
+/* check if a syn packet is coming in our connection */
+int
+check_bad_syn(npf_cache_t *npc, int *retfl)
+{
+	struct tcphdr *oth
+
+	/* Fetch relevant data. */
+	KASSERT(npf_iscached(npc, NPC_LAYER4));
+
+	oth = npc->npc_l4.tcp;
+	if (oth->th_flags & TH_RST) {
+		*retfl |= NPF_RULE_RETACK; /* return an ACK : RFC 5961 */
+		return 1;
+	}
+	return 0;
 }
 
 /*
@@ -245,14 +264,19 @@ npf_return_icmp(const npf_cache_t *npc)
 bool
 npf_return_block(npf_cache_t *npc, const int retfl)
 {
+	uint8_t flags = 0;
 	if (!npf_iscached(npc, NPC_IP46) || !npf_iscached(npc, NPC_LAYER4)) {
 		return false;
 	}
+
 	switch (npc->npc_proto) {
 	case IPPROTO_TCP:
-		if (retfl & NPF_RULE_RETRST) {
-			(void)npf_return_tcp(npc);
-		}
+		if (retfl & NPF_RULE_RETRST)
+			flags |= TH_ACK | TH_RST; /* blocking */
+		else if (retfl & NPF_RULE_RETACK)
+			flags |= TH_ACK; /* ACK counter measures */
+
+		(void)npf_return_tcp(npc, flags);
 		break;
 	case IPPROTO_UDP:
 		if (retfl & NPF_RULE_RETICMP)
