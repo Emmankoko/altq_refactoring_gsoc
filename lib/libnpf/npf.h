@@ -148,7 +148,7 @@ nl_table_t *	npf_table_create(const char *, unsigned, int);
 const char *	npf_table_getname(nl_table_t *);
 unsigned	npf_table_getid(nl_table_t *);
 int		npf_table_gettype(nl_table_t *);
-int		npf_table_add_entry(nl_table_t *, int, const char *, const char *,
+int		npf_table_add_entry(nl_table_t *, const char *, const char *, int,
 		    const npf_addr_t *, const npf_netmask_t);
 int		npf_table_insert(nl_config_t *, nl_table_t *);
 void		npf_table_destroy(nl_table_t *);
