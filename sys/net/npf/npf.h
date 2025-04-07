@@ -66,12 +66,13 @@ typedef uint8_t			npf_netmask_t;
 
 /* BPF coprocessor. */
 #if defined(NPF_BPFCOP)
-#define	NPF_COP_L3		0
+#define	NPF_COP_L23		0 /* we cop both layer 2 and 3 information */
 #define	NPF_COP_TABLE		1
 
-#define	BPF_MW_IPVER		0
-#define	BPF_MW_L4OFF		1
-#define	BPF_MW_L4PROTO		2
+#define BPF_MW_ETHER_TYPE		0
+#define	BPF_MW_IPVER		1
+#define	BPF_MW_L4OFF		2
+#define	BPF_MW_L4PROTO		3
 #endif
 /* The number of words used. */
 #define	NPF_BPF_NWORDS		3
@@ -142,6 +143,7 @@ int		nbuf_find_tag(nbuf_t *, uint32_t *);
 #define	NPC_ALG_EXEC	0x100	/* ALG execution. */
 
 #define	NPC_FMTERR	0x200	/* Format error. */
+#define NPC_LAYER2	0x400	/* ether header */
 
 #define	NPC_IP46	(NPC_IP4|NPC_IP6)
 
@@ -154,6 +156,14 @@ typedef struct {
 	nbuf_t *		npc_nbuf;
 
 	/*
+	 * pointers to ether source and dest address
+	 * and ether type
+	 */
+	uint8_t  ether_dhost[ETHER_ADDR_LEN];
+	uint8_t  ether_shost[ETHER_ADDR_LEN];
+	uint16_t ether_type;
+
+	/*
 	 * Pointers to the IP source and destination addresses,
 	 * and the address length (4 for IPv4 or 16 for IPv6).
 	 */
@@ -163,6 +173,9 @@ typedef struct {
 	/* IP header length and L4 protocol. */
 	uint32_t		npc_hlen;
 	uint16_t		npc_proto;
+
+	/* cache l2 pkt info */
+	struct ether_header *ether;
 
 	/* IPv4, IPv6. */
 	union {
@@ -221,6 +234,7 @@ bool		npf_autounload_p(void);
 #define	NPF_RULE_OUT			0x20000000
 #define	NPF_RULE_DIMASK			(NPF_RULE_IN | NPF_RULE_OUT)
 #define	NPF_RULE_FORW			0x40000000
+#define NPF_LAYER_2			0x80000000 /* use layer 3 by default */
 
 /* Private range of rule attributes (not public and should not be set). */
 #define	NPF_RULE_PRIVMASK		0x0f000000

@@ -168,6 +168,7 @@ yyerror(const char *fmt, ...)
 %token			TO
 %token			TREE
 %token			TYPE
+%token			L2
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
@@ -175,6 +176,7 @@ yyerror(const char *fmt, ...)
 %token	<str>		IDENTIFIER
 %token	<str>		IPV4ADDR
 %token	<str>		IPV6ADDR
+%token	<str>		HWADDR
 %token	<num>		NUM
 %token	<fpnum>		FPNUM
 %token	<str>		STRING
@@ -187,7 +189,7 @@ yyerror(const char *fmt, ...)
 %type	<num>		port opt_final number afamily opt_family
 %type	<num>		block_or_pass rule_dir group_dir block_opts
 %type	<num>		maybe_not opt_stateful icmp_type table_type
-%type	<num>		map_sd map_algo map_flags map_type
+%type	<num>		map_sd map_algo map_flags map_type layer
 %type	<num>		param_val
 %type	<var>		static_ifaddrs filt_addr_element
 %type	<var>		filt_port filt_port_list port_range icmp_type_and_code
@@ -517,13 +519,18 @@ group_opts
 		memset(&$$, 0, sizeof(rule_group_t));
 		$$.rg_default = true;
 	}
-	| STRING group_dir on_ifname
+	| STRING group_dir on_ifname layer
 	{
 		memset(&$$, 0, sizeof(rule_group_t));
 		$$.rg_name = $1;
-		$$.rg_attr = $2;
+		$$.rg_attr = $2 | $4;
 		$$.rg_ifname = $3;
 	}
+	;
+
+layer
+	: L2 { $$ = NPF_LAYER_2; }
+	: /* use layer 3 by default if no layer is set */ { $$ = 0; }
 	;
 
 ruleset_block
@@ -559,6 +566,11 @@ rule
 		npfctl_build_rule($1 | $2 | $3 | $4, $5,
 		    AF_UNSPEC, NULL, NULL, $7, $8);
 	}
+	| block_or_pass rule_dir on_ifname l2_filt_opts /* layer 2 */
+	{
+		npfctl_build_l2_rule($1 | $2, $3, $4);
+	}
+
 	;
 
 block_or_pass

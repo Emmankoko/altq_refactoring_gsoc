@@ -141,7 +141,7 @@ npf_packet_bypass_tag_p(nbuf_t *nbuf)
  * Note: packet flow and inspection logic is in strict order.
  */
 __dso_public int
-npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
+npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di, int layer)
 {
 	nbuf_t nbuf;
 	npf_cache_t npc;
@@ -173,8 +173,13 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	rp = NULL;
 	con = NULL;
 
-	/* Cache everything. */
-	flags = npf_cache_all(&npc);
+	/* Cache all in layer 3 if no layer 2 rules were set.
+	 * if layer 2 is cached, even though all is cached, still recache
+	 */
+	if (layer & NPF_LAYER2)
+		flags = npf_recache(&npc);
+	else
+		flags = npf_cache_all(&npc, layer);
 
 	/* Malformed packet, leave quickly. */
 	if (flags & NPC_FMTERR) {

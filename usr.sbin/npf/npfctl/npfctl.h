@@ -80,6 +80,11 @@ typedef struct filt_opts {
 	bool		fo_tinvert;
 } filt_opts_t;
 
+typedef struct l2_filt_opt {
+	
+
+}
+
 typedef struct opt_proto {
 	int		op_proto;
 	npfvar_t *	op_opts;

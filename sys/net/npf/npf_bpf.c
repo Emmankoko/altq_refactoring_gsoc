@@ -56,16 +56,16 @@ __KERNEL_RCSID(0, "$NetBSD: npf_bpf.c,v 1.14 2018/09/29 14:41:36 rmind Exp $");
 
 static bpf_ctx_t *npf_bpfctx __read_mostly;
 
-static uint32_t	npf_cop_l3(const bpf_ctx_t *, bpf_args_t *, uint32_t);
+static uint32_t	npf_cop_layer23(const bpf_ctx_t *, bpf_args_t *, uint32_t);
 static uint32_t	npf_cop_table(const bpf_ctx_t *, bpf_args_t *, uint32_t);
 
 static const bpf_copfunc_t npf_bpfcop[] = {
-	[NPF_COP_L3]	= npf_cop_l3,
+	[NPF_COP_L23]	= npf_cop_layer23,
 	[NPF_COP_TABLE]	= npf_cop_table,
 };
 
 #define	BPF_MW_ALLMASK \
-    ((1U << BPF_MW_IPVER) | (1U << BPF_MW_L4OFF) | (1U << BPF_MW_L4PROTO))
+    ((1U << BPF_MW_ETHER_TYPE) | (1U << BPF_MW_IPVER) | (1U << BPF_MW_L4OFF) | (1U << BPF_MW_L4PROTO))
 
 void
 npf_bpf_sysinit(void)
@@ -113,10 +113,12 @@ npf_bpf_prepare(npf_cache_t *npc, bpf_args_t *args, uint32_t *M)
 
 	/*
 	 * Output words in the memory store:
+	 *	BPF_MW_ETHER_TYPE	ether type
 	 *	BPF_MW_IPVER	IP version (4 or 6).
 	 *	BPF_MW_L4OFF	L4 header offset.
 	 *	BPF_MW_L4PROTO	L4 protocol.
 	 */
+	M[BPF_MW_ETHER_TYPE] = npc->ether.ether_type;
 	M[BPF_MW_IPVER] = ver;
 	M[BPF_MW_L4OFF] = npc->npc_hlen;
 	M[BPF_MW_L4PROTO] = npc->npc_proto;
@@ -148,15 +150,18 @@ npf_bpf_validate(const void *code, size_t len)
 }
 
 /*
- * NPF_COP_L3: fetches layer 3 information.
+ * NPF_COP_L23: fetches layers 2 & 3 information.
+ * if it is fetching at layer 3, ether type goes NULL
+ * if fetching at layer 2, ether type present
  */
 static uint32_t
-npf_cop_l3(const bpf_ctx_t *bc, bpf_args_t *args, uint32_t A)
+npf_cop_layer23(const bpf_ctx_t *bc, bpf_args_t *args, uint32_t A)
 {
 	const npf_cache_t * const npc = (const npf_cache_t *)args->arg;
 	const uint32_t ver = (npc->npc_alen & 4) | ((npc->npc_alen >> 4) * 6);
 	uint32_t * const M = args->mem;
 
+	M[BPF_MW_ETHER_TYPE] = npc->ether_type;
 	M[BPF_MW_IPVER] = ver;
 	M[BPF_MW_L4OFF] = npc->npc_hlen;
 	M[BPF_MW_L4PROTO] = npc->npc_proto;

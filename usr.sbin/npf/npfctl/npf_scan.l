@@ -96,6 +96,8 @@ DID	[a-zA-Z_][a-zA-Z_0-9-]*
 SPID	[a-zA-Z][a-zA-Z_0-9.]*
 NUMBER	[0-9]+
 HEXDIG	[0-9a-fA-F]+
+/* strictly use two hex to be able catch ips used for hw */
+HWAHEX	([0-9a-fA-F]{2}:)*[0-9a-fA-F]{2}
 
 %%
 %{
@@ -211,6 +213,11 @@ any			return ANY;
 {NUMBER}"."[0-9][0-9.]* {
 			yylval.str = estrndup(yytext, yyleng);
 			return IPV4ADDR;
+		}
+
+{HWAHEX} {
+			yylval.str = estrndup(yytext, yyleng);
+			return HWADDR;
 		}
 
 {NUMBER}	{
