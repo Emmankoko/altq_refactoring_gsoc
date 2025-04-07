@@ -711,7 +711,7 @@ spa_add(const char *name, nvlist_t *config, const char *altroot)
 	mutex_init(&spa->spa_props_lock, NULL, MUTEX_DEFAULT, NULL);
 	mutex_init(&spa->spa_cksum_tmpls_lock, NULL, MUTEX_DEFAULT, NULL);
 	mutex_init(&spa->spa_scrub_lock, NULL, MUTEX_DEFAULT, NULL);
-	mutex_init(&spa->spa_suspend_lock, NULL, MUTEX_DEFAULT, NULL);
+	mutex_init(&spa->spa_suspend_lock, NULL, MUTEX_DEFAULT, NULL); /* this is its lock */
 	mutex_init(&spa->spa_vdev_top_lock, NULL, MUTEX_DEFAULT, NULL);
 	mutex_init(&spa->spa_alloc_lock, NULL, MUTEX_DEFAULT, NULL);
 
@@ -719,7 +719,7 @@ spa_add(const char *name, nvlist_t *config, const char *altroot)
 	cv_init(&spa->spa_evicting_os_cv, NULL, CV_DEFAULT, NULL);
 	cv_init(&spa->spa_proc_cv, NULL, CV_DEFAULT, NULL);
 	cv_init(&spa->spa_scrub_io_cv, NULL, CV_DEFAULT, NULL);
-	cv_init(&spa->spa_suspend_cv, NULL, CV_DEFAULT, NULL);
+	cv_init(&spa->spa_suspend_cv, NULL, CV_DEFAULT, NULL); /* its conditional variable */
 
 	for (int t = 0; t < TXG_SIZE; t++)
 		bplist_create(&spa->spa_free_bplist[t]);
@@ -1862,6 +1862,7 @@ spa_get_failmode(spa_t *spa)
 boolean_t
 spa_suspended(spa_t *spa)
 {
+	/* spa->spa_suspended being read from here without holding locks */
 	return (spa->spa_suspended);
 }
 

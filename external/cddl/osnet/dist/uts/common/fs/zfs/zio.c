@@ -1818,6 +1818,9 @@ zio_suspend(spa_t *spa, zio_t *zio)
 
 	zfs_ereport_post(FM_EREPORT_ZFS_IO_FAILURE, spa, NULL, NULL, 0, 0);
 
+	/* a simple case here called */
+	/* i dont really know what zio.c file does so*/
+
 	mutex_enter(&spa->spa_suspend_lock);
 
 	if (spa->spa_suspend_zio_root == NULL)

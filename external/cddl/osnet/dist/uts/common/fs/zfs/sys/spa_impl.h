@@ -232,7 +232,7 @@ struct spa {
 	/* per-CPU array of root of async I/O: */
 	zio_t		**spa_async_zio_root;
 	zio_t		*spa_suspend_zio_root;	/* root of all suspended I/O */
-	kmutex_t	spa_suspend_lock;	/* protects suspend_zio_root */
+	kmutex_t	spa_suspend_lock;	/* protects suspend_zio_root */ /* lock here actually */
 	kcondvar_t	spa_suspend_cv;		/* notification of resume */
 	uint8_t		spa_suspended;		/* pool is suspended */
 	uint8_t		spa_claiming;		/* pool is doing zil_claim() */
