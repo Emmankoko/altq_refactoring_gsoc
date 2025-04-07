@@ -1019,8 +1019,8 @@ npfctl_fill_table(nl_table_t *tl, unsigned type, const char *fname, FILE *fp)
 		 * same with mask: mask1, mask2 etc.addr
 		 */
 #define ovlp 4
-		snprintf(addr_key + ovlp, sizeof(addr_key) - ovlp, "%llu", ++addr_mask);
-		snprintf(mask_key + ovlp, sizeof(mask_key) - ovlp, "%llu", addr_mask);
+		snprintf(addr_key + ovlp, sizeof(addr_key) - ovlp, "%lu", ++addr_mask);
+		snprintf(mask_key + ovlp, sizeof(mask_key) - ovlp, "%lu", addr_mask);
 		npf_table_add_entry(tl, addr_key, mask_key, fam.fam_family,
 		    &fam.fam_addr, fam.fam_mask);
 	}
