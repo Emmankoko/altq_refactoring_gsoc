@@ -99,10 +99,7 @@ npf_mk_params(npf_t *npf, const nvlist_t *req, nvlist_t *resp, bool set)
 static int __noinline
 npf_mk_table_entries(npf_table_t *t, const nvlist_t *req, nvlist_t *resp)
 {
-	const nvlist_t * const *entries;
-	size_t nitems;
 	int error = 0;
-
 	uint64_t addr_mask = 1;
 	char addr_key[25] = "addr1";
 	char mask_key[25] = "mask1";
@@ -110,7 +107,6 @@ npf_mk_table_entries(npf_table_t *t, const nvlist_t *req, nvlist_t *resp)
 	if (!nvlist_exists_binary(req, addr_key)) {
 		return 0; /* empty table */
 	}
-
 
 	while ((nvlist_exists_binary(req, addr_key) && addr_mask < UINT16_MAX)) {
 		//const nvlist_t *entry = entries[i];
@@ -137,8 +133,8 @@ npf_mk_table_entries(npf_table_t *t, const nvlist_t *req, nvlist_t *resp)
 			}
 			break;
 		}
-		snprintf(addr_key + 4, sizeof(addr_key) - 4, "%llu", ++addr_mask);
-		snprintf(mask_key + 4, sizeof(mask_key) - 4, "%llu", addr_mask);
+		snprintf(addr_key + 4, sizeof(addr_key) - 4, "%lu", ++addr_mask);
+		snprintf(mask_key + 4, sizeof(mask_key) - 4, "%lu", addr_mask);
 	}
 
 	return error;
