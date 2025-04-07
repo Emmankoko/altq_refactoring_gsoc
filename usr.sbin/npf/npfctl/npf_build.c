@@ -990,11 +990,14 @@ npfctl_fill_table(nl_table_t *tl, unsigned type, const char *fname, FILE *fp)
 	char *buf = NULL;
 	int l = 0;
 	size_t n;
+	uint64_t addr_mask = 0;
+	char addr_key[25] = "addr";
+	char mask_key[25] = "mask";
 
 	if (fp == NULL && (fp = fopen(fname, "r")) == NULL) {
 		err(EXIT_FAILURE, "open '%s'", fname);
 	}
-	while (l++, getline(&buf, &n, fp) != -1) {
+	while (l++, getline(&buf, &n, fp) != -1 && addr_mask < UINT64_MAX) {
 		fam_addr_mask_t fam;
 		int alen;
 
@@ -1011,7 +1014,14 @@ npfctl_fill_table(nl_table_t *tl, unsigned type, const char *fname, FILE *fp)
 			    "table type other than \"lpm\"", fname, l);
 		}
 
-		npf_table_add_entry(tl, fam.fam_family,
+		/* write key to buffer
+		 * each address/mask get a key of addr1, addr2, and so on
+		 * same with mask: mask1, mask2 etc.addr
+		 */
+#define ovlp 4
+		snprintf(addr_key + ovlp, sizeof(addr_key) - ovlp, "%llu", ++addr_mask);
+		snprintf(mask_key + ovlp, sizeof(mask_key) - ovlp, "%llu", addr_mask);
+		npf_table_add_entry(tl, addr_key, mask_key, fam.fam_family,
 		    &fam.fam_addr, fam.fam_mask);
 	}
 	free(buf);

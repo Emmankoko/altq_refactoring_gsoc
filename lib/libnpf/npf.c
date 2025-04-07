@@ -1129,23 +1129,16 @@ npf_table_create(const char *name, unsigned id, int type)
 	return tl;
 }
 
+/* just append the address directly to the table nvlist */
 int
-npf_table_add_entry(nl_table_t *tl, int af, const npf_addr_t *addr,
-    const npf_netmask_t mask)
+npf_table_add_entry(nl_table_t *tl, const char *addr_key, const char *mask_key,
+	int af, const npf_addr_t *addr, const npf_netmask_t mask)
 {
-	nvlist_t *entry;
-
-	entry = nvlist_create(0);
-	if (!entry) {
-		return ENOMEM;
-	}
-	if (!_npf_add_addr(entry, "addr", af, addr)) {
-		nvlist_destroy(entry);
+	if (!_npf_add_addr(tl->table_dict, addr_key, af, addr)) {
+		nvlist_destroy(tl->table_dict);
 		return EINVAL;
 	}
-	nvlist_add_number(entry, "mask", mask);
-	nvlist_append_nvlist_array(tl->table_dict, "entries", entry);
-	nvlist_destroy(entry);
+	nvlist_add_number(tl->table_dict, mask_key, mask);
 	return 0;
 }
 

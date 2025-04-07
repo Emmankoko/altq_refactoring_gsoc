@@ -42,6 +42,7 @@ __KERNEL_RCSID(0, "$NetBSD: npf_ctl.c,v 1.60 2020/05/30 14:16:56 rmind Exp $");
 #include <sys/conf.h>
 #include <sys/kmem.h>
 #include <net/bpf.h>
+#include <sys/types.h>
 #endif
 
 #include "npf_impl.h"
@@ -102,19 +103,24 @@ npf_mk_table_entries(npf_table_t *t, const nvlist_t *req, nvlist_t *resp)
 	size_t nitems;
 	int error = 0;
 
-	if (!nvlist_exists_nvlist_array(req, "entries")) {
-		return 0;
+	uint64_t addr_mask = 1;
+	char addr_key[25] = "addr1";
+	char mask_key[25] = "mask1";
+
+	if (!nvlist_exists_binary(req, addr_key)) {
+		return 0; /* empty table */
 	}
-	entries = nvlist_get_nvlist_array(req, "entries", &nitems);
-	for (unsigned i = 0; i < nitems; i++) {
-		const nvlist_t *entry = entries[i];
+
+
+	while ((nvlist_exists_binary(req, addr_key) && addr_mask < UINT16_MAX)) {
+		//const nvlist_t *entry = entries[i];
 		const npf_addr_t *addr;
 		npf_netmask_t mask;
 		size_t alen;
 
 		/* Get address and mask; add a table entry. */
-		addr = dnvlist_get_binary(entry, "addr", &alen, NULL, 0);
-		mask = dnvlist_get_number(entry, "mask", NPF_NO_NETMASK);
+		addr = dnvlist_get_binary(req, addr_key, &alen, NULL, 0);
+		mask = dnvlist_get_number(req, mask_key, NPF_NO_NETMASK);
 		if (addr == NULL || alen == 0) {
 			NPF_ERR_DEBUG(resp);
 			error = EINVAL;
@@ -131,7 +137,10 @@ npf_mk_table_entries(npf_table_t *t, const nvlist_t *req, nvlist_t *resp)
 			}
 			break;
 		}
+		snprintf(addr_key + 4, sizeof(addr_key) - 4, "%llu", ++addr_mask);
+		snprintf(mask_key + 4, sizeof(mask_key) - 4, "%llu", addr_mask);
 	}
+
 	return error;
 }
 
