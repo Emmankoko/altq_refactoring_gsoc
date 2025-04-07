@@ -2205,7 +2205,7 @@ static __isl_give isl_printer *print_set_c(__isl_take isl_printer *p,
 	int i;
 
 	if (!set)
-		return isl_printer_free(p);
+		return isl_printer_free(p); /* frees p and returns NULL if rset is NULL */
 
 	if (set->n == 0)
 		p = isl_printer_print_str(p, "0");
@@ -2354,6 +2354,12 @@ static __isl_give isl_printer *print_pw_qpolynomial_fold_c(
 	for (i = 0; i < pwf->n; ++i) {
 		p = isl_printer_print_str(p, "(");
 		p = print_set_c(p, space, pwf->p[i].set);
+		/* after print_set_c called here, not checked for NULL */
+		/* hence possible use after free error */
+
+		//i suggest
+		if ((p = print_set_c(p, space, pwf->p[i].set)) == NULL)
+			return NULL;
 		p = isl_printer_print_str(p, ") ? (");
 		p = print_qpolynomial_fold_c(p, space, pwf->p[i].fold);
 		p = isl_printer_print_str(p, ") : ");
