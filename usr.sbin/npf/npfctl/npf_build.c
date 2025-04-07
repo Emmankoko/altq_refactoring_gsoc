@@ -1047,8 +1047,12 @@ npfctl_build_table(const char *tname, unsigned type, const char *fname)
 		yyerror("table type 'const' must be loaded from a file");
 	}
 
+	printf("loading.....\n");
+
 	tl = npfctl_load_table(tname, npfctl_tid_counter++, type, fname, NULL);
 	assert(tl != NULL);
+
+	printf("inserting...\n");
 
 	if (npf_table_insert(npf_conf, tl)) {
 		yyerror("table '%s' is already defined", tname);
