@@ -285,6 +285,10 @@ npfctl_parse_port_range(in_port_t s, in_port_t e)
 npfvar_t *
 npfctl_parse_port_range_variable(const char *v, npfvar_t *vp)
 {
+	/* bringing a NULL vp here, count becomes 0*/
+	/* doesn't even get to execute loop */
+	/* just returns the allocated variable */
+	/* no need to handle it here */
 	size_t count = npfvar_get_count(vp);
 	npfvar_t *pvp = npfvar_create();
 	port_range_t *pr;
