@@ -175,6 +175,7 @@ flags			return FLAGS;
 icmp-type		return ICMPTYPE;
 code			return CODE;
 any			return ANY;
+ether			return ETHER;
 
 "/"			return SLASH;
 "{"			return CURLY_OPEN;

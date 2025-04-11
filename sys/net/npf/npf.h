@@ -230,11 +230,12 @@ bool		npf_autounload_p(void);
 
 #define	NPF_DYNAMIC_GROUP		(NPF_RULE_GROUP | NPF_RULE_DYNAMIC)
 
-#define	NPF_RULE_IN			0x10000000
-#define	NPF_RULE_OUT			0x20000000
+#define	NPF_RULE_IN			0x01000000
+#define	NPF_RULE_OUT			0x02000000
 #define	NPF_RULE_DIMASK			(NPF_RULE_IN | NPF_RULE_OUT)
-#define	NPF_RULE_FORW			0x40000000
-#define NPF_LAYER_2			0x80000000 /* use layer 3 by default */
+#define	NPF_RULE_FORW			0x04000000
+#define NPF_LAYER_2			0x08000000
+#define NPF_LAYER_3			0x10000000
 
 /* Private range of rule attributes (not public and should not be set). */
 #define	NPF_RULE_PRIVMASK		0x0f000000
@@ -272,10 +273,6 @@ bool		npf_autounload_p(void);
 #define	NPF_TABLE_IFADDR		4
 
 #define	NPF_TABLE_MAXNAMELEN		32
-
-/* Layers. */
-#define	NPF_LAYER_2			2
-#define	NPF_LAYER_3			3
 
 /*
  * Flags passed via nbuf tags.

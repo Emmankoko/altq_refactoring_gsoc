@@ -45,6 +45,7 @@ __RCSID("$NetBSD: npf_data.c,v 1.30 2019/01/19 21:19:32 rmind Exp $");
 #define	__FAVOR_BSD
 #include <netinet/tcp.h>
 #include <net/if.h>
+#include <net/if_ether.h>
 
 #include <string.h>
 #include <ctype.h>
@@ -255,6 +256,18 @@ npfctl_parse_fam_addr_mask(const char *addr, const char *mask,
 }
 
 npfvar_t *
+npfctl_parse_mac_addr(const char *mac_addr)
+{
+	struct ether_addr *ether;
+
+	if ((ether = ether_aton(mac_addr)) == NULL) {
+		yyerror("invalid mac address format\n");
+	}
+
+	return npfvar_create_element(NPFVAR_MAC, ether, sizeof(*ether));
+}
+
+npfvar_t *
 npfctl_parse_table_id(const char *name)
 {
 	u_int tid;
@@ -265,6 +278,12 @@ npfctl_parse_table_id(const char *name)
 		return NULL;
 	}
 	return npfvar_create_element(NPFVAR_TABLE, &tid, sizeof(u_int));
+}
+
+npfvar_t *
+npfctl_parse_ether(uint16_t *eth_type)
+{
+	return npfvar_create_element(NPFVAR_ETH_TYPE, eth_type, sizeof(*eth_type));
 }
 
 /*
@@ -322,6 +341,37 @@ npfctl_parse_port_range_variable(const char *v, npfvar_t *vp)
 		}
 	}
 	return pvp;
+}
+
+npfvar_t *
+npfctl_parse_ether_variable(const char *v, npfvar_t *vp)
+{
+	size_t count = npfvar_get_count(vp);
+	npfvar_t *ether = npfvar_create();
+
+	for (size_t i = 0; i < count; i++) {
+		int type = npfvar_get_type(vp, i);
+		void *data = npfvar_get_data(vp, type, i);
+		uint16_t ether_type;
+
+		switch (type) {
+		case NPFVAR_NUM:
+			ether_type = *(unsigned long *)data;
+			npfvar_add_elements(ether, npfvar_create_element(NPFVAR_ETH_TYPE, ether_type, sizeof(ether_type)););
+			break;
+		default:
+			if (v) {
+				yyerror("wrong variable '%s' type '%s' "
+				    "for ether type ", v, npfvar_type(type));
+			} else {
+				yyerror("wrong element '%s' in the "
+				    "inline list", npfvar_type(type));
+			}
+			npfvar_destroy(ether);
+			return NULL;
+		}
+	}
+	return ether;
 }
 
 npfvar_t *

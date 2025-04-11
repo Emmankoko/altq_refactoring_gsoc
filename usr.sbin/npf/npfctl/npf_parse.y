@@ -186,19 +186,19 @@ yyerror(const char *fmt, ...)
 
 %type	<str>		addr some_name table_store dynamic_ifaddrs
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
-%type	<num>		port opt_final number afamily opt_family
-%type	<num>		block_or_pass rule_dir group_dir block_opts
+%type	<num>		port opt_final number afamily opt_family opt_ether
+%type	<num>		block_or_pass rule_dir group_dir block_opts ether_type
 %type	<num>		maybe_not opt_stateful icmp_type table_type
 %type	<num>		map_sd map_algo map_flags map_type layer
 %type	<num>		param_val
-%type	<var>		static_ifaddrs filt_addr_element
+%type	<var>		static_ifaddrs filt_addr_element mac_addr
 %type	<var>		filt_port filt_port_list port_range icmp_type_and_code
 %type	<var>		filt_addr addr_and_mask tcp_flags tcp_flags_and_mask
-%type	<var>		procs proc_call proc_param_list proc_param
+%type	<var>		procs proc_call proc_param_list proc_param ether
 %type	<var>		element list_elems list value filt_addr_list
 %type	<var>		opt_proto proto proto_elems
 %type	<addrport>	mapseg
-%type	<filtopts>	filt_opts all_or_filt_opts
+%type	<filtopts>	filt_opts all_or_filt_opts l2_filt_opts l2_fopts
 %type	<optproto>	rawproto
 %type	<rulegroup>	group_opts
 
@@ -313,6 +313,7 @@ element
 	| dynamic_ifaddrs	{ $$ = npfctl_ifnet_table($1); }
 	| static_ifaddrs	{ $$ = $1; }
 	| addr_and_mask		{ $$ = $1; }
+	| mac_addr		{ $$ = $1; }
 	;
 
 /*
@@ -395,8 +396,8 @@ map_type
 mapseg
 	: filt_addr filt_port
 	{
-		$$.ap_netaddr = $1;
-		$$.ap_portrange = $2;
+		$$.filt.opt_3.ap_netaddr = $1;
+		$$.filt.opt_3.ap_portrange = $2;
 	}
 	;
 
@@ -514,10 +515,11 @@ group_dir
 	;
 
 group_opts
-	: DEFAULT
+	: DEFAULT layer
 	{
 		memset(&$$, 0, sizeof(rule_group_t));
 		$$.rg_default = true;
+		$$.rg_attr = $2;
 	}
 	| STRING group_dir on_ifname layer
 	{
@@ -530,7 +532,7 @@ group_opts
 
 layer
 	: L2 { $$ = NPF_LAYER_2; }
-	: /* use layer 3 by default if no layer is set */ { $$ = 0; }
+	: /* use layer 3 by default if no layer is set */ { $$ = NPF_LAYER_3; }
 	;
 
 ruleset_block
@@ -566,11 +568,11 @@ rule
 		npfctl_build_rule($1 | $2 | $3 | $4, $5,
 		    AF_UNSPEC, NULL, NULL, $7, $8);
 	}
-	| block_or_pass rule_dir on_ifname l2_filt_opts /* layer 2 */
+	| block_or_pass ETHER rule_dir opt_final on_ifname
+		l2_filt_opts /* layer 2 */
 	{
-		npfctl_build_l2_rule($1 | $2, $3, $4);
+		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, $6, NULL, NULL);
 	}
-
 	;
 
 block_or_pass
@@ -670,13 +672,37 @@ all_or_filt_opts
 	: ALL
 	{
 		$$.fo_finvert = false;
-		$$.fo_from.ap_netaddr = NULL;
-		$$.fo_from.ap_portrange = NULL;
+		$$.filt.opt_3.fo_from.ap_netaddr = NULL;
+		$$.filt.opt_3.fo_from.ap_portrange = NULL;
 		$$.fo_tinvert = false;
-		$$.fo_to.ap_netaddr = NULL;
-		$$.fo_to.ap_portrange = NULL;
+		$$.filt.opt_3.fo_to.ap_netaddr = NULL;
+		$$.filt.opt_3.fo_to.ap_portrange = NULL;
+		$$.layer = NPF_LAYER_3;
 	}
-	| filt_opts	{ $$ = $1; }
+	| filt_opts	{ $$ = $1; $$.layer = NPF_LAYER_3; }
+	;
+
+l2_filt_opts
+	: ALL
+	{
+		$$.fo_finvert = false;
+		$$.filt.opt_2.fo_from.mac_addr = NULL;
+		$$.fo_tinvert = false;
+		$$.filt.opt_2.fo_to.mac_addr = NULL;
+		$$.layer = NPF_LAYER_2;
+		$$.filt.opt_2.ether_type = ETHERTYPE_MAX;
+	}
+	| l2_fopts ether_type
+	{
+		$$ = $1;
+		$$.layer = NPF_LAYER_2;
+		$$.filt.opt_2.ether_type = $2;
+	}
+	;
+
+ether_type
+	: number { $$ =  $1; }
+	| /* empty */ { $$ = ETHERTYPE_MAX; }
 	;
 
 opt_stateful
@@ -701,29 +727,53 @@ filt_opts
 	: FROM maybe_not filt_addr filt_port TO maybe_not filt_addr filt_port
 	{
 		$$.fo_finvert = $2;
-		$$.fo_from.ap_netaddr = $3;
-		$$.fo_from.ap_portrange = $4;
+		$$.filt.opt_3.fo_from.ap_netaddr = $3;
+		$$.filt.opt_3.fo_from.ap_portrange = $4;
 		$$.fo_tinvert = $6;
-		$$.fo_to.ap_netaddr = $7;
-		$$.fo_to.ap_portrange = $8;
+		$$.filt.opt_3.fo_to.ap_netaddr = $7;
+		$$.filt.opt_3.fo_to.ap_portrange = $8;
 	}
 	| FROM maybe_not filt_addr filt_port
 	{
 		$$.fo_finvert = $2;
-		$$.fo_from.ap_netaddr = $3;
-		$$.fo_from.ap_portrange = $4;
+		$$.filt.opt_3.fo_from.ap_netaddr = $3;
+		$$.filt.opt_3.fo_from.ap_portrange = $4;
 		$$.fo_tinvert = false;
-		$$.fo_to.ap_netaddr = NULL;
-		$$.fo_to.ap_portrange = NULL;
+		$$.filt.opt_3.fo_to.ap_netaddr = NULL;
+		$$.filt.opt_3.fo_to.ap_portrange = NULL;
 	}
 	| TO maybe_not filt_addr filt_port
 	{
 		$$.fo_finvert = false;
-		$$.fo_from.ap_netaddr = NULL;
-		$$.fo_from.ap_portrange = NULL;
+		$$.filt.opt_3.fo_from.ap_netaddr = NULL;
+		$$.filt.opt_3.fo_from.ap_portrange = NULL;
 		$$.fo_tinvert = $2;
-		$$.fo_to.ap_netaddr = $3;
-		$$.fo_to.ap_portrange = $4;
+		$$.filt.opt_3.fo_to.ap_netaddr = $3;
+		$$.filt.opt_3.fo_to.ap_portrange = $4;
+	}
+	;
+
+l2_fopts
+	: FROM maybe_not filt_addr TO maybe_not filt_addr
+	{
+		$$.fo_finvert = $2;
+		$$.filt.opt_2.fo_from.macaddr = $3;
+		$$.fo_tinvert = $6;
+		$$.filt.opt_2.fo_to.mac_addr = $6;
+	}
+	| FROM maybe_not filt_addr
+	{
+		$$.fo_finvert = $2;
+		$$.filt.opt_2.fo_from.mac_addr = $3;
+		$$.fo_tinvert = false;
+		$$.filt.opt_2.fo_to.mac_addr = NULL;
+	}
+	| TO maybe_not filt_addr
+	{
+		$$.fo_finvert = false;
+		$$.filt.opt_2.fo_from.mac_addr = NULL;
+		$$.fo_tinvert = $2;
+		$$.filt.opt_2.fo_to.mac_addr = $3;
 	}
 	;
 
@@ -759,8 +809,13 @@ addr_and_mask
 	}
 	;
 
+mac_addr
+	: addr { $$ = npfctl_parse_mac_addr($1); }
+	;
+
 filt_addr_element
 	: addr_and_mask		{ assert($1 != NULL); $$ = $1; }
+	| mac_addr		{ assert($1 != NULL); $$ = $1; }
 	| static_ifaddrs
 	{
 		if (npfvar_get_count($1) != 1)
@@ -784,6 +839,7 @@ again:
 			type = npfvar_get_type(vp, 0);
 			goto again;
 		case NPFVAR_FAM:
+		case NPFVAR_MAC:
 		case NPFVAR_TABLE:
 			$$ = vp;
 			break;
@@ -808,6 +864,7 @@ again:
 addr
 	: IPV4ADDR	{ $$ = $1; }
 	| IPV6ADDR	{ $$ = $1; }
+	| HWADDR	{ $$ = $1; }
 	;
 
 filt_port

@@ -130,6 +130,7 @@ __RCSID("$NetBSD: npf_bpf_comp.c,v 1.17 2024/10/30 11:19:38 riastradh Exp $");
 #define	FETCHED_L3		0x01
 #define	CHECKED_L4_PROTO	0x02
 #define	X_EQ_L4OFF		0x04
+#define FETCHED_L2		0x08
 
 struct npf_bpf {
 	/*
@@ -497,6 +498,12 @@ void
 npfctl_bpf_ipver(npf_bpf_t *ctx, sa_family_t af)
 {
 	fetch_l3(ctx, af, 0);
+}
+
+void
+npfctl_bpf_ether_type(npf_bpf_t *ctx, uint16_t eth)
+{
+
 }
 
 /*

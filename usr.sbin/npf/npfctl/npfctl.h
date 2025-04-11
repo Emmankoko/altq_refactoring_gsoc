@@ -73,17 +73,31 @@ typedef struct addr_port {
 	npfvar_t *	ap_portrange;
 } addr_port_t;
 
-typedef struct filt_opts {
+typedef struct macaddr {
+	npfvar_t *	hawddr;
+} macaddr_t;
+
+typedef struct L3 {
 	addr_port_t	fo_from;
 	addr_port_t	fo_to;
+} l3;
+
+typedef struct L2 {
+	macaddr_t 	fo_from;
+	macaddr_t 	fo_to;
+	uint16_t	ether_type;
+} l2;
+
+typedef struct filt_opts {
+	union {
+		l3 opt_3;
+		l2 opt_2;
+	} filt;
+
+	int layer;
 	bool		fo_finvert;
 	bool		fo_tinvert;
 } filt_opts_t;
-
-typedef struct l2_filt_opt {
-	
-
-}
 
 typedef struct opt_proto {
 	int		op_proto;
@@ -142,8 +156,11 @@ npfvar_t *	npfctl_parse_table_id(const char *);
 npfvar_t * 	npfctl_parse_icmp(int, int, int);
 npfvar_t *	npfctl_parse_port_range(in_port_t, in_port_t);
 npfvar_t *	npfctl_parse_port_range_variable(const char *, npfvar_t *);
+npfvar_t *	npfctl_parse_ether_variable(const char *, npfvar_t *);
+npfvar_t *	npfctl_parse_ether(uint16_t *eth_type)
 npfvar_t *	npfctl_parse_fam_addr_mask(const char *, const char *,
 		    unsigned long *);
+npfvar_t *	npfctl_parse_mac_addr(const char *);
 bool		npfctl_parse_cidr(char *, fam_addr_mask_t *, int *);
 uint16_t	npfctl_npt66_calcadj(npf_netmask_t, const npf_addr_t *,
 		    const npf_addr_t *);

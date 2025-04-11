@@ -58,8 +58,10 @@ static bool			npf_debug = false;
 static nl_rule_t *		the_rule = NULL;
 static bool			npf_conf_built = false;
 
-static nl_rule_t *		defgroup = NULL;
+static nl_rule_t *		defgroup;
+static nl_rule_t *		defgroup_l2;
 static nl_rule_t *		current_group[MAX_RULE_NESTING];
+
 static unsigned			rule_nesting_level = 0;
 static unsigned			npfctl_tid_counter = 0;
 
@@ -100,9 +102,11 @@ npfctl_config_build(void)
 	/*
 	 * The default group is mandatory.  Note: npfctl_build_group_end()
 	 * skipped the default rule, since it must be the last one.
+	 * if you set a layer 2 rule, layer 2 default also becomes mandatory.
+	 * if you didn't set layer 2 rules, only layer 3 default is mandatory
 	 */
-	if (!defgroup) {
-		errx(EXIT_FAILURE, "default group was not defined");
+	if (!defgroup_l3) {
+		errx(EXIT_FAILURE, "layer3 default group was not defined");
 	}
 	assert(rule_nesting_level == 0);
 	npf_rule_insert(npf_conf, NULL, defgroup);
@@ -435,71 +439,88 @@ static bool
 npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
     const filt_opts_t *fopts)
 {
-	const addr_port_t *apfrom = &fopts->fo_from;
-	const addr_port_t *apto = &fopts->fo_to;
-	bool any_proto, any_addrs, any_ports, stateful;
-	bool any_l4proto, non_tcpudp, tcp_with_nofl;
 	npf_bpf_t *bc;
 	unsigned opts;
 	size_t len;
 
-	/*
-	 * Gather some information about the protocol options, if any.
-	 * Check the filter criteria in general -- if none specified,
-	 * then no byte-code.
-	 */
-	any_l4proto = npfctl_check_proto(popts, &non_tcpudp, &tcp_with_nofl);
-	any_proto = (family != AF_UNSPEC) || any_l4proto;
-	any_addrs = apfrom->ap_netaddr || apto->ap_netaddr;
-	any_ports = apfrom->ap_portrange || apto->ap_portrange;
-	stateful = (npf_rule_getattr(rl) & NPF_RULE_STATEFUL) != 0;
-	if (!any_proto && !any_addrs && !any_ports && !stateful) {
-		return false;
+
+
+	if (fopts->layer == NPF_LAYER_3) {
+		const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
+		const addr_port_t *apto = &fopts->filt.opt_3.fo_to;
+		bool any_proto, any_addrs, any_ports, stateful;
+		bool any_l4proto, non_tcpudp, tcp_with_nofl;
+
+		/*
+		 * Gather some information about the protocol options, if any.
+		 * Check the filter criteria in general -- if none specified,
+		 * then no byte-code.
+		 */
+		any_l4proto = npfctl_check_proto(popts, &non_tcpudp, &tcp_with_nofl);
+		any_proto = (family != AF_UNSPEC) || any_l4proto;
+		any_addrs = apfrom->ap_netaddr || apto->ap_netaddr;
+		any_ports = apfrom->ap_portrange || apto->ap_portrange;
+		stateful = (npf_rule_getattr(rl) & NPF_RULE_STATEFUL) != 0;
+		if (!any_proto && !any_addrs && !any_ports && !stateful) {
+			return false;
+		}
+
+		/*
+		 * Sanity check: ports can only be used with TCP or UDP protocol.
+		 */
+		if (any_ports && non_tcpudp) {
+			yyerror("invalid filter options for given the protocol(s)");
+		}
+
+		bc = npfctl_bpf_create();
+
+		/* Build layer 3 and 4 protocol blocks. */
+		if (family != AF_UNSPEC) {
+			npfctl_bpf_ipver(bc, family);
+		}
+		if (any_l4proto) {
+			npfctl_build_proto(bc, popts);
+		}
+
+		/*
+		 * If this is a stateful rule and TCP flags are not specified,
+		 * then add "flags S/SAFR" filter for TCP protocol case.
+		 */
+		if (stateful && (!any_l4proto || tcp_with_nofl)) {
+			npfctl_bpf_tcpfl(bc, TH_SYN, TH_SYN | TH_ACK | TH_FIN | TH_RST);
+		}
+
+		/* Build IP address blocks. */
+		opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
+		npfctl_build_vars(bc, family, apfrom->ap_netaddr, opts);
+		opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
+		npfctl_build_vars(bc, family, apto->ap_netaddr, opts);
+
+		/*
+		 * Build the port-range blocks.  If no protocol is specified,
+		 * then we implicitly filter for the TCP / UDP protocols.
+		 */
+		if (any_ports && !any_l4proto) {
+			npfctl_bpf_group_enter(bc, false);
+			npfctl_bpf_proto(bc, IPPROTO_TCP);
+			npfctl_bpf_proto(bc, IPPROTO_UDP);
+			npfctl_bpf_group_exit(bc);
+		}
+		npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
+		npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
+	}
+	else if (fopts->layer == NPF_LAYER_2) {
+
+		const macaddr_t *apfrom = &fopts->filt.opt_3.fo_from;
+		const macaddr_t *apto = &fopts->filt.opt_3.fo_to;
+
+		bc = npfctl_bpf_create();
+		if (fopts->filt.opt_2.ether_type ! ETHERTYPE_MAX ) {
+
+		}
 	}
 
-	/*
-	 * Sanity check: ports can only be used with TCP or UDP protocol.
-	 */
-	if (any_ports && non_tcpudp) {
-		yyerror("invalid filter options for given the protocol(s)");
-	}
 
-	bc = npfctl_bpf_create();
-
-	/* Build layer 3 and 4 protocol blocks. */
-	if (family != AF_UNSPEC) {
-		npfctl_bpf_ipver(bc, family);
-	}
-	if (any_l4proto) {
-		npfctl_build_proto(bc, popts);
-	}
-
-	/*
-	 * If this is a stateful rule and TCP flags are not specified,
-	 * then add "flags S/SAFR" filter for TCP protocol case.
-	 */
-	if (stateful && (!any_l4proto || tcp_with_nofl)) {
-		npfctl_bpf_tcpfl(bc, TH_SYN, TH_SYN | TH_ACK | TH_FIN | TH_RST);
-	}
-
-	/* Build IP address blocks. */
-	opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
-	npfctl_build_vars(bc, family, apfrom->ap_netaddr, opts);
-	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
-	npfctl_build_vars(bc, family, apto->ap_netaddr, opts);
-
-	/*
-	 * Build the port-range blocks.  If no protocol is specified,
-	 * then we implicitly filter for the TCP / UDP protocols.
-	 */
-	if (any_ports && !any_l4proto) {
-		npfctl_bpf_group_enter(bc, false);
-		npfctl_bpf_proto(bc, IPPROTO_TCP);
-		npfctl_bpf_proto(bc, IPPROTO_UDP);
-		npfctl_bpf_group_exit(bc);
-	}
-	npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
-	npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
 
 	/* Set the byte-code marks, if any. */
 	const void *bmarks = npfctl_bpf_bmarks(bc, &len);
@@ -522,6 +543,19 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	npfctl_bpf_destroy(bc);
 
 	return true;
+}
+
+static bool
+npfctl_build_l2code(nl_rule_t *rl, const filt_opts_t *fopts)
+{
+	unsigned opts;
+	const macaddr_t *apfrom = &fopts->filt.opt_2.fo_from;
+	const macaddr_t *apto = &fopts->filt.opt_2.fo_to;
+	/* Build mac address blocks. */
+	opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
+	npfctl_build_vars(bc, family, apfrom->ap_netaddr, opts);
+	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
+	npfctl_build_vars(bc, family, apto->ap_netaddr, opts);
 }
 
 static void
@@ -657,13 +691,10 @@ npfctl_build_group(const char *name, int attr, const char *ifname, bool def)
 	rl = npf_rule_create(name, attr | NPF_RULE_GROUP, ifname);
 	npf_rule_setprio(rl, NPF_PRI_LAST);
 	if (def) {
-		if (defgroup) {
-			yyerror("multiple default groups are not valid");
-		}
-		if (rule_nesting_level) {
-			yyerror("default group can only be at the top level");
-		}
-		defgroup = rl;
+		if (attr & NPF_LAYER_2)
+			defgroup_l2 = set_defgroup(rl, defgroup_l2, attr);
+		else
+			defgroup = set_defgroup(rl, defgroup, attr);
 	}
 
 	/* Set the current group and increase the nesting level. */
@@ -671,6 +702,21 @@ npfctl_build_group(const char *name, int attr, const char *ifname, bool def)
 		yyerror("rule nesting limit reached");
 	}
 	current_group[++rule_nesting_level] = rl;
+}
+
+static nl_rule_t *
+set_defgroup(nl_rule_t *rl, nl_rule_t *def_group, int attr)
+{
+	char *str = (attr & NPF_LAYER_2) ? "layer2" : "layer3";
+
+	if (def_group) {
+		yyerror("multiple %s default groups are not valid", str);
+	}
+	if (rule_nesting_level) {
+		yyerror("default group can only be at the top level");
+	}
+
+	return rl;
 }
 
 void
@@ -688,7 +734,7 @@ npfctl_build_group_end(void)
 	 * - If the parent is NULL, then it is a global rule.
 	 * - The default rule must be the last, so it is inserted later.
 	 */
-	if (group == defgroup) {
+	if (group == defgroup || group == defgroup_l2) {
 		assert(parent == NULL);
 		return;
 	}
@@ -704,9 +750,15 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
     const npfvar_t *popts, const filt_opts_t *fopts,
     const char *pcap_filter, const char *rproc)
 {
-	nl_rule_t *rl;
+	nl_rule_t *rl, *cg;
 
 	attr |= (npf_conf ? 0 : NPF_RULE_DYNAMIC);
+
+	/* quickly check for group-rule layer compat */
+	if (npf_conf) {
+		cg = current_group[rule_nesting_level];
+		npfctl_rule_layer_compat(cg, fopts->layer)
+	}
 
 	rl = npf_rule_create(NULL, attr, ifname);
 	if (pcap_filter) {
@@ -720,7 +772,7 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 	}
 
 	if (npf_conf) {
-		nl_rule_t *cg = current_group[rule_nesting_level];
+		cg = current_group[rule_nesting_level];
 
 		if (rproc && !npf_rproc_exists_p(npf_conf, rproc)) {
 			yyerror("rule procedure '%s' is not defined", rproc);
@@ -732,6 +784,34 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 		/* We have parsed a single rule - set it. */
 		the_rule = rl;
 	}
+}
+
+/*
+ * this function is here to ensure that layer 2 rules are rightfully embedded in layer2 groups
+ * and vice versa. layer3 group => layer 3 rules
+ * does not allow setting layer 2 rules in layer 3 groups
+ * */
+static void
+npfctl_rule_layer_compat(nl_rule_t *cg, int layer)
+{
+	char *str = (layer & NPF_LAYER_2) ? "layer2" : "layer3";
+	uint64_t attr;
+	if (!cg)
+		return;
+	attr = nvlist_get_number(cg, "attr");
+
+	if (!(attr & layer)) {
+		yerror("cannot insert %s rules in this group"
+		" make sure to insert same layer rules in same group ", str);
+	}
+}
+
+void
+npfctl_build_l2_rule(uint32_t attr, const char *ifname, const l2_filt_opt_t *fopts)
+{
+	nl_rule_t *rl;
+
+	rl = npf_rule_create(NULL, attr, ifname);
 }
 
 /*
@@ -927,13 +1007,13 @@ npfctl_build_natseg(int sd, int type, unsigned mflags, const char *ifname,
 
 	if (type & NPF_NATIN) {
 		memset(&imfopts, 0, sizeof(filt_opts_t));
-		memcpy(&imfopts.fo_to, ap2, sizeof(addr_port_t));
+		memcpy(&imfopts.filt.opt_3.fo_to, ap2, sizeof(addr_port_t));
 		nt1 = npfctl_build_nat(NPF_NATIN, ifname,
 		    ap1, popts, fopts, flags);
 	}
 	if (type & NPF_NATOUT) {
 		memset(&imfopts, 0, sizeof(filt_opts_t));
-		memcpy(&imfopts.fo_from, ap1, sizeof(addr_port_t));
+		memcpy(&imfopts.filt.opt_3.fo_from, ap1, sizeof(addr_port_t));
 		nt2 = npfctl_build_nat(NPF_NATOUT, ifname,
 		    ap2, popts, fopts, flags);
 	}
