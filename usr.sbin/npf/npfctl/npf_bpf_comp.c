@@ -141,6 +141,7 @@ struct npf_bpf {
 	size_t			alen;
 	unsigned		nblocks;
 	sa_family_t		af;
+	uint16_t		eth_type;
 	uint32_t		flags;
 
 	/*
@@ -469,6 +470,47 @@ fetch_l3(npf_bpf_t *ctx, sa_family_t af, unsigned flags)
 	}
 }
 
+void
+fetch_ether_type(npf_bpf_t *ctx, uint16_t type)
+{
+	if ((ctx->flags & FETCHED_L2) == 0 || (type && ctx->eth_type == 0)) {
+		const uint8_t jt = type ? 0 : JUMP_MAGIC;
+		const uint8_t jf = type ? JUMP_MAGIC : 0;
+		const bool ingroup = ctx->ingroup != 0;
+		const bool invert = ctx->invert;
+
+		/*
+		 * L2 block cannot be inserted in the middle of a group.
+		 * Check and start the group after.
+		 */
+		if (ingroup) {
+			assert(ctx->nblocks == ctx->gblock);
+			npfctl_bpf_group_exit(ctx);
+		}
+
+		struct bpf_insn insns_et[] = {
+			BPF_STMT(BPF_LD+BPF_W+BPF_MEM, BPF_MW_ETHER_TYPE),
+			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, type, jt, jf),
+		};
+		add_insns(ctx, insns_et, __arraycount(insns_et));
+		ctx->flags |= FETCHED_L2;
+		ctx->eth_type = type;
+
+		if (type) {
+			uint32_t mwords[] = { BM_ETHER_TYPE, 1, type };
+			add_bmarks(ctx, mwords, sizeof(mwords));
+		}
+		if (ingroup) {
+			npfctl_bpf_group_enter(ctx, invert);
+		}
+
+	} else if (type && type != ctx->eth_type) {
+		errx(EXIT_FAILURE, "ether type mismatch");
+	}
+}
+
+
+
 static void
 bm_invert_checkpoint(npf_bpf_t *ctx, const unsigned opts)
 {
@@ -498,12 +540,6 @@ void
 npfctl_bpf_ipver(npf_bpf_t *ctx, sa_family_t af)
 {
 	fetch_l3(ctx, af, 0);
-}
-
-void
-npfctl_bpf_ether_type(npf_bpf_t *ctx, uint16_t eth)
-{
-
 }
 
 /*
@@ -642,6 +678,47 @@ npfctl_bpf_cidr(npf_bpf_t *ctx, unsigned opts, sa_family_t af,
 		(opts & MATCH_SRC) ? BM_SRC_CIDR: BM_DST_CIDR, 6,
 		af, mask, awords[0], awords[1], awords[2], awords[3],
 	};
+	bm_invert_checkpoint(ctx, opts);
+	done_block(ctx, mwords, sizeof(mwords));
+}
+
+/*
+ * for ether address, 6 octets(a word and halfword)
+ * just fetch directly using a word and halfword fetch
+ */
+void
+npfctl_bpf_ether(npf_bpf_t *ctx, unsigned opts, struct ether_addr *ether_addr)
+{
+	unsigned off;
+	assert(((opts & MATCH_SRC) != 0) ^ ((opts & MATCH_DST) != 0));
+	const uint32_t *awords = (const uint32_t *)ether_addr;
+
+	off = (opts & MATCH_SRC) ? offsetof(struct ether_header, ether_shost) :
+					offsetof(struct ether_header, ether_dhost);
+	const uint32_t word_offset = sizeof(uint32_t);
+
+
+	uint32_t mac_word = ntohl(awords[0]);
+	uint16_t mac_hword = (uint16_t)ntohl(awords[1]);
+
+	/* load and compare first word then do same to last halfword */
+	struct bpf_insn insns_ether_w[] = {
+		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, off),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, mac_word, 0, JUMP_MAGIC),
+	};
+	add_insns(ctx, insns_ether_w, __arraycount(insns_ether_w));
+
+	struct bpf_insn insns_ether_h[] = {
+		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, off + word_offset),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, mac_hword, 0, JUMP_MAGIC),
+	};
+	add_insns(ctx, insns_ether_h, __arraycount(insns_ether_h));
+
+	uint32_t mwords[] = {
+		(opts & MATCH_SRC) ? BM_SRC_ETHER: BM_DST_ETHER, 2,
+		mac_word, mac_hword
+	};
+
 	bm_invert_checkpoint(ctx, opts);
 	done_block(ctx, mwords, sizeof(mwords));
 }

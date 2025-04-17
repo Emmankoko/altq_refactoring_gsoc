@@ -48,8 +48,7 @@
 #define	NPFVAR_ICMP		10
 #define	NPFVAR_INTERFACE	11
 #define	NPFVAR_PROTO		12
-#define NPFVAR_MAC		13
-#define NPFVAR_ETH_TYPE		14
+#define	NPFVAR_MAC		13
 
 #ifdef _NPFVAR_PRIVATE
 static const char *npfvar_types[ ] = {

@@ -127,6 +127,11 @@ typedef enum {
 	NPFCTL_PARSE_MAP
 } parse_entry_t;
 
+struct ether_type_filt {
+	const char *type;
+	uint16_t ntype;
+};
+
 #define	NPF_IFNET_TABLE_PREF		".ifnet-"
 #define	NPF_IFNET_TABLE_PREFLEN		(sizeof(NPF_IFNET_TABLE_PREF) - 1)
 
@@ -193,9 +198,9 @@ typedef struct npf_bpf npf_bpf_t;
 #define	MATCH_INVERT	0x04
 
 enum {
-	BM_IPVER, BM_PROTO, BM_SRC_CIDR, BM_SRC_TABLE, BM_DST_CIDR,
+	BM_IPVER, BM_ETHER_TYPE, BM_PROTO, BM_SRC_CIDR, BM_SRC_TABLE, BM_DST_CIDR,
 	BM_DST_TABLE, BM_SRC_PORTS, BM_DST_PORTS, BM_TCPFL, BM_ICMP_TYPE,
-	BM_ICMP_CODE, BM_SRC_NEG, BM_DST_NEG,
+	BM_ICMP_CODE, BM_SRC_NEG, BM_DST_NEG, BM_SRC_ETHER, BM_DST_ETHER,
 
 	BM_COUNT // total number of the marks
 };
@@ -203,7 +208,9 @@ enum {
 npf_bpf_t *	npfctl_bpf_create(void);
 struct bpf_program *npfctl_bpf_complete(npf_bpf_t *);
 const void *	npfctl_bpf_bmarks(npf_bpf_t *, size_t *);
+void		npfctl_bpf_ether(npf_bpf_t *, unsigned, struct ether_addr *);
 void		npfctl_bpf_destroy(npf_bpf_t *);
+void		fetch_ether_type(npf_bpf_t *, uint16_t);
 
 void		npfctl_bpf_group_enter(npf_bpf_t *, bool);
 void		npfctl_bpf_group_exit(npf_bpf_t *);

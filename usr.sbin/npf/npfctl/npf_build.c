@@ -329,6 +329,10 @@ npfctl_build_vars(npf_bpf_t *ctx, sa_family_t family, npfvar_t *vars, int opts)
 			npfctl_bpf_table(ctx, opts, tid);
 			break;
 		}
+		case NPFVAR_MAC: {
+			struct ether_addr *eth = data;
+			npfctl_bpf_ether(ctx, opts, eth);
+		}
 		default:
 			yyerror("unexpected %s", npfvar_type(type));
 		}
@@ -443,84 +447,12 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	unsigned opts;
 	size_t len;
 
+	if ( fopts->layer == NPF_LAYER_3 ) {
 
-
-	if (fopts->layer == NPF_LAYER_3) {
-		const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
-		const addr_port_t *apto = &fopts->filt.opt_3.fo_to;
-		bool any_proto, any_addrs, any_ports, stateful;
-		bool any_l4proto, non_tcpudp, tcp_with_nofl;
-
-		/*
-		 * Gather some information about the protocol options, if any.
-		 * Check the filter criteria in general -- if none specified,
-		 * then no byte-code.
-		 */
-		any_l4proto = npfctl_check_proto(popts, &non_tcpudp, &tcp_with_nofl);
-		any_proto = (family != AF_UNSPEC) || any_l4proto;
-		any_addrs = apfrom->ap_netaddr || apto->ap_netaddr;
-		any_ports = apfrom->ap_portrange || apto->ap_portrange;
-		stateful = (npf_rule_getattr(rl) & NPF_RULE_STATEFUL) != 0;
-		if (!any_proto && !any_addrs && !any_ports && !stateful) {
-			return false;
-		}
-
-		/*
-		 * Sanity check: ports can only be used with TCP or UDP protocol.
-		 */
-		if (any_ports && non_tcpudp) {
-			yyerror("invalid filter options for given the protocol(s)");
-		}
-
-		bc = npfctl_bpf_create();
-
-		/* Build layer 3 and 4 protocol blocks. */
-		if (family != AF_UNSPEC) {
-			npfctl_bpf_ipver(bc, family);
-		}
-		if (any_l4proto) {
-			npfctl_build_proto(bc, popts);
-		}
-
-		/*
-		 * If this is a stateful rule and TCP flags are not specified,
-		 * then add "flags S/SAFR" filter for TCP protocol case.
-		 */
-		if (stateful && (!any_l4proto || tcp_with_nofl)) {
-			npfctl_bpf_tcpfl(bc, TH_SYN, TH_SYN | TH_ACK | TH_FIN | TH_RST);
-		}
-
-		/* Build IP address blocks. */
-		opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
-		npfctl_build_vars(bc, family, apfrom->ap_netaddr, opts);
-		opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
-		npfctl_build_vars(bc, family, apto->ap_netaddr, opts);
-
-		/*
-		 * Build the port-range blocks.  If no protocol is specified,
-		 * then we implicitly filter for the TCP / UDP protocols.
-		 */
-		if (any_ports && !any_l4proto) {
-			npfctl_bpf_group_enter(bc, false);
-			npfctl_bpf_proto(bc, IPPROTO_TCP);
-			npfctl_bpf_proto(bc, IPPROTO_UDP);
-			npfctl_bpf_group_exit(bc);
-		}
-		npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
-		npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
+		build_l3_code(family, popts, fopts);
+	} else if ( fopts->layer == NPF_LAYER_2 ) {
+		build_l2_code(fopts);
 	}
-	else if (fopts->layer == NPF_LAYER_2) {
-
-		const macaddr_t *apfrom = &fopts->filt.opt_3.fo_from;
-		const macaddr_t *apto = &fopts->filt.opt_3.fo_to;
-
-		bc = npfctl_bpf_create();
-		if (fopts->filt.opt_2.ether_type ! ETHERTYPE_MAX ) {
-
-		}
-	}
-
-
 
 	/* Set the byte-code marks, if any. */
 	const void *bmarks = npfctl_bpf_bmarks(bc, &len);
@@ -545,17 +477,99 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	return true;
 }
 
-static bool
-npfctl_build_l2code(nl_rule_t *rl, const filt_opts_t *fopts)
+static void
+build_l2_code(const filt_opts_t *fopts)
 {
+	npf_bpf_t *bc;
 	unsigned opts;
-	const macaddr_t *apfrom = &fopts->filt.opt_2.fo_from;
-	const macaddr_t *apto = &fopts->filt.opt_2.fo_to;
-	/* Build mac address blocks. */
+	macaddr_t *ap_from = fopts->filt.opt_2.fo_from;
+	macaddr_t *ap_to = fopts->filt.opt_2.fo_to;
+	uint8_t ether_type = fopts->filt.opt_2.ether_type;
+
+	bc = npfctl_bpf_create();
+
+	if (ether_type != ETHERTYPE_MAX) {
+		fetch_ether_type(bc, ether_type);
+	}
+
+	/* Build ether address blocks. */
+	opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
+	npfctl_build_vars(bc, 0, ap_from->hawddr, opts);
+	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
+	npfctl_build_vars(bc, 0, ap_to->hawddr, opts);
+}
+
+static void
+build_l3_code(sa_family_t family, const npfvar_t *popts,
+    const filt_opts_t *fopts)
+{
+	npf_bpf_t *bc;
+	unsigned opts;
+	size_t len;
+
+	const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
+	const addr_port_t *apto = &fopts->filt.opt_3.fo_to;
+	bool any_proto, any_addrs, any_ports, stateful;
+	bool any_l4proto, non_tcpudp, tcp_with_nofl;
+
+	/*
+	 * Gather some information about the protocol options, if any.
+	 * Check the filter criteria in general -- if none specified,
+	 * then no byte-code.
+	 */
+	any_l4proto = npfctl_check_proto(popts, &non_tcpudp, &tcp_with_nofl);
+	any_proto = (family != AF_UNSPEC) || any_l4proto;
+	any_addrs = apfrom->ap_netaddr || apto->ap_netaddr;
+	any_ports = apfrom->ap_portrange || apto->ap_portrange;
+	stateful = (npf_rule_getattr(rl) & NPF_RULE_STATEFUL) != 0;
+	if (!any_proto && !any_addrs && !any_ports && !stateful) {
+		return false;
+	}
+
+	/*
+		* Sanity check: ports can only be used with TCP or UDP protocol.
+		*/
+	if (any_ports && non_tcpudp) {
+		yyerror("invalid filter options for given the protocol(s)");
+	}
+
+	bc = npfctl_bpf_create();
+
+	/* Build layer 3 and 4 protocol blocks. */
+	if (family != AF_UNSPEC) {
+		npfctl_bpf_ipver(bc, family);
+	}
+	if (any_l4proto) {
+		npfctl_build_proto(bc, popts);
+	}
+
+	/*
+		* If this is a stateful rule and TCP flags are not specified,
+		* then add "flags S/SAFR" filter for TCP protocol case.
+		*/
+	if (stateful && (!any_l4proto || tcp_with_nofl)) {
+		npfctl_bpf_tcpfl(bc, TH_SYN, TH_SYN | TH_ACK | TH_FIN | TH_RST);
+	}
+
+	/* Build IP address blocks. */
 	opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
 	npfctl_build_vars(bc, family, apfrom->ap_netaddr, opts);
 	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
 	npfctl_build_vars(bc, family, apto->ap_netaddr, opts);
+
+	/*
+		* Build the port-range blocks.  If no protocol is specified,
+		* then we implicitly filter for the TCP / UDP protocols.
+		*/
+	if (any_ports && !any_l4proto) {
+		npfctl_bpf_group_enter(bc, false);
+		npfctl_bpf_proto(bc, IPPROTO_TCP);
+		npfctl_bpf_proto(bc, IPPROTO_UDP);
+		npfctl_bpf_group_exit(bc);
+	}
+
+	npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
+	npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
 }
 
 static void
@@ -800,7 +814,7 @@ npfctl_rule_layer_compat(nl_rule_t *cg, int layer)
 		return;
 	attr = nvlist_get_number(cg, "attr");
 
-	if (!(attr & layer)) {
+	if ((attr & layer) == 0) {
 		yerror("cannot insert %s rules in this group"
 		" make sure to insert same layer rules in same group ", str);
 	}
