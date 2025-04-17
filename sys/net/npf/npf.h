@@ -50,6 +50,10 @@
 struct npf;
 typedef struct npf npf_t;
 
+#ifndef ETHER_ADDR_LEN
+#define ETHER_ADDR_LEN 6
+#endif
+
 /*
  * Storage of address (both for IPv4 and IPv6) and netmask.
  */
