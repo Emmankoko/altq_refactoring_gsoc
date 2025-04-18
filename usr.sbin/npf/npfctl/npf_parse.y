@@ -169,6 +169,7 @@ yyerror(const char *fmt, ...)
 %token			TREE
 %token			TYPE
 %token			L2
+%token			ETHER
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
