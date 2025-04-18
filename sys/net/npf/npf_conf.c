@@ -217,7 +217,7 @@ npf_config_locked_p(npf_t *npf)
 void
 npf_config_sync(npf_t *npf)
 {
-	KASSERT(npf_config_locked_p(npf));
+	KASSERT(npf_config_locked_p(npf)); /* here */
 	npf_ebr_full_sync(npf->ebr);
 }
 

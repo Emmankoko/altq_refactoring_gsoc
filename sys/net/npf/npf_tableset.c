@@ -866,8 +866,7 @@ npf_table_gc(npf_t *npf, npf_table_t *t)
 
 	ref = thmap_stage_gc(t->t_map);
 	if (npf) {
-		KASSERT(npf_config_locked_p(npf));
-		npf_config_sync(npf);
+		npf_config_sync(npf); /* mutex ownerhip is already checked in config sync */
 	}
 	thmap_gc(t->t_map, ref);
 
