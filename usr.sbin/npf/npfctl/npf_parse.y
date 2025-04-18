@@ -570,7 +570,7 @@ rule
 		    AF_UNSPEC, NULL, NULL, $7, $8);
 	}
 	| block_or_pass ETHER rule_dir opt_final on_ifname
-		l2_filt_opts /* layer 2 */
+		l2_filt_opts
 	{
 		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, $6, NULL, NULL);
 	}
@@ -819,7 +819,7 @@ addr_and_mask
 	;
 
 mac_addr
-	: addr { $$ = npfctl_parse_mac_addr($1); }
+	: HWADDR { $$ = npfctl_parse_mac_addr($1); }
 	;
 
 filt_addr_element
@@ -873,7 +873,6 @@ again:
 addr
 	: IPV4ADDR	{ $$ = $1; }
 	| IPV6ADDR	{ $$ = $1; }
-	| HWADDR	{ $$ = $1; }
 	;
 
 filt_port
