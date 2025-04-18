@@ -680,7 +680,7 @@ all_or_filt_opts
 		$$.filt.opt_3.fo_to.ap_portrange = NULL;
 		$$.layer = NPF_LAYER_3;
 	}
-	| filt_opts	{ $$ = $1; $$.layer = NPF_LAYER_3; }
+	| filt_opts	{ $$ = $1; }
 	;
 
 l2_filt_opts
@@ -693,11 +693,9 @@ l2_filt_opts
 		$$.layer = NPF_LAYER_2;
 		$$.filt.opt_2.ether_type = ETHERTYPE_MAX;
 	}
-	| l2_fopts ether_type
+	| l2_fopts
 	{
 		$$ = $1;
-		$$.layer = NPF_LAYER_2;
-		$$.filt.opt_2.ether_type = $2;
 	}
 	;
 
@@ -733,6 +731,7 @@ filt_opts
 		$$.fo_tinvert = $6;
 		$$.filt.opt_3.fo_to.ap_netaddr = $7;
 		$$.filt.opt_3.fo_to.ap_portrange = $8;
+		$$.layer = NPF_LAYER_3;
 	}
 	| FROM maybe_not filt_addr filt_port
 	{
@@ -742,6 +741,7 @@ filt_opts
 		$$.fo_tinvert = false;
 		$$.filt.opt_3.fo_to.ap_netaddr = NULL;
 		$$.filt.opt_3.fo_to.ap_portrange = NULL;
+		$$.layer = NPF_LAYER_3;
 	}
 	| TO maybe_not filt_addr filt_port
 	{
@@ -751,30 +751,38 @@ filt_opts
 		$$.fo_tinvert = $2;
 		$$.filt.opt_3.fo_to.ap_netaddr = $3;
 		$$.filt.opt_3.fo_to.ap_portrange = $4;
+		$$.layer = NPF_LAYER_3;
 	}
 	;
 
 l2_fopts
-	: FROM maybe_not filt_addr TO maybe_not filt_addr
+	: FROM maybe_not filt_addr TO maybe_not filt_addr ether_type
 	{
 		$$.fo_finvert = $2;
 		$$.filt.opt_2.fo_from.macaddr = $3;
 		$$.fo_tinvert = $6;
 		$$.filt.opt_2.fo_to.mac_addr = $6;
+		$$.filt.opt_2.ether_type = $7;
+		$$.layer = NPF_LAYER_2;
 	}
-	| FROM maybe_not filt_addr
+	| FROM maybe_not filt_addr ether_type
 	{
 		$$.fo_finvert = $2;
 		$$.filt.opt_2.fo_from.mac_addr = $3;
 		$$.fo_tinvert = false;
 		$$.filt.opt_2.fo_to.mac_addr = NULL;
+		$$.filt.opt_2.ether_type = $4;
+		$$.layer = NPF_LAYER_2;
+
 	}
-	| TO maybe_not filt_addr
+	| TO maybe_not filt_addr ether_type
 	{
 		$$.fo_finvert = false;
 		$$.filt.opt_2.fo_from.mac_addr = NULL;
 		$$.fo_tinvert = $2;
 		$$.filt.opt_2.fo_to.mac_addr = $3;
+		$$.filt.opt_2.ether_type = $4;
+		$$.layer = NPF_LAYER_2;
 	}
 	;
 
