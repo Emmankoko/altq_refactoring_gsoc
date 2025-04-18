@@ -532,7 +532,7 @@ group_opts
 
 layer
 	: L2 { $$ = NPF_LAYER_2; }
-	: /* use layer 3 by default if no layer is set */ { $$ = NPF_LAYER_3; }
+	| /* use layer 3 by default if no layer is set */ { $$ = NPF_LAYER_3; }
 	;
 
 ruleset_block
