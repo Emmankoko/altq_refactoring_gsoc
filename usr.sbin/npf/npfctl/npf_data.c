@@ -344,6 +344,7 @@ npfctl_parse_port_range_variable(const char *v, npfvar_t *vp)
 	return pvp;
 }
 
+/*
 npfvar_t *
 npfctl_parse_ether_variable(const char *v, npfvar_t *vp)
 {
@@ -374,6 +375,7 @@ npfctl_parse_ether_variable(const char *v, npfvar_t *vp)
 	}
 	return ether;
 }
+*/
 
 npfvar_t *
 npfctl_parse_ifnet(const char *ifname, const int family)
