@@ -280,11 +280,13 @@ npfctl_parse_table_id(const char *name)
 	return npfvar_create_element(NPFVAR_TABLE, &tid, sizeof(u_int));
 }
 
+/*
 npfvar_t *
 npfctl_parse_ether(uint16_t *eth_type)
 {
 	return npfvar_create_element(NPFVAR_ETH_TYPE, eth_type, sizeof(*eth_type));
 }
+*/
 
 /*
  * npfctl_parse_port_range: create a port-range variable.  Note that the

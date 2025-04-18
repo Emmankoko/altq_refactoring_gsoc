@@ -162,7 +162,7 @@ npfvar_t * 	npfctl_parse_icmp(int, int, int);
 npfvar_t *	npfctl_parse_port_range(in_port_t, in_port_t);
 npfvar_t *	npfctl_parse_port_range_variable(const char *, npfvar_t *);
 npfvar_t *	npfctl_parse_ether_variable(const char *, npfvar_t *);
-npfvar_t *	npfctl_parse_ether(uint16_t *eth_type)
+//npfvar_t *	npfctl_parse_ether(uint16_t *eth_type);
 npfvar_t *	npfctl_parse_fam_addr_mask(const char *, const char *,
 		    unsigned long *);
 npfvar_t *	npfctl_parse_mac_addr(const char *);
