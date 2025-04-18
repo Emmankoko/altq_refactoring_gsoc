@@ -70,7 +70,7 @@ typedef uint8_t			npf_netmask_t;
 
 /* BPF coprocessor. */
 #if defined(NPF_BPFCOP)
-#define	NPF_COP_L23		0 /* we cop both layer 2 and 3 information */
+#define	NPF_COP_L3		0 /* we cop both layer 2 and 3 information */
 #define	NPF_COP_TABLE		1
 
 #define BPF_MW_ETHER_TYPE		0
