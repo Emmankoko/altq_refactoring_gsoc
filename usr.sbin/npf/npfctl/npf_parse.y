@@ -532,8 +532,8 @@ group_opts
 	;
 
 layer
-	: L2 { $$ = NPF_LAYER_2; }
-	| /* use layer 3 by default if no layer is set */ { $$ = NPF_LAYER_3; }
+	: L2	{ $$ = NPF_LAYER_2; }
+	|	{ $$ = NPF_LAYER_3; }
 	;
 
 ruleset_block
@@ -701,7 +701,7 @@ l2_filt_opts
 
 ether_type
 	: number { $$ =  $1; }
-	| /* empty */ { $$ = ETHERTYPE_MAX; }
+	|	{ $$ = ETHERTYPE_MAX; }
 	;
 
 opt_stateful
