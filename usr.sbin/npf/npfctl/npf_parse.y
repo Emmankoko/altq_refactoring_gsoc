@@ -186,7 +186,7 @@ yyerror(const char *fmt, ...)
 
 %type	<str>		addr some_name table_store dynamic_ifaddrs
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
-%type	<num>		port opt_final number afamily opt_family opt_ether
+%type	<num>		port opt_final number afamily opt_family
 %type	<num>		block_or_pass rule_dir group_dir block_opts ether_type
 %type	<num>		maybe_not opt_stateful icmp_type table_type
 %type	<num>		map_sd map_algo map_flags map_type layer
@@ -194,7 +194,7 @@ yyerror(const char *fmt, ...)
 %type	<var>		static_ifaddrs filt_addr_element mac_addr
 %type	<var>		filt_port filt_port_list port_range icmp_type_and_code
 %type	<var>		filt_addr addr_and_mask tcp_flags tcp_flags_and_mask
-%type	<var>		procs proc_call proc_param_list proc_param ether
+%type	<var>		procs proc_call proc_param_list proc_param
 %type	<var>		element list_elems list value filt_addr_list
 %type	<var>		opt_proto proto proto_elems
 %type	<addrport>	mapseg
@@ -568,7 +568,7 @@ rule
 		npfctl_build_rule($1 | $2 | $3 | $4, $5,
 		    AF_UNSPEC, NULL, NULL, $7, $8);
 	}
-	| block_or_pass ETHER rule_dir opt_final on_ifname
+	| block_or_pass ether rule_dir opt_final on_ifname
 		l2_filt_opts /* layer 2 */
 	{
 		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, $6, NULL, NULL);
