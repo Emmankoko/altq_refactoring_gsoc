@@ -569,7 +569,7 @@ rule
 		npfctl_build_rule($1 | $2 | $3 | $4, $5,
 		    AF_UNSPEC, NULL, NULL, $7, $8);
 	}
-	| block_or_pass ether rule_dir opt_final on_ifname
+	| block_or_pass ETHER rule_dir opt_final on_ifname
 		l2_filt_opts /* layer 2 */
 	{
 		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, $6, NULL, NULL);
