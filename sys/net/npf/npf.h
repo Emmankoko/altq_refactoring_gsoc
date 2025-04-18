@@ -73,10 +73,10 @@ typedef uint8_t			npf_netmask_t;
 #define	NPF_COP_L23		0 /* we cop both layer 2 and 3 information */
 #define	NPF_COP_TABLE		1
 
-//#define BPF_MW_ETHER_TYPE		0
-#define	BPF_MW_IPVER		0
-#define	BPF_MW_L4OFF		1
-#define	BPF_MW_L4PROTO		2
+#define BPF_MW_ETHER_TYPE		0
+#define	BPF_MW_IPVER		1
+#define	BPF_MW_L4OFF		2
+#define	BPF_MW_L4PROTO		3
 #endif
 /* The number of words used. */
 #define	NPF_BPF_NWORDS		3
