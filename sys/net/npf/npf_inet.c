@@ -421,24 +421,6 @@ done:
 }
 
 static int
-npf_cache_ether(npf_cache_t *npc, nbuf_t *nbuf)
-{
-	struct ether_header *ether;
-	int flags = 0;
-
-	ether = nbuf_ensure_contig(nbuf, sizeof(struct ether_header));
-	if (ether == NULL)
-		return NPC_FMTERR;
-
-	npc->ether_dhost[ETHER_ADDR_LEN] = ether->ether_dhost[ETHER_ADDR_LEN];
-	npc->ether_dhost[ETHER_ADDR_LEN] = ether->ether_dhost[ETHER_ADDR_LEN];
-	npc->ether_type = ether->ether_type;
-
-	flags |= NPC_LAYER2;
-	return flags;
-}
-
-static int
 npf_cache_ip(npf_cache_t *npc, nbuf_t *nbuf)
 {
 	const void *nptr = nbuf_dataptr(nbuf);
@@ -603,7 +585,7 @@ npf_cache_tcp(npf_cache_t *npc, nbuf_t *nbuf, unsigned hlen)
  * => nbuf offset shall be set accordingly.
  */
 int
-npf_cache_all(npf_cache_t *npc, int layer)
+npf_cache_all(npf_cache_t *npc)
 {
 	nbuf_t *nbuf = npc->npc_nbuf;
 	int flags, l4flags;
@@ -615,17 +597,6 @@ npf_cache_all(npf_cache_t *npc, int layer)
 	 */
 again:
 	nbuf_unset_flag(nbuf, NBUF_DATAREF_RESET);
-
-	/*
-	 * First, cahce ether header type
-	 * if there are no layer 2 rules, no caching here
-	 */
-	if (layer & NPF_LAYER2) {
-		flags = npf_cache_ether(npc, nbuf);
-		if ((flags & NPC_LAYER4) == 0) {
-			goto out;
-		}
-	}
 
 	/*
 	 * First, cache the L3 header (IPv4 or IPv6).  If IP packet is
@@ -694,8 +665,8 @@ out:
 	return flags;
 }
 
-int
-npf_recache(npf_cache_t *npc, int layer)
+void
+npf_recache(npf_cache_t *npc)
 {
 	nbuf_t *nbuf = npc->npc_nbuf;
 	const int mflags __diagused = npc->npc_info & (NPC_IP46 | NPC_LAYER4);
@@ -703,12 +674,10 @@ npf_recache(npf_cache_t *npc, int layer)
 
 	nbuf_reset(nbuf);
 	npc->npc_info = 0;
-	flags = npf_cache_all(npc, layer);
+	flags = npf_cache_all(npc);
 
 	KASSERT((flags & mflags) == mflags);
 	KASSERT(nbuf_flag_p(nbuf, NBUF_DATAREF_RESET) == 0);
-
-	return flags;
 }
 
 /*

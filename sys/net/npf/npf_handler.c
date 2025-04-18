@@ -46,7 +46,7 @@
 
 #ifdef _KERNEL
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: npf_handler.c,v 1.50 2024/07/05 04:34:35 rin Exp $");
+__KERNEL_RCSID(0, "$NetBSD: npf_handler.c,v 1.49 2020/05/30 14:16:56 rmind Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -141,7 +141,7 @@ npf_packet_bypass_tag_p(nbuf_t *nbuf)
  * Note: packet flow and inspection logic is in strict order.
  */
 __dso_public int
-npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di, int layer)
+npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 {
 	nbuf_t nbuf;
 	npf_cache_t npc;
@@ -173,13 +173,8 @@ npfk_packet_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di, int laye
 	rp = NULL;
 	con = NULL;
 
-	/* Cache all in layer 3 if no layer 2 rules were set.
-	 * if layer 2 is cached, even though all is cached, still recache
-	 */
-	if (layer & NPF_LAYER2)
-		flags = npf_recache(&npc);
-	else
-		flags = npf_cache_all(&npc, layer);
+	/* Cache everything. */
+	flags = npf_cache_all(&npc);
 
 	/* Malformed packet, leave quickly. */
 	if (flags & NPC_FMTERR) {
@@ -333,8 +328,10 @@ out:
 		error = ENETUNREACH;
 	}
 
-	/* Free the mbuf chain. */
-	m_freem(*mp);
-	*mp = NULL;
+	if (*mp) {
+		/* Free the mbuf chain. */
+		m_freem(*mp);
+		*mp = NULL;
+	}
 	return error;
 }
