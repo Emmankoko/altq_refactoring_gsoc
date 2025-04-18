@@ -45,7 +45,6 @@ __RCSID("$NetBSD: npf_data.c,v 1.30 2019/01/19 21:19:32 rmind Exp $");
 #define	__FAVOR_BSD
 #include <netinet/tcp.h>
 #include <net/if.h>
-#include <net/if_ether.h>
 
 #include <string.h>
 #include <ctype.h>
