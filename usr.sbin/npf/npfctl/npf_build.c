@@ -447,52 +447,15 @@ npfctl_check_proto(const npfvar_t *vars, bool *non_tcpudp, bool *tcp_with_nofl)
 	return count != 0;
 }
 
-static bool
-npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
-    const filt_opts_t *fopts)
-{
-	npf_bpf_t *bc;
-	size_t len;
-
-	if ( fopts->layer == NPF_LAYER_3 ) {
-
-		bc = build_l3_code(rl, family, popts, fopts);
-	} else if ( fopts->layer == NPF_LAYER_2 ) {
-		bc = build_l2_code(fopts);
-	}
-
-	/* Set the byte-code marks, if any. */
-	const void *bmarks = npfctl_bpf_bmarks(bc, &len);
-	if (bmarks && npf_rule_setinfo(rl, bmarks, len) != 0) {
-		errx(EXIT_FAILURE, "npf_rule_setinfo");
-	}
-
-	/* Complete BPF byte-code and pass to the rule. */
-	struct bpf_program *bf = npfctl_bpf_complete(bc);
-	if (bf == NULL) {
-		npfctl_bpf_destroy(bc);
-		return true;
-	}
-	len = bf->bf_len * sizeof(struct bpf_insn);
-
-	if (npf_rule_setcode(rl, NPF_CODE_BPF, bf->bf_insns, len) != 0) {
-		errx(EXIT_FAILURE, "npf_rule_setcode");
-	}
-	npfctl_dump_bpf(bf);
-	npfctl_bpf_destroy(bc);
-
-	return true;
-}
-
 static npf_bpf_t *
 build_l2_code(const filt_opts_t *fopts)
 {
 	npf_bpf_t *bc;
 	unsigned opts;
 
-	macaddr_t *ap_from = &fopts->filt.opt_2.fo_from;
-	macaddr_t *ap_to = &fopts->filt.opt_2.fo_to;
-	uint8_t ether_type = fopts->filt.opt_2.ether_type;
+	const macaddr_t *ap_from = &fopts->filt.opt_2.fo_from;
+	const macaddr_t *ap_to = &fopts->filt.opt_2.fo_to;
+	const uint8_t ether_type = fopts->filt.opt_2.ether_type;
 
 	bc = npfctl_bpf_create();
 
@@ -580,6 +543,43 @@ build_l3_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
 
 	return bc;
+}
+
+static bool
+npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
+    const filt_opts_t *fopts)
+{
+	npf_bpf_t *bc;
+	size_t len;
+
+	if ( fopts->layer == NPF_LAYER_3 ) {
+
+		bc = build_l3_code(rl, family, popts, fopts);
+	} else if ( fopts->layer == NPF_LAYER_2 ) {
+		bc = build_l2_code(fopts);
+	}
+
+	/* Set the byte-code marks, if any. */
+	const void *bmarks = npfctl_bpf_bmarks(bc, &len);
+	if (bmarks && npf_rule_setinfo(rl, bmarks, len) != 0) {
+		errx(EXIT_FAILURE, "npf_rule_setinfo");
+	}
+
+	/* Complete BPF byte-code and pass to the rule. */
+	struct bpf_program *bf = npfctl_bpf_complete(bc);
+	if (bf == NULL) {
+		npfctl_bpf_destroy(bc);
+		return true;
+	}
+	len = bf->bf_len * sizeof(struct bpf_insn);
+
+	if (npf_rule_setcode(rl, NPF_CODE_BPF, bf->bf_insns, len) != 0) {
+		errx(EXIT_FAILURE, "npf_rule_setcode");
+	}
+	npfctl_dump_bpf(bf);
+	npfctl_bpf_destroy(bc);
+
+	return true;
 }
 
 static void
@@ -734,7 +734,7 @@ npfctl_build_group(const char *name, int attr, const char *ifname, bool def)
 static nl_rule_t *
 set_defgroup(nl_rule_t *rl, nl_rule_t *def_group, int attr)
 {
-	char *str = (attr & NPF_LAYER_2) ? "layer2" : "layer3";
+	const char *str = (attr & NPF_LAYER_2) ? "layer2" : "layer3";
 
 	if (def_group) {
 		yyerror("multiple %s default groups are not valid", str);
@@ -784,7 +784,7 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 	/* quickly check for group-rule layer compat */
 	if (npf_conf) {
 		cg = current_group[rule_nesting_level];
-		npfctl_rule_layer_compat(cg, fopts->layer)
+		npfctl_rule_layer_compat(cg, fopts->layer);
 	}
 
 	rl = npf_rule_create(NULL, attr, ifname);
@@ -825,10 +825,10 @@ npfctl_rule_layer_compat(nl_rule_t *cg, int layer)
 	uint64_t attr;
 	if (!cg)
 		return;
-	attr = nvlist_get_number(cg, "attr");
+	attr = dnvlist_get_number(cg, "attr");
 
 	if ((attr & layer) == 0) {
-		yerror("cannot insert %s rules in this group"
+		yyerror("cannot insert %s rules in this group"
 		" make sure to insert same layer rules in same group ", str);
 	}
 }
