@@ -466,9 +466,9 @@ build_l2_code(const filt_opts_t *fopts)
 
 	/* Build ether address blocks. */
 	opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
-	npfctl_build_vars(bc, 0, ap_from->hawddr, opts);
+	npfctl_build_vars(bc, 0, ap_from->hwaddr, opts);
 	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
-	npfctl_build_vars(bc, 0, ap_to->hawddr, opts);
+	npfctl_build_vars(bc, 0, ap_to->hwaddr, opts);
 	return bc;
 }
 
