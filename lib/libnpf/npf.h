@@ -103,6 +103,7 @@ void		npf_ext_param_bool(nl_ext_t *, const char *, bool);
 void		npf_ext_param_string(nl_ext_t *, const char *, const char *);
 
 nl_rule_t *	npf_rule_create(const char *, uint32_t, const char *);
+void		npf_rule_layer_compat(nl_rule_t *, int);
 int		npf_rule_setcode(nl_rule_t *, int, const void *, size_t);
 int		npf_rule_setprio(nl_rule_t *, int);
 int		npf_rule_setproc(nl_rule_t *, const char *);

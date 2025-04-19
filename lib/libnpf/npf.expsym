@@ -58,6 +58,7 @@ npf_rproc_getname
 npf_rproc_insert
 npf_rproc_iterate
 npf_rule_create
+npf_rule_layer_compat
 npf_rule_destroy
 npf_rule_exists_p
 npf_rule_export

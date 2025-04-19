@@ -46,7 +46,6 @@ __RCSID("$NetBSD: npf_build.c,v 1.56 2023/08/18 14:26:50 tnn Exp $");
 #include <fcntl.h>
 #include <errno.h>
 #include <err.h>
-#include <nv.h>
 
 #include <pcap/pcap.h>
 
@@ -771,26 +770,6 @@ npfctl_build_group_end(void)
 }
 
 /*
- * this function is here to ensure that layer 2 rules are rightfully embedded in layer2 groups
- * and vice versa. layer3 group => layer 3 rules
- * does not allow setting layer 2 rules in layer 3 groups
- */
-static void
-npfctl_rule_layer_compat(nl_rule_t *cg, int layer)
-{
-	const char *str = (layer & NPF_LAYER_2) ? "layer 2" : "layer 3";
-	uint64_t attr;
-	if (!cg)
-		return;
-	attr = nvlist_get_number(cg, "attr");
-
-	if ((attr & layer) == 0) {
-		yyerror("cannot insert %s rules in this group"
-		" make sure to insert same layer rules in same group ", str);
-	}
-}
-
-/*
  * npfctl_build_rule: create a rule, build byte-code from filter options,
  * if any, and insert into the ruleset of current group, or set the rule.
  */
@@ -806,7 +785,7 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 	/* quickly check for group-rule layer compat */
 	if (npf_conf) {
 		cg = current_group[rule_nesting_level];
-		npfctl_rule_layer_compat(cg, fopts->layer);
+		npf_rule_layer_compat(cg, fopts->layer);
 	}
 
 	rl = npf_rule_create(NULL, attr, ifname);

@@ -586,6 +586,27 @@ npf_ruleset_add(int fd, const char *rname, nl_rule_t *rl, uint64_t *id)
 	return 0;
 }
 
+/*
+ * this function is here to ensure that layer 2 rules are
+ * rightfully embedded in layer2 groups
+ * and vice versa. layer3 group => layer 3 rules
+ * does not allow setting layer 2 rules in layer 3 groups
+ */
+void
+npf_rule_layer_compat(nl_rule_t *cg, int layer)
+{
+	const char *str = (layer & NPF_LAYER_2) ? "layer 2" : "layer 3";
+	uint64_t attr;
+	if (!cg)
+		return;
+	attr = nvlist_get_number(cg, "attr");
+
+	if ((attr & layer) == 0) {
+		yyerror("cannot insert %s rules in this group"
+		" make sure to insert same layer rules in same group ", str);
+	}
+}
+
 int
 npf_ruleset_remove(int fd, const char *rname, uint64_t id)
 {
