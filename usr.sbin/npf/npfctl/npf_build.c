@@ -770,6 +770,26 @@ npfctl_build_group_end(void)
 }
 
 /*
+ * this function is here to ensure that layer 2 rules are
+ * rightfully embedded in layer2 groups
+ * and vice versa. layer3 group => layer 3 rules
+ * does not allow setting layer 2 rules in layer 3 groups
+ */
+static void
+npf_rule_layer_compat(nl_rule_t *cg, int layer)
+{
+	const char *str = (layer & NPF_LAYER_2) ? "layer 2" : "layer 3";
+	uint32_t attr;
+
+	attr = npf_rule_getattr(cg);
+
+	if ((attr & layer) == 0) {
+		yyerror("cannot insert %s rules in this group"
+		" make sure to insert same layer rules in same group ", str);
+	}
+}
+
+/*
  * npfctl_build_rule: create a rule, build byte-code from filter options,
  * if any, and insert into the ruleset of current group, or set the rule.
  */
