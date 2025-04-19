@@ -57,6 +57,7 @@ static nl_config_t *		npf_conf = NULL;
 static bool			npf_debug = false;
 static nl_rule_t *		the_rule = NULL;
 static bool			npf_conf_built = false;
+static bool			l2_group = false;;
 
 static nl_rule_t *		defgroup;
 static nl_rule_t *		defgroup_l2;
@@ -105,11 +106,18 @@ npfctl_config_build(void)
 	 * if you set a layer 2 rule, layer 2 default also becomes mandatory.
 	 * if you didn't set layer 2 rules, only layer 3 default is mandatory
 	 */
-	if (!defgroup_l3) {
-		errx(EXIT_FAILURE, "layer3 default group was not defined");
+	if (!defgroup) {
+		errx(EXIT_FAILURE, "layer 3 default group was not defined");
+	}
+
+	if (l2_group & !defgroup_l2) {
+		errx(EXIT_FAILURE, "layer 2 default group not defined");
 	}
 	assert(rule_nesting_level == 0);
 	npf_rule_insert(npf_conf, NULL, defgroup);
+
+	if (defgroup_l2)
+		npf_rule_insert(npf_conf, NULL, defgroup_l2);
 
 	npf_config_build(npf_conf);
 	npf_conf_built = true;
@@ -444,14 +452,13 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
     const filt_opts_t *fopts)
 {
 	npf_bpf_t *bc;
-	unsigned opts;
 	size_t len;
 
 	if ( fopts->layer == NPF_LAYER_3 ) {
 
-		build_l3_code(family, popts, fopts);
+		bc = build_l3_code(rl, family, popts, fopts);
 	} else if ( fopts->layer == NPF_LAYER_2 ) {
-		build_l2_code(fopts);
+		bc = build_l2_code(fopts);
 	}
 
 	/* Set the byte-code marks, if any. */
@@ -477,18 +484,19 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	return true;
 }
 
-static void
+static npf_bpf_t *
 build_l2_code(const filt_opts_t *fopts)
 {
 	npf_bpf_t *bc;
 	unsigned opts;
-	macaddr_t *ap_from = fopts->filt.opt_2.fo_from;
-	macaddr_t *ap_to = fopts->filt.opt_2.fo_to;
+
+	macaddr_t *ap_from = &fopts->filt.opt_2.fo_from;
+	macaddr_t *ap_to = &fopts->filt.opt_2.fo_to;
 	uint8_t ether_type = fopts->filt.opt_2.ether_type;
 
 	bc = npfctl_bpf_create();
 
-	if (ether_type != ETHERTYPE_MAX) {
+	if (ether_type != 0) {
 		fetch_ether_type(bc, ether_type);
 	}
 
@@ -497,15 +505,15 @@ build_l2_code(const filt_opts_t *fopts)
 	npfctl_build_vars(bc, 0, ap_from->hawddr, opts);
 	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
 	npfctl_build_vars(bc, 0, ap_to->hawddr, opts);
+	return bc;
 }
 
-static void
-build_l3_code(sa_family_t family, const npfvar_t *popts,
+static npf_bpf_t *
+build_l3_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
     const filt_opts_t *fopts)
 {
 	npf_bpf_t *bc;
 	unsigned opts;
-	size_t len;
 
 	const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
 	const addr_port_t *apto = &fopts->filt.opt_3.fo_to;
@@ -570,6 +578,8 @@ build_l3_code(sa_family_t family, const npfvar_t *popts,
 
 	npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
 	npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
+
+	return bc;
 }
 
 static void
@@ -710,6 +720,9 @@ npfctl_build_group(const char *name, int attr, const char *ifname, bool def)
 		else
 			defgroup = set_defgroup(rl, defgroup, attr);
 	}
+	else if (attr & NPF_LAYER_2) {
+		l2_group = true;
+	}
 
 	/* Set the current group and increase the nesting level. */
 	if (rule_nesting_level >= MAX_RULE_NESTING) {
@@ -818,14 +831,6 @@ npfctl_rule_layer_compat(nl_rule_t *cg, int layer)
 		yerror("cannot insert %s rules in this group"
 		" make sure to insert same layer rules in same group ", str);
 	}
-}
-
-void
-npfctl_build_l2_rule(uint32_t attr, const char *ifname, const l2_filt_opt_t *fopts)
-{
-	nl_rule_t *rl;
-
-	rl = npf_rule_create(NULL, attr, ifname);
 }
 
 /*

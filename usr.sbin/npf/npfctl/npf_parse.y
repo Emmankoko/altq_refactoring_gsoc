@@ -691,7 +691,7 @@ l2_filt_opts
 		$$.fo_tinvert = false;
 		$$.filt.opt_2.fo_to.mac_addr = NULL;
 		$$.layer = NPF_LAYER_2;
-		$$.filt.opt_2.ether_type = ETHERTYPE_MAX;
+		$$.filt.opt_2.ether_type = 0;
 	}
 	| l2_fopts ether_type
 	{
@@ -703,7 +703,7 @@ l2_filt_opts
 
 ether_type
 	: number { $$ =  $1; }
-	|	{ $$ = ETHERTYPE_MAX; }
+	|	{ $$ = 0; }
 	;
 
 opt_stateful
