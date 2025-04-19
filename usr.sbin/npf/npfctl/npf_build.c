@@ -556,7 +556,7 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	if ( fopts->layer == NPF_LAYER_3 ) {
 
 		bc = build_l3_code(rl, family, popts, fopts);
-	} else if ( fopts->layer == NPF_LAYER_2 ) {
+	} else {
 		bc = build_l2_code(fopts);
 	}
 
