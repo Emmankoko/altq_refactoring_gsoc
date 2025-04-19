@@ -397,8 +397,8 @@ map_type
 mapseg
 	: filt_addr filt_port
 	{
-		$$.filt.opt_3.ap_netaddr = $1;
-		$$.filt.opt_3.ap_portrange = $2;
+		$$.ap_netaddr = $1;
+		$$.ap_portrange = $2;
 	}
 	;
 
@@ -572,7 +572,7 @@ rule
 	| block_or_pass ETHER rule_dir opt_final on_ifname
 		l2_filt_opts
 	{
-		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, $6, NULL, NULL);
+		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, &$6, NULL, NULL);
 	}
 	;
 
@@ -697,7 +697,7 @@ l2_filt_opts
 	{
 		$$ = $1;
 		$$.filt.opt_2.ether_type = $2;
-		$$.layer = NPF_LAYER2;
+		$$.layer = NPF_LAYER_2;
 	}
 	;
 
@@ -758,23 +758,23 @@ l2_fopts
 	: FROM maybe_not filt_addr TO maybe_not filt_addr
 	{
 		$$.fo_finvert = $2;
-		$$.filt.opt_2.fo_from.macaddr = $3;
+		$$.filt.opt_2.fo_from.hwaddr = $3;
 		$$.fo_tinvert = $6;
-		$$.filt.opt_2.fo_to.mac_addr = $6;
+		$$.filt.opt_2.fo_to.hwaddr = $6;
 	}
 	| FROM maybe_not filt_addr
 	{
 		$$.fo_finvert = $2;
-		$$.filt.opt_2.fo_from.mac_addr = $3;
+		$$.filt.opt_2.fo_from.hwaddr = $3;
 		$$.fo_tinvert = false;
-		$$.filt.opt_2.fo_to.mac_addr = NULL;
+		$$.filt.opt_2.fo_to.hwaddr = NULL;
 	}
 	| TO maybe_not filt_addr
 	{
 		$$.fo_finvert = false;
-		$$.filt.opt_2.fo_from.mac_addr = NULL;
+		$$.filt.opt_2.fo_from.hwaddr = NULL;
 		$$.fo_tinvert = $2;
-		$$.filt.opt_2.fo_to.mac_addr = $3;
+		$$.filt.opt_2.fo_to.hwaddr = $3;
 	}
 	;
 
