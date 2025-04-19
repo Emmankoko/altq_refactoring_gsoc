@@ -687,9 +687,9 @@ l2_filt_opts
 	: ALL
 	{
 		$$.fo_finvert = false;
-		$$.filt.opt_2.fo_from.mac_addr = NULL;
+		$$.filt.opt_2.fo_from.hwaddr = NULL;
 		$$.fo_tinvert = false;
-		$$.filt.opt_2.fo_to.mac_addr = NULL;
+		$$.filt.opt_2.fo_to.hwaddr = NULL;
 		$$.layer = NPF_LAYER_2;
 		$$.filt.opt_2.ether_type = 0;
 	}

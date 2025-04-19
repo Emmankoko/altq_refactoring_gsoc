@@ -74,7 +74,7 @@ typedef struct addr_port {
 } addr_port_t;
 
 typedef struct macaddr {
-	npfvar_t *	hawddr;
+	npfvar_t *	hwaddr;
 } macaddr_t;
 
 typedef struct L3 {
