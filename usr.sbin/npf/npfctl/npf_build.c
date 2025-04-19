@@ -46,6 +46,7 @@ __RCSID("$NetBSD: npf_build.c,v 1.56 2023/08/18 14:26:50 tnn Exp $");
 #include <fcntl.h>
 #include <errno.h>
 #include <err.h>
+#include <nv.h>
 
 #include <pcap/pcap.h>
 
@@ -340,6 +341,7 @@ npfctl_build_vars(npf_bpf_t *ctx, sa_family_t family, npfvar_t *vars, int opts)
 		case NPFVAR_MAC: {
 			struct ether_addr *eth = data;
 			npfctl_bpf_ether(ctx, opts, eth);
+			break;
 		}
 		default:
 			yyerror("unexpected %s", npfvar_type(type));
@@ -698,6 +700,21 @@ npfctl_build_maprset(const char *name, int attr, const char *ifname)
 	npf_nat_insert(npf_conf, rl);
 }
 
+static nl_rule_t *
+set_defgroup(nl_rule_t *rl, nl_rule_t *def_group, int attr)
+{
+	const char *str = (attr & NPF_LAYER_2) ? "layer2" : "layer3";
+
+	if (def_group) {
+		yyerror("multiple %s default groups are not valid", str);
+	}
+	if (rule_nesting_level) {
+		yyerror("default group can only be at the top level");
+	}
+
+	return rl;
+}
+
 /*
  * npfctl_build_group: create a group, update the current group pointer
  * and increase the nesting level.
@@ -731,21 +748,6 @@ npfctl_build_group(const char *name, int attr, const char *ifname, bool def)
 	current_group[++rule_nesting_level] = rl;
 }
 
-static nl_rule_t *
-set_defgroup(nl_rule_t *rl, nl_rule_t *def_group, int attr)
-{
-	const char *str = (attr & NPF_LAYER_2) ? "layer2" : "layer3";
-
-	if (def_group) {
-		yyerror("multiple %s default groups are not valid", str);
-	}
-	if (rule_nesting_level) {
-		yyerror("default group can only be at the top level");
-	}
-
-	return rl;
-}
-
 void
 npfctl_build_group_end(void)
 {
@@ -766,6 +768,26 @@ npfctl_build_group_end(void)
 		return;
 	}
 	npf_rule_insert(npf_conf, parent, group);
+}
+
+/*
+ * this function is here to ensure that layer 2 rules are rightfully embedded in layer2 groups
+ * and vice versa. layer3 group => layer 3 rules
+ * does not allow setting layer 2 rules in layer 3 groups
+ */
+static void
+npfctl_rule_layer_compat(nl_rule_t *cg, int layer)
+{
+	const char *str = (layer & NPF_LAYER_2) ? "layer 2" : "layer 3";
+	uint64_t attr;
+	if (!cg)
+		return;
+	attr = nvlist_get_number(cg, "attr");
+
+	if ((attr & layer) == 0) {
+		yyerror("cannot insert %s rules in this group"
+		" make sure to insert same layer rules in same group ", str);
+	}
 }
 
 /*
@@ -810,26 +832,6 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 	} else {
 		/* We have parsed a single rule - set it. */
 		the_rule = rl;
-	}
-}
-
-/*
- * this function is here to ensure that layer 2 rules are rightfully embedded in layer2 groups
- * and vice versa. layer3 group => layer 3 rules
- * does not allow setting layer 2 rules in layer 3 groups
- * */
-static void
-npfctl_rule_layer_compat(nl_rule_t *cg, int layer)
-{
-	char *str = (layer & NPF_LAYER_2) ? "layer2" : "layer3";
-	uint64_t attr;
-	if (!cg)
-		return;
-	attr = dnvlist_get_number(cg, "attr");
-
-	if ((attr & layer) == 0) {
-		yyerror("cannot insert %s rules in this group"
-		" make sure to insert same layer rules in same group ", str);
 	}
 }
 
