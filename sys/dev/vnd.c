@@ -1187,7 +1187,7 @@ vndioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 		 * "write" commands
 		 */
 		if (error == ENOSYS) {
-			error = 0;
+			error = 0; /* unneeded 0 assignemnt to error */
 			break;
 		}
 
@@ -1199,7 +1199,7 @@ vndioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 
 		/* If no COMPAT_30 module, or not handled, check writes */
 		if (error == ENOSYS || error == EPASSTHROUGH) {
-			error = 0;
+			error = 0; /* unneeded 0 assignement to error */
 			break;
 		}
 		return error;
@@ -1246,7 +1246,7 @@ vndioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 		break;
 	}
 
-	error = disk_ioctl(&vnd->sc_dkdev, dev, cmd, data, flag, l);
+	error = disk_ioctl(&vnd->sc_dkdev, dev, cmd, data, flag, l); /* error overwritten */
 	if (error != EPASSTHROUGH)
 		return error;
 
