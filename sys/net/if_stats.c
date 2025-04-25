@@ -96,6 +96,8 @@ if_stats_to_if_data_cb(void *v1, void *v2, struct cpu_info *ci)
 		ctx->ifi->ifi_imcasts    += local_counters[if_imcasts];
 		ctx->ifi->ifi_omcasts    += local_counters[if_omcasts];
 		ctx->ifi->ifi_iqdrops    += local_counters[if_iqdrops];
+		ctx->ifi->ifi_pfil_drops_in  += local_counters[if_pfil_drop_in];
+		ctx->ifi->ifi_pfil_drops_out += local_counters[if_pfil_drop_out];
 		ctx->ifi->ifi_noproto    += local_counters[if_noproto];
 	}
 

@@ -197,6 +197,8 @@ struct if_data {
 	uint64_t ifi_imcasts;		/* packets received via multicast */
 	uint64_t ifi_omcasts;		/* packets sent via multicast */
 	uint64_t ifi_iqdrops;		/* dropped on input, this interface */
+	uint64_t ifi_pfil_drops_in;	/* dropped by pfil for inbound frames */
+	uint64_t ifi_pfil_drops_out;	/* dropped by pfil for ougoing packets */
 	uint64_t ifi_noproto;		/* destined for unsupported protocol */
 	struct	timespec ifi_lastchange;/* last operational state change */
 };

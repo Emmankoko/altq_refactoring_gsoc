@@ -1383,6 +1383,8 @@ status(prop_dictionary_t env, prop_dictionary_t oenv)
 		print_plural(", ", ifi->ifi_ierrors, "error");
 	if (ifi->ifi_iqdrops)
 		print_plural(", ", ifi->ifi_iqdrops, "queue drop");
+	if (ifi->ifi_pfil_drops_in)
+		print_plural(",", ifi->ifi_pfil_drops_in, "pfil drops");
 	if (ifi->ifi_noproto)
 		printf(", %" PRIu64 " unknown protocol", ifi->ifi_noproto);
 	print_plural("\n\toutput: ", ifi->ifi_opackets, "packet");
@@ -1391,8 +1393,11 @@ status(prop_dictionary_t env, prop_dictionary_t oenv)
 		print_plural(", ", ifi->ifi_omcasts, "multicast");
 	if (ifi->ifi_oerrors)
 		print_plural(", ", ifi->ifi_oerrors, "error");
+	if (ifi->ifi_pfil_drops_out)
+		print_plural(",", ifi->ifi_pfil_drops_out, "pfil drops");
 	if (ifi->ifi_collisions)
 		print_plural(", ", ifi->ifi_collisions, "collision");
+
 	printf("\n");
 
 	SIMPLEQ_FOREACH(statistics_f, &statistics_funcs, f_next)
