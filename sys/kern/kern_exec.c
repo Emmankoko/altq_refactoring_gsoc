@@ -2213,7 +2213,7 @@ static int
 handle_posix_spawn_attrs(struct posix_spawnattr *attrs, struct proc *parent)
 {
 	struct sigaction sigact;
-	int error;
+	int error; /* uninit error */
 	struct proc *p = curproc;
 	struct lwp *l = curlwp;
 
@@ -2249,20 +2249,20 @@ handle_posix_spawn_attrs(struct posix_spawnattr *attrs, struct proc *parent)
 		if (pgrp == 0)
 			pgrp = mypid;
 
-		error = proc_enterpgrp(parent, mypid, pgrp, false);
+		error = proc_enterpgrp(parent, mypid, pgrp, false); /* overwritten in a condition block */
 		if (error)
 			goto out;
 	}
 
 	/* Set scheduler policy */
 	if (attrs->sa_flags & POSIX_SPAWN_SETSCHEDULER)
-		error = do_sched_setparam(p->p_pid, 0, attrs->sa_schedpolicy,
+		error = do_sched_setparam(p->p_pid, 0, attrs->sa_schedpolicy, /* condition block */
 		    &attrs->sa_schedparam);
 	else if (attrs->sa_flags & POSIX_SPAWN_SETSCHEDPARAM) {
-		error = do_sched_setparam(parent->p_pid, 0,
+		error = do_sched_setparam(parent->p_pid, 0, /* condition block */
 		    SCHED_NONE, &attrs->sa_schedparam);
 	}
-	if (error)
+	if (error) /* may be used unitialized */
 		goto out;
 
 	/* Reset user ID's */
