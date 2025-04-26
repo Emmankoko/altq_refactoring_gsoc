@@ -776,7 +776,7 @@ npfctl_build_group_end(void)
  * does not allow setting layer 2 rules in layer 3 groups
  */
 static uint32_t
-npf_rule_layer_compat(nl_rule_t *cg, int layer)
+npf_rule_layer_compat(nl_rule_t *cg, uint32_t layer)
 {
 	const char *str = (layer & NPF_LAYER_2) ? "layer 2" : "layer 3";
 	uint32_t attr;
