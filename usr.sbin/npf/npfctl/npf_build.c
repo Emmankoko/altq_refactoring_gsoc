@@ -775,7 +775,7 @@ npfctl_build_group_end(void)
  * and vice versa. layer3 group => layer 3 rules
  * does not allow setting layer 2 rules in layer 3 groups
  */
-static void
+static uint32_t
 npf_rule_layer_compat(nl_rule_t *cg, int layer)
 {
 	const char *str = (layer & NPF_LAYER_2) ? "layer 2" : "layer 3";
@@ -787,6 +787,7 @@ npf_rule_layer_compat(nl_rule_t *cg, int layer)
 		yyerror("cannot insert %s rules in this group"
 		" make sure to insert same layer rules in same group ", str);
 	}
+	return layer;
 }
 
 /*
@@ -802,10 +803,14 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 
 	attr |= (npf_conf ? 0 : NPF_RULE_DYNAMIC);
 
-	/* quickly check for group-rule layer compat */
+	/*
+	 * quickly check for group-rule layer compat
+	 * if the filter layer matches group layer,
+	 * mask the layer in rule for kernel
+	 */
 	if (npf_conf) {
 		cg = current_group[rule_nesting_level];
-		npf_rule_layer_compat(cg, fopts->layer);
+		attr |= npf_rule_layer_compat(cg, fopts->layer);
 	}
 
 	rl = npf_rule_create(NULL, attr, ifname);

@@ -94,7 +94,7 @@ typedef struct filt_opts {
 		l2 opt_2;
 	} filt;
 
-	int layer;
+	uint32_t	layer;
 	bool		fo_finvert;
 	bool		fo_tinvert;
 } filt_opts_t;
