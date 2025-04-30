@@ -197,6 +197,13 @@ typedef struct {
 	const void *		npc_ckey;
 } npf_cache_t;
 
+typedef struct eth_cache {
+	uint8_t edst[];
+	uint8_t esrc[];
+	uint16_t eth_type;
+	struct ether_header *ether;
+} eth_cache_t;
+
 static inline bool
 npf_iscached(const npf_cache_t *npc, const int inf)
 {

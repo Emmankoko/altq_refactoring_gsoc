@@ -54,6 +54,7 @@ typedef void (*pfil_ifunc_t)(void *, unsigned long, void *);
 
 #define	PFIL_TYPE_AF		1	/* key is AF_* type */
 #define	PFIL_TYPE_IFNET		2	/* key is ifnet or ifaddr pointer */
+#define	PFIL_TYPE_ETHER		3   /* ether filter type */
 
 typedef struct pfil_head	pfil_head_t;
 

@@ -122,6 +122,7 @@ static bool		pfil_registered = false;
 static pfil_head_t *	npf_ph_if = NULL;
 static pfil_head_t *	npf_ph_inet = NULL;
 static pfil_head_t *	npf_ph_inet6 = NULL;
+static pfil_head_t *	npf_ph_ether = NULL;
 
 static const npf_ifops_t kern_ifops = {
 	.getname	= npf_ifop_getname,
@@ -390,6 +391,13 @@ npfos_packet_handler(void *arg, struct mbuf **mp, ifnet_t *ifp, int di)
 	return npfk_packet_handler(npf, mp, ifp, di);
 }
 
+static int
+npfos_layer2_handler(void *arg, struct mbuf **mp, ifnet_t *ifp, int di)
+{
+	npf_t *npf = npf_getkernctx();
+	return npfk_layer2_handler(npf, mp, ifp, di);
+}
+
 /*
  * npf_ifhook: hook handling interface changes.
  */
@@ -491,6 +499,18 @@ npf_pfil_register(bool init)
 		KASSERT(error == 0);
 	}
 
+	/* Capture points of activity at link layer */
+	if ((npf_ph_ether = pfil_head_get(PFIL_TYPE_ETHER, 0)) == NULL) {
+		error = ENOENT;
+		goto out;
+	}
+
+	if (npf_ph_ether) {
+		error = pfil_add_hook(npfos_layer2_handler, npf,
+			PFIL_ALL, npf_ph_ether);
+		KASSERT(error == 0);
+	}
+
 	/*
 	 * It is necessary to re-sync all/any interface address tables,
 	 * since we did not listen for any changes.
@@ -526,6 +546,10 @@ npf_pfil_unregister(bool fini)
 	if (npf_ph_inet6) {
 		(void)pfil_remove_hook(npfos_packet_handler, npf,
 		    PFIL_ALL, npf_ph_inet6);
+	}
+	if (npf_ph_ether) {
+		(void)pfil_remove_hook(npfos_layer2_handler, npf,
+			PFIL_ALL, npf_ph_ether);
 	}
 	pfil_registered = false;
 

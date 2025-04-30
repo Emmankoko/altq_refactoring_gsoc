@@ -185,6 +185,8 @@ static pktq_rps_hash_func_t ether_pktq_rps_hash_p;
 static int ether_output(struct ifnet *, struct mbuf *,
     const struct sockaddr *, const struct rtentry *);
 
+static pfil_head_t *ether_hook		__read_mostly; /* not going anywhere */
+
 /*
  * Ethernet output routine.
  * Encapsulate a packet of type family for the local net.
@@ -211,6 +213,15 @@ ether_output(struct ifnet * const ifp0, struct mbuf * const m0,
 #ifdef MBUFTRACE
 	m_claimm(m, ifp->if_mowner);
 #endif
+
+	/*
+	 * pfil processing quickly before any protocol tries to process
+	 */
+	error = pfil_run_hooks(ether_hook, &m, ifp, PFIL_OUT);
+	if (error || m == NULL) {
+		if_statinc(ifp, if_pfil_drops_out);
+		return error;
+	}
 
 #if NCARP > 0
 	if (ifp->if_type == IFT_CARP) {
@@ -757,6 +768,17 @@ ether_input(struct ifnet *ifp, struct mbuf *m)
 	}
 
 	/*
+	 * run filtering hook here before it starts processing on ether types
+	 */
+	if (pfil_run_hooks(ether_hook, &m, ifp, PFIL_IN) != 0 || m == NULL)
+	{
+		if (m == NULL) {/* mbuf freed */
+			if_statinc(ifp, if_pfil_drops_in);
+			return;
+		}
+	}
+
+	/*
 	 * Processing a logical interfaces that are able
 	 * to configure vlan(4).
 	*/
@@ -1044,7 +1066,7 @@ ether_ifattach(struct ifnet *ifp, const uint8_t *lla)
 	if (lla != NULL && ETHER_IS_MULTICAST(lla))
 		aprint_error("The multicast bit is set in the MAC address. "
 			"It's wrong.\n");
-	
+
 	ifp->if_type = IFT_ETHER;
 	ifp->if_hdrlen = ETHER_HDR_LEN;
 	ifp->if_dlt = DLT_EN10MB;
@@ -2014,6 +2036,9 @@ ether_sysctl_setup(struct sysctllog **clog)
 void
 etherinit(void)
 {
+
+	pfil_ether =  pfil_head_create(PFIL_TYPE_ETHER, NULL);
+	KASSERT(pfil_ether != NULL);
 
 #ifdef DIAGNOSTIC
 	mutex_init(&bigpktpps_lock, MUTEX_DEFAULT, IPL_NET);

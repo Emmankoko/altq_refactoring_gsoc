@@ -860,7 +860,7 @@ npf_rule_reinspect(const npf_rule_t *rg, bpf_args_t *bc_args,
  */
 npf_rule_t *
 npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
-    const int di, const int layer)
+    const int di, const uint32_t layer)
 {
 	nbuf_t *nbuf = npc->npc_nbuf;
 	const int di_mask = (di & PFIL_IN) ? NPF_RULE_IN : NPF_RULE_OUT;
@@ -886,6 +886,13 @@ npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
 		npf_rule_t *rl = rlset->rs_rules[n];
 		const unsigned skip_to = rl->r_skip_to & SKIPTO_MASK;
 		const uint32_t attr = rl->r_attr;
+
+		/*
+		 * only inspect layer 2 rules at ether
+		 * and inspect layer 3 rules at ip
+		 */
+		if ((attr & layer) == 0)
+			continue;
 
 		KASSERT(!nbuf_flag_p(nbuf, NBUF_DATAREF_RESET));
 		KASSERT(n < skip_to);
