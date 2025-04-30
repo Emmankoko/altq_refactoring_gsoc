@@ -219,7 +219,7 @@ ether_output(struct ifnet * const ifp0, struct mbuf * const m0,
 	 */
 	error = pfil_run_hooks(ether_hook, &m, ifp, PFIL_OUT);
 	if (error || m == NULL) {
-		if_statinc(ifp, if_pfil_drops_out);
+		if_statinc(ifp, if_pfil_drop_out);
 		return error;
 	}
 
@@ -773,7 +773,7 @@ ether_input(struct ifnet *ifp, struct mbuf *m)
 	if (pfil_run_hooks(ether_hook, &m, ifp, PFIL_IN) != 0 || m == NULL)
 	{
 		if (m == NULL) {/* mbuf freed */
-			if_statinc(ifp, if_pfil_drops_in);
+			if_statinc(ifp, if_pfil_drop_in);
 			return;
 		}
 	}
@@ -2037,8 +2037,8 @@ void
 etherinit(void)
 {
 
-	pfil_ether =  pfil_head_create(PFIL_TYPE_ETHER, NULL);
-	KASSERT(pfil_ether != NULL);
+	ether_hook =  pfil_head_create(PFIL_TYPE_ETHER, NULL);
+	KASSERT(ether_hook != NULL);
 
 #ifdef DIAGNOSTIC
 	mutex_init(&bigpktpps_lock, MUTEX_DEFAULT, IPL_NET);
