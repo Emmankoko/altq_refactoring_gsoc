@@ -214,15 +214,6 @@ ether_output(struct ifnet * const ifp0, struct mbuf * const m0,
 	m_claimm(m, ifp->if_mowner);
 #endif
 
-	/*
-	 * pfil processing quickly before any protocol tries to process
-	 */
-	error = pfil_run_hooks(ether_hook, &m, ifp, PFIL_OUT);
-	if (error || m == NULL) {
-		if_statinc(ifp, if_pfil_drop_out);
-		return error;
-	}
-
 #if NCARP > 0
 	if (ifp->if_type == IFT_CARP) {
 		struct ifaddr *ifa;
@@ -444,6 +435,15 @@ ether_output(struct ifnet * const ifp0, struct mbuf * const m0,
 		return error;
 	if (m == NULL)
 		return 0;
+
+	/*
+	 * pfil processing when we are sure the ether header is filled in mbuf
+	 */
+	error = pfil_run_hooks(ether_hook, &m, ifp, PFIL_OUT);
+	if (error || m == NULL) {
+		if_statinc(ifp, if_pfil_drop_out);
+		return error;
+	}
 
 #if NBRIDGE > 0
 	/*

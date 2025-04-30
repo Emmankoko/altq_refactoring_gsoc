@@ -344,7 +344,6 @@ npfk_layer2_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	npf_rule_t *rl;
 	int error, decision, flags;
 	npf_match_info_t mi;
-	bool mff;
 
 	KASSERT(ifp != NULL);
 
