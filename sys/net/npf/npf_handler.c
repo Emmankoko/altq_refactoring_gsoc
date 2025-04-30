@@ -340,7 +340,7 @@ __dso_public int
 npfk_layer2_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 {
 	nbuf_t nbuf;
-	eth_cache_t npc;
+	npf_cache_t npc;
 	npf_rule_t *rl;
 	int error, decision, flags;
 	npf_match_info_t mi;
