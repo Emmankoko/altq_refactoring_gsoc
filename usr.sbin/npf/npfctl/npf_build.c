@@ -451,7 +451,6 @@ npfctl_check_proto(const npfvar_t *vars, bool *non_tcpudp, bool *tcp_with_nofl)
 static void
 build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
 {
-	npf_bpf_t *bc;
 	unsigned opts;
 
 	const macaddr_t *ap_from = &fopts->filt.opt_2.fo_from;
@@ -473,7 +472,6 @@ static void
 build_l3_code(npf_bpf_t *bc, nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
     const filt_opts_t *fopts)
 {
-	npf_bpf_t *bc;
 	unsigned opts;
 
 	const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
