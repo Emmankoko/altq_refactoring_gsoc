@@ -97,7 +97,7 @@ SPID	[a-zA-Z][a-zA-Z_0-9.]*
 NUMBER	[0-9]+
 HEXDIG	[0-9a-fA-F]+
 /* strictly use two hex to be able catch ips used for hw */
-HWAHEX	([0-9a-fA-F]{2}:)*[0-9a-fA-F]{2}
+HWAHEX	([0-9a-fA-F]{2}:)+[0-9a-fA-F]{2}
 
 %%
 %{
