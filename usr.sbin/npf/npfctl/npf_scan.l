@@ -96,8 +96,10 @@ DID	[a-zA-Z_][a-zA-Z_0-9-]*
 SPID	[a-zA-Z][a-zA-Z_0-9.]*
 NUMBER	[0-9]+
 HEXDIG	[0-9a-fA-F]+
-/* strictly use two hex to be able catch ips used for hw */
-HWAHEX	([0-9a-fA-F]{2}:)+[0-9a-fA-F]{2}
+/* strictly follow three ether address format */
+HWACOLON	^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$
+HWAHYPHEN	^([0-9a-fA-F]{2}-){5}[0-9a-fA-F]{2}$
+HWADOT		^([0-9a-fA-F]{4}.){2}[0-9a-fA-F]{4}$
 
 %%
 %{
@@ -217,7 +219,17 @@ layer-2		return L2;
 			return IPV4ADDR;
 		}
 
-{HWAHEX} {
+{HWACOLON} {
+			yylval.str = estrndup(yytext, yyleng);
+			return HWADDR;
+		}
+
+{HWAHYPHEN} {
+			yylval.str = estrndup(yytext, yyleng);
+			return HWADDR;
+		}
+
+{HWADOT} {
 			yylval.str = estrndup(yytext, yyleng);
 			return HWADDR;
 		}
