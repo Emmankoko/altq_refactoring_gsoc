@@ -458,7 +458,7 @@ build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
 	const uint8_t ether_type = fopts->filt.opt_2.ether_type;
 	bool addr_or_ether;
 
-	anyaddr = ap_from->hwaddr || ap_to->hwaddr || ether_type;
+	addr_or_ether = ap_from->hwaddr || ap_to->hwaddr || ether_type;
 	if(!addr_or_ether)
 		return false;
 
