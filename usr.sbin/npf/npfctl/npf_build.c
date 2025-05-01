@@ -448,8 +448,8 @@ npfctl_check_proto(const npfvar_t *vars, bool *non_tcpudp, bool *tcp_with_nofl)
 	return count != 0;
 }
 
-static npf_bpf_t *
-build_l2_code(const filt_opts_t *fopts)
+static void
+build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
 {
 	npf_bpf_t *bc;
 	unsigned opts;
@@ -457,8 +457,6 @@ build_l2_code(const filt_opts_t *fopts)
 	const macaddr_t *ap_from = &fopts->filt.opt_2.fo_from;
 	const macaddr_t *ap_to = &fopts->filt.opt_2.fo_to;
 	const uint8_t ether_type = fopts->filt.opt_2.ether_type;
-
-	bc = npfctl_bpf_create();
 
 	if (ether_type != 0) {
 		fetch_ether_type(bc, ether_type);
@@ -469,11 +467,10 @@ build_l2_code(const filt_opts_t *fopts)
 	npfctl_build_vars(bc, 0, ap_from->hwaddr, opts);
 	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
 	npfctl_build_vars(bc, 0, ap_to->hwaddr, opts);
-	return bc;
 }
 
-static npf_bpf_t *
-build_l3_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
+static void
+build_l3_code(npf_bpf_t *bc, nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
     const filt_opts_t *fopts)
 {
 	npf_bpf_t *bc;
@@ -504,8 +501,6 @@ build_l3_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	if (any_ports && non_tcpudp) {
 		yyerror("invalid filter options for given the protocol(s)");
 	}
-
-	bc = npfctl_bpf_create();
 
 	/* Build layer 3 and 4 protocol blocks. */
 	if (family != AF_UNSPEC) {
@@ -542,8 +537,6 @@ build_l3_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 
 	npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
 	npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
-
-	return bc;
 }
 
 static bool
@@ -553,11 +546,14 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	npf_bpf_t *bc;
 	size_t len;
 
-	if ( fopts->layer == NPF_LAYER_3 ) {
+	bc = npfctl_bpf_create();
 
-		bc = build_l3_code(rl, family, popts, fopts);
+	if ( fopts->layer == NPF_LAYER_3 ) {
+		printf("layer 3333\n");
+		build_l3_code(bc, rl, family, popts, fopts);
 	} else {
-		bc = build_l2_code(fopts);
+		build_l2_code(bc, fopts);
+		printf("layer 2222\n");
 	}
 
 	/* Set the byte-code marks, if any. */
