@@ -448,7 +448,7 @@ npfctl_check_proto(const npfvar_t *vars, bool *non_tcpudp, bool *tcp_with_nofl)
 	return count != 0;
 }
 
-static void
+static bool
 build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
 {
 	unsigned opts;
@@ -456,6 +456,11 @@ build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
 	const macaddr_t *ap_from = &fopts->filt.opt_2.fo_from;
 	const macaddr_t *ap_to = &fopts->filt.opt_2.fo_to;
 	const uint8_t ether_type = fopts->filt.opt_2.ether_type;
+	bool addr_or_ether;
+
+	anyaddr = ap_from->hwaddr || ap_to->hwaddr || ether_type;
+	if(!addr_or_ether)
+		return false;
 
 	if (ether_type != 0) {
 		fetch_ether_type(bc, ether_type);
@@ -466,9 +471,11 @@ build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
 	npfctl_build_vars(bc, 0, ap_from->hwaddr, opts);
 	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
 	npfctl_build_vars(bc, 0, ap_to->hwaddr, opts);
+
+	return true;
 }
 
-static void
+static bool
 build_l3_code(npf_bpf_t *bc, nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
     const filt_opts_t *fopts)
 {
@@ -535,6 +542,8 @@ build_l3_code(npf_bpf_t *bc, nl_rule_t *rl, sa_family_t family, const npfvar_t *
 
 	npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
 	npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
+
+	return true;
 }
 
 static bool
@@ -548,10 +557,12 @@ npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 
 	if ( fopts->layer == NPF_LAYER_3 ) {
 		printf("layer 3333\n");
-		build_l3_code(bc, rl, family, popts, fopts);
+		if (!build_l3_code(bc, rl, family, popts, fopts))
+			return false;
 	} else {
-		build_l2_code(bc, fopts);
 		printf("layer 2222\n");
+		if (!build_l2_code(bc, fopts))
+			return false;
 	}
 
 	/* Set the byte-code marks, if any. */
