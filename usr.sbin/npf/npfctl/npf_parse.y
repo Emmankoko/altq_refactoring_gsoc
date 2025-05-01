@@ -185,7 +185,7 @@ yyerror(const char *fmt, ...)
 %token	<str>		TABLE_ID
 %token	<str>		VAR_ID
 
-%type	<str>		addr some_name table_store dynamic_ifaddrs
+%type	<str>		addr some_name table_store dynamic_ifaddrs hwaddr
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
 %type	<num>		port opt_final number afamily opt_family
 %type	<num>		block_or_pass rule_dir group_dir block_opts ether_type
@@ -702,7 +702,7 @@ l2_filt_opts
 	;
 
 ether_type
-	: number { $$ =  $1; }
+	: type number { $$ =  $2; }
 	|	{ $$ = 0; }
 	;
 
@@ -811,12 +811,16 @@ addr_and_mask
 	;
 
 mac_addr
-	: HWADDR { $$ = npfctl_parse_mac_addr($1); }
+	: hwaddr { $$ = npfctl_parse_mac_addr($1); }
+	;
+
+hwaddr
+	: HWADDR { $$ = $1; }
 	;
 
 filt_addr_element
-	: addr_and_mask		{ assert($1 != NULL); $$ = $1; }
-	| mac_addr		{ assert($1 != NULL); $$ = $1; }
+	: mac_addr		{ assert($1 != NULL); $$ = $1; }
+	| addr_and_mask		{ assert($1 != NULL); $$ = $1; }
 	| static_ifaddrs
 	{
 		if (npfvar_get_count($1) != 1)
