@@ -702,7 +702,7 @@ l2_filt_opts
 	;
 
 ether_type
-	: type number { $$ =  $2; }
+	: TYPE number { $$ =  $2; }
 	|	{ $$ = 0; }
 	;
 
