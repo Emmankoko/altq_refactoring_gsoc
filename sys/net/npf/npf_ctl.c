@@ -412,14 +412,13 @@ npf_mk_rules(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc)
 		npf_rule_t *rl = NULL;
 		const char *name;
 
-		if(!layer2rule) {
-			if (rl->r_attr & NPF_LAYER_2)
-				layer2rule = true;
-		}
-
 		error = npf_mk_singlerule(npf, rule, resp, nc->rule_procs, &rl);
 		if (error) {
 			break;
+		}
+		if(!layer2rule) {
+			if (rl->r_attr & NPF_LAYER_2)
+				layer2rule = true;
 		}
 		name = dnvlist_get_string(rule, "name", NULL);
 		if (name && npf_ruleset_lookup(rlset, name)) {
