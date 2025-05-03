@@ -47,6 +47,8 @@ __KERNEL_RCSID(0, "$NetBSD: npf_ctl.c,v 1.60 2020/05/30 14:16:56 rmind Exp $");
 #include "npf_impl.h"
 #include "npf_conn.h"
 
+bool layer2rule = false;
+
 #define	NPF_ERR_DEBUG(e) \
 	nvlist_add_string((e), "source-file", __FILE__); \
 	nvlist_add_number((e), "source-line", __LINE__);
@@ -409,6 +411,11 @@ npf_mk_rules(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc)
 		const nvlist_t *rule = rules[i];
 		npf_rule_t *rl = NULL;
 		const char *name;
+
+		if(!layer2rule) {
+			if (rl->r_attr & NPF_LAYER_2)
+				layer2rule = true;
+		}
 
 		error = npf_mk_singlerule(npf, rule, resp, nc->rule_procs, &rl);
 		if (error) {

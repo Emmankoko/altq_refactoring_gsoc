@@ -88,6 +88,7 @@ MODULE(MODULE_CLASS_DRIVER, npf, "bpf");
 
 static int	npf_pfil_register(bool);
 static void	npf_pfil_unregister(bool);
+extern bool	layer2rule;
 
 static int	npf_dev_open(dev_t, int, int, lwp_t *);
 static int	npf_dev_close(dev_t, int, int, lwp_t *);
@@ -499,16 +500,18 @@ npf_pfil_register(bool init)
 		KASSERT(error == 0);
 	}
 
-	/* Capture points of activity at link layer */
-	if ((npf_ph_ether = pfil_head_get(PFIL_TYPE_ETHER, 0)) == NULL) {
-		error = ENOENT;
-		goto out;
-	}
+	if (layer2rule) {
+		/* Capture points of activity at link layer */
+		if ((npf_ph_ether = pfil_head_get(PFIL_TYPE_ETHER, 0)) == NULL) {
+			error = ENOENT;
+			goto out;
+		}
 
-	if (npf_ph_ether) {
-		error = pfil_add_hook(npfos_layer2_handler, npf,
-			PFIL_ALL, npf_ph_ether);
-		KASSERT(error == 0);
+		if (npf_ph_ether) {
+			error = pfil_add_hook(npfos_layer2_handler, npf,
+				PFIL_ALL, npf_ph_ether);
+			KASSERT(error == 0);
+		}
 	}
 
 	/*
