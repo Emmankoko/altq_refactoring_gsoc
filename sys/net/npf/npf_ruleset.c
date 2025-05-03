@@ -902,6 +902,7 @@ npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
 			break;
 		}
 
+		printf("inspecting the rule %d\n", n);
 		/* Main inspection of the rule. */
 		if (!npf_rule_inspect(rl, &bc_args, di_mask, ifid)) {
 			n = skip_to;

@@ -584,7 +584,7 @@ npf_cache_ether(npf_cache_t *npc)
 	struct mbuf *m = npc->npc_nbuf->nb_mbuf0;
 	struct ether_header *ether;
 
-	nbuf_unset_flag(nbuf, NBUF_DATAREF_RESET);
+	nbuf_unset_flag(npc->npc_nbuf, NBUF_DATAREF_RESET);
 	/*
 	 * we are so sure ether header will be in the first mbuf
 	 * and we are also sure 14 bytes ether_header will be fully accessible
@@ -594,7 +594,7 @@ npf_cache_ether(npf_cache_t *npc)
 		return NPC_FMTERR;
 	npc->ether = ether;
 
-	KASSERT(nbuf_flag_p(nbuf, NBUF_DATAREF_RESET) == 0);
+	KASSERT(nbuf_flag_p(npc->npc_nbuf, NBUF_DATAREF_RESET) == 0);
 	return NPC_LAYER2;
 }
 
