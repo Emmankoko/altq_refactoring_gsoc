@@ -937,6 +937,12 @@ npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
 	return final_rl;
 }
 
+bool
+ensure_layer_2(npf_rule_t *rl)
+{
+	return rl->r_attr & NPF_LAYER_2;
+}
+
 /*
  * npf_rule_conclude: return decision and the flags for conclusion.
  *

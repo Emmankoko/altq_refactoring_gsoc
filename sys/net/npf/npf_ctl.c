@@ -417,8 +417,7 @@ npf_mk_rules(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc)
 			break;
 		}
 		if(!layer2rule) {
-			if (rl->r_attr & NPF_LAYER_2)
-				layer2rule = true;
+			layer2rule = ensure_layer_2(rl); /* stop this immediately we verify ther's a l2 rule */
 		}
 		name = dnvlist_get_string(rule, "name", NULL);
 		if (name && npf_ruleset_lookup(rlset, name)) {

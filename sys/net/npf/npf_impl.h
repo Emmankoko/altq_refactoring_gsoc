@@ -428,6 +428,7 @@ void		npf_ruleset_gc(npf_ruleset_t *);
 
 npf_rule_t *	npf_ruleset_inspect(npf_cache_t *, const npf_ruleset_t *,
 		    const int, const uint32_t);
+bool		ensure_layer_2(npf_rule_t *);
 int		npf_rule_conclude(const npf_rule_t *, npf_match_info_t *);
 
 /* Rule interface. */
