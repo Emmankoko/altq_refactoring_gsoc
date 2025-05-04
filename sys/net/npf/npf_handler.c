@@ -400,10 +400,10 @@ npfk_layer2_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 	npf_config_read_exit(npf, slock);
 
 	if (error) {
-		npf_stats_inc(npf, NPF_STAT_BLOCK_RULESET);
+		npf_stats_inc(npf, NPF_ETHER_STAT_BLOCK);
 		goto out;
 	}
-	npf_stats_inc(npf, NPF_STAT_PASS_RULESET);
+	npf_stats_inc(npf, NPF_ETHER_STAT_PASS);
 
 pass:
 	decision = NPF_DECISION_PASS;
@@ -412,9 +412,9 @@ pass:
 out:
 
 	/* Get the new mbuf pointer. */
-	//if ((*mp = nbuf_head_mbuf(&nbuf)) == NULL) {
-	//	return error ? error : ENOMEM;
-	//}
+	if ((*mp = nbuf_head_mbuf(&nbuf)) == NULL) {
+		return error ? error : ENOMEM;
+	}
 
 	/* Pass the packet if decided and there is no error. */
 	if (decision == NPF_DECISION_PASS && !error) {
