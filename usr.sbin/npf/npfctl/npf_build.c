@@ -728,6 +728,7 @@ npfctl_build_group_end(void)
  * and vice versa. layer3 group => layer 3 rules
  * does not allow setting layer 2 rules in layer 3 groups
  */
+/*
 static uint32_t
 npf_rule_layer_compat(nl_rule_t *cg, uint32_t layer)
 {
@@ -742,6 +743,7 @@ npf_rule_layer_compat(nl_rule_t *cg, uint32_t layer)
 	}
 	return layer;
 }
+	*/
 
 /*
  * npfctl_build_rule: create a rule, build byte-code from filter options,
@@ -761,10 +763,10 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 	 * if the filter layer matches group layer,
 	 * mask the layer in rule for kernel
 	 */
-	if (npf_conf) {
-		cg = current_group[rule_nesting_level];
-		attr |= npf_rule_layer_compat(cg, fopts->layer);
-	}
+	//if (npf_conf) {
+	//	cg = current_group[rule_nesting_level];
+	//	attr |= npf_rule_layer_compat(cg, fopts->layer);
+	//}
 
 	rl = npf_rule_create(NULL, attr, ifname);
 	if (pcap_filter) {
