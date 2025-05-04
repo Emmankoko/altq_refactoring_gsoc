@@ -133,8 +133,8 @@ npt66			return NPT66;
 "-"			return MINUS;
 procedure		return PROCEDURE;
 \\\n			yylineno++; yycolumn = 0;
-\n			yylineno++; yycolumn = 0; return SEPLINE;
-;			return SEPLINE;
+\n			yylineno++; yycolumn = 0; return NEWLINE;
+;			return SEMICOLON;
 name			return NAME;
 group			return GROUP;
 default			return DEFAULT;
@@ -211,21 +211,6 @@ any			return ANY;
 {NUMBER}"."[0-9][0-9.]* {
 			yylval.str = estrndup(yytext, yyleng);
 			return IPV4ADDR;
-		}
-
-^({HEXDOUBLE}":"){5}{HEXDOUBLE}$ {
-			yylval.str = estrndup(yytext, yyleng);
-			return HWADDR;
-		}
-
-^({HEXDOUBLE}"-"){5}{HEXDOUBLE}$ {
-			yylval.str = estrndup(yytext, yyleng);
-			return HWADDR;
-		}
-
-^({HEXQUAT}"."){2}{HEXQUAT}$ {
-			yylval.str = estrndup(yytext, yyleng);
-			return HWADDR;
 		}
 
 {NUMBER}	{
