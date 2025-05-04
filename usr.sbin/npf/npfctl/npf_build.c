@@ -452,8 +452,8 @@ static bool
 npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	const filt_opts_t *fopts)
 {
-	const addr_port_t *apfrom = &fopts->fo_from;
-	const addr_port_t *apto = &fopts->fo_to;
+	const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
+	const addr_port_t *apto = &fopts->filt.opt_3.fo_to;
 	bool any_proto, any_addrs, any_ports, stateful;
 	bool any_l4proto, non_tcpudp, tcp_with_nofl;
 	npf_bpf_t *bc;
