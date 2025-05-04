@@ -682,7 +682,7 @@ all_or_filt_opts
 	{
 		$$.fo_finvert = false;
 		$$.filt.opt_3.fo_from.ap_netaddr = NULL;
-		$$.file.opt_3.fo_from.ap_portrange = NULL;
+		$$.filt.opt_3.fo_from.ap_portrange = NULL;
 		$$.fo_tinvert = false;
 		$$.filt.opt_3.fo_to.ap_netaddr = NULL;
 		$$.filt.opt_3.fo_to.ap_portrange = NULL;
