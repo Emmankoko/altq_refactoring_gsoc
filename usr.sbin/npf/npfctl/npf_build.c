@@ -449,48 +449,22 @@ npfctl_check_proto(const npfvar_t *vars, bool *non_tcpudp, bool *tcp_with_nofl)
 }
 
 static bool
-build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
+npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
+	const filt_opts_t *fopts)
 {
-	unsigned opts;
-
-	const macaddr_t *ap_from = &fopts->filt.opt_2.fo_from;
-	const macaddr_t *ap_to = &fopts->filt.opt_2.fo_to;
-	const uint8_t ether_type = fopts->filt.opt_2.ether_type;
-	bool addr_or_ether;
-
-	addr_or_ether = ap_from->hwaddr || ap_to->hwaddr || ether_type;
-	if(!addr_or_ether)
-		return false;
-
-	if (ether_type != 0) {
-		fetch_ether_type(bc, ether_type);
-	}
-
-	/* Build ether address blocks. */
-	opts = MATCH_SRC | (fopts->fo_finvert ? MATCH_INVERT : 0);
-	npfctl_build_vars(bc, 0, ap_from->hwaddr, opts);
-	opts = MATCH_DST | (fopts->fo_tinvert ? MATCH_INVERT : 0);
-	npfctl_build_vars(bc, 0, ap_to->hwaddr, opts);
-
-	return true;
-}
-
-static bool
-build_l3_code(npf_bpf_t *bc, nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
-    const filt_opts_t *fopts)
-{
-	unsigned opts;
-
-	const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
-	const addr_port_t *apto = &fopts->filt.opt_3.fo_to;
+	const addr_port_t *apfrom = &fopts->fo_from;
+	const addr_port_t *apto = &fopts->fo_to;
 	bool any_proto, any_addrs, any_ports, stateful;
 	bool any_l4proto, non_tcpudp, tcp_with_nofl;
+	npf_bpf_t *bc;
+	unsigned opts;
+	size_t len;
 
 	/*
-	 * Gather some information about the protocol options, if any.
-	 * Check the filter criteria in general -- if none specified,
-	 * then no byte-code.
-	 */
+		* Gather some information about the protocol options, if any.
+		* Check the filter criteria in general -- if none specified,
+		* then no byte-code.
+		*/
 	any_l4proto = npfctl_check_proto(popts, &non_tcpudp, &tcp_with_nofl);
 	any_proto = (family != AF_UNSPEC) || any_l4proto;
 	any_addrs = apfrom->ap_netaddr || apto->ap_netaddr;
@@ -506,6 +480,8 @@ build_l3_code(npf_bpf_t *bc, nl_rule_t *rl, sa_family_t family, const npfvar_t *
 	if (any_ports && non_tcpudp) {
 		yyerror("invalid filter options for given the protocol(s)");
 	}
+
+	bc = npfctl_bpf_create();
 
 	/* Build layer 3 and 4 protocol blocks. */
 	if (family != AF_UNSPEC) {
@@ -539,31 +515,8 @@ build_l3_code(npf_bpf_t *bc, nl_rule_t *rl, sa_family_t family, const npfvar_t *
 		npfctl_bpf_proto(bc, IPPROTO_UDP);
 		npfctl_bpf_group_exit(bc);
 	}
-
 	npfctl_build_vars(bc, family, apfrom->ap_portrange, MATCH_SRC);
 	npfctl_build_vars(bc, family, apto->ap_portrange, MATCH_DST);
-
-	return true;
-}
-
-static bool
-npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
-    const filt_opts_t *fopts)
-{
-	npf_bpf_t *bc;
-	size_t len;
-
-	bc = npfctl_bpf_create();
-
-	if ( fopts->layer == NPF_LAYER_3 ) {
-		printf("layer 3333\n");
-		if (!build_l3_code(bc, rl, family, popts, fopts))
-			return false;
-	} else {
-		printf("layer 2222\n");
-		if (!build_l2_code(bc, fopts))
-			return false;
-	}
 
 	/* Set the byte-code marks, if any. */
 	const void *bmarks = npfctl_bpf_bmarks(bc, &len);
