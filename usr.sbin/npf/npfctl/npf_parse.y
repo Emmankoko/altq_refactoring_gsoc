@@ -135,6 +135,7 @@ yyerror(const char *fmt, ...)
 %token			IPSET
 %token			LPM
 %token			MAP
+%token			NEWLINE
 %token			NO_PORTS
 %token			MINUS
 %token			NAME
@@ -158,7 +159,7 @@ yyerror(const char *fmt, ...)
 %token			RETURNRST
 %token			ROUNDROBIN
 %token			RULESET
-%token			SEPLINE
+%token			SEMICOLON
 %token			SET
 %token			SLASH
 %token			STATEFUL
@@ -168,8 +169,6 @@ yyerror(const char *fmt, ...)
 %token			TO
 %token			TREE
 %token			TYPE
-%token			L2
-%token			ETHER
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
@@ -177,7 +176,6 @@ yyerror(const char *fmt, ...)
 %token	<str>		IDENTIFIER
 %token	<str>		IPV4ADDR
 %token	<str>		IPV6ADDR
-%token	<str>		HWADDR
 %token	<num>		NUM
 %token	<fpnum>		FPNUM
 %token	<str>		STRING
@@ -185,21 +183,21 @@ yyerror(const char *fmt, ...)
 %token	<str>		TABLE_ID
 %token	<str>		VAR_ID
 
-%type	<str>		addr some_name table_store dynamic_ifaddrs hwaddr
+%type	<str>		addr some_name table_store dynamic_ifaddrs
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
 %type	<num>		port opt_final number afamily opt_family
-%type	<num>		block_or_pass rule_dir group_dir block_opts ether_type
+%type	<num>		block_or_pass rule_dir group_dir block_opts
 %type	<num>		maybe_not opt_stateful icmp_type table_type
-%type	<num>		map_sd map_algo map_flags map_type layer
+%type	<num>		map_sd map_algo map_flags map_type
 %type	<num>		param_val
-%type	<var>		static_ifaddrs filt_addr_element mac_addr
+%type	<var>		static_ifaddrs filt_addr_element
 %type	<var>		filt_port filt_port_list port_range icmp_type_and_code
 %type	<var>		filt_addr addr_and_mask tcp_flags tcp_flags_and_mask
 %type	<var>		procs proc_call proc_param_list proc_param
-%type	<var>		element list_elems list value filt_addr_list
+%type	<var>		element list_elems list_trail list value filt_addr_list
 %type	<var>		opt_proto proto proto_elems
 %type	<addrport>	mapseg
-%type	<filtopts>	filt_opts all_or_filt_opts l2_filt_opts l2_fopts
+%type	<filtopts>	filt_opts all_or_filt_opts
 %type	<optproto>	rawproto
 %type	<rulegroup>	group_opts
 
@@ -223,7 +221,7 @@ input
 	;
 
 lines
-	: lines SEPLINE line
+	: lines sepline line
 	| line
 	;
 
@@ -243,6 +241,11 @@ alg
 	{
 		npfctl_build_alg($2);
 	}
+	;
+
+sepline
+	: NEWLINE
+	| SEMICOLON
 	;
 
 param_val
@@ -275,18 +278,17 @@ value
 	;
 
 list
-	: CURLY_OPEN list_elems CURLY_CLOSE
+	: CURLY_OPEN opt_nl list_elems CURLY_CLOSE
 	{
-		$$ = $2;
+		$$ = $3;
 	}
 	;
 
 list_elems
-	: list_elems COMMA element
+	: element list_trail
 	{
-		npfvar_add_elements($1, $3);
+		$$ = npfvar_add_elements($1, $2);
 	}
-	| element
 	;
 
 element
@@ -314,7 +316,24 @@ element
 	| dynamic_ifaddrs	{ $$ = npfctl_ifnet_table($1); }
 	| static_ifaddrs	{ $$ = $1; }
 	| addr_and_mask		{ $$ = $1; }
-	| mac_addr		{ $$ = $1; }
+	;
+
+list_trail
+	: element_sep element list_trail
+	{
+		$$ = npfvar_add_elements($2, $3);
+	}
+	| opt_nl 		{ $$ = NULL; }
+	| element_sep 		{ $$ = NULL; }
+	;
+
+element_sep
+	: opt_nl COMMA opt_nl
+	;
+
+opt_nl
+	: opt_nl NEWLINE
+	|
 	;
 
 /*
@@ -434,7 +453,7 @@ rproc
 	;
 
 procs
-	: procs SEPLINE proc_call
+	: procs sepline proc_call
 	{
 		$$ = npfvar_add_elements($1, $3);
 	}
@@ -516,24 +535,18 @@ group_dir
 	;
 
 group_opts
-	: DEFAULT layer
+	: DEFAULT
 	{
 		memset(&$$, 0, sizeof(rule_group_t));
 		$$.rg_default = true;
-		$$.rg_attr = $2;
 	}
-	| STRING group_dir on_ifname layer
+	| STRING group_dir on_ifname
 	{
 		memset(&$$, 0, sizeof(rule_group_t));
 		$$.rg_name = $1;
-		$$.rg_attr = $2 | $4;
+		$$.rg_attr = $2;
 		$$.rg_ifname = $3;
 	}
-	;
-
-layer
-	: L2	{ $$ = NPF_LAYER_2; }
-	|	{ $$ = NPF_LAYER_3; }
 	;
 
 ruleset_block
@@ -541,7 +554,7 @@ ruleset_block
 	;
 
 ruleset_def
-	: ruleset_def SEPLINE rule_group
+	: ruleset_def sepline rule_group
 	| rule_group
 	;
 
@@ -568,11 +581,6 @@ rule
 	{
 		npfctl_build_rule($1 | $2 | $3 | $4, $5,
 		    AF_UNSPEC, NULL, NULL, $7, $8);
-	}
-	| block_or_pass ETHER rule_dir opt_final on_ifname
-		l2_filt_opts
-	{
-		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, &$6, NULL, NULL);
 	}
 	;
 
@@ -674,36 +682,13 @@ all_or_filt_opts
 	{
 		$$.fo_finvert = false;
 		$$.filt.opt_3.fo_from.ap_netaddr = NULL;
-		$$.filt.opt_3.fo_from.ap_portrange = NULL;
+		$$.file.opt_3.fo_from.ap_portrange = NULL;
 		$$.fo_tinvert = false;
 		$$.filt.opt_3.fo_to.ap_netaddr = NULL;
 		$$.filt.opt_3.fo_to.ap_portrange = NULL;
 		$$.layer = NPF_LAYER_3;
 	}
 	| filt_opts	{ $$ = $1; $$.layer = NPF_LAYER_3; }
-	;
-
-l2_filt_opts
-	: ALL
-	{
-		$$.fo_finvert = false;
-		$$.filt.opt_2.fo_from.hwaddr = NULL;
-		$$.fo_tinvert = false;
-		$$.filt.opt_2.fo_to.hwaddr = NULL;
-		$$.layer = NPF_LAYER_2;
-		$$.filt.opt_2.ether_type = 0;
-	}
-	| l2_fopts ether_type
-	{
-		$$ = $1;
-		$$.filt.opt_2.ether_type = $2;
-		$$.layer = NPF_LAYER_2;
-	}
-	;
-
-ether_type
-	: TYPE number { $$ =  $2; }
-	|	{ $$ = 0; }
 	;
 
 opt_stateful
@@ -754,30 +739,6 @@ filt_opts
 	}
 	;
 
-l2_fopts
-	: FROM maybe_not filt_addr TO maybe_not filt_addr
-	{
-		$$.fo_finvert = $2;
-		$$.filt.opt_2.fo_from.hwaddr = $3;
-		$$.fo_tinvert = $6;
-		$$.filt.opt_2.fo_to.hwaddr = $6;
-	}
-	| FROM maybe_not filt_addr
-	{
-		$$.fo_finvert = $2;
-		$$.filt.opt_2.fo_from.hwaddr = $3;
-		$$.fo_tinvert = false;
-		$$.filt.opt_2.fo_to.hwaddr = NULL;
-	}
-	| TO maybe_not filt_addr
-	{
-		$$.fo_finvert = false;
-		$$.filt.opt_2.fo_from.hwaddr = NULL;
-		$$.fo_tinvert = $2;
-		$$.filt.opt_2.fo_to.hwaddr = $3;
-	}
-	;
-
 filt_addr_list
 	: filt_addr_list COMMA filt_addr_element
 	{
@@ -810,17 +771,8 @@ addr_and_mask
 	}
 	;
 
-mac_addr
-	: hwaddr { $$ = npfctl_parse_mac_addr($1); }
-	;
-
-hwaddr
-	: HWADDR { $$ = $1; }
-	;
-
 filt_addr_element
-	: mac_addr		{ assert($1 != NULL); $$ = $1; }
-	| addr_and_mask		{ assert($1 != NULL); $$ = $1; }
+	: addr_and_mask		{ assert($1 != NULL); $$ = $1; }
 	| static_ifaddrs
 	{
 		if (npfvar_get_count($1) != 1)
@@ -844,7 +796,6 @@ again:
 			type = npfvar_get_type(vp, 0);
 			goto again;
 		case NPFVAR_FAM:
-		case NPFVAR_MAC:
 		case NPFVAR_TABLE:
 			$$ = vp;
 			break;
@@ -899,7 +850,9 @@ port_range
 	}
 	| VAR_ID
 	{
-		npfvar_t *vp = npfvar_lookup($1);
+		npfvar_t *vp;
+		if ((vp = npfvar_lookup($1)) == NULL)
+			yyerror("undefined port variable %s", $1);
 		$$ = npfctl_parse_port_range_variable($1, vp);
 	}
 	;

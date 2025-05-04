@@ -127,11 +127,6 @@ typedef enum {
 	NPFCTL_PARSE_MAP
 } parse_entry_t;
 
-struct ether_type_filt {
-	const char *type;
-	uint16_t ntype;
-};
-
 #define	NPF_IFNET_TABLE_PREF		".ifnet-"
 #define	NPF_IFNET_TABLE_PREFLEN		(sizeof(NPF_IFNET_TABLE_PREF) - 1)
 
@@ -165,7 +160,7 @@ npfvar_t *	npfctl_parse_port_range_variable(const char *, npfvar_t *);
 //npfvar_t *	npfctl_parse_ether(uint16_t *eth_type);
 npfvar_t *	npfctl_parse_fam_addr_mask(const char *, const char *,
 		    unsigned long *);
-npfvar_t *	npfctl_parse_mac_addr(const char *);
+//npfvar_t *	npfctl_parse_mac_addr(const char *);
 bool		npfctl_parse_cidr(char *, fam_addr_mask_t *, int *);
 uint16_t	npfctl_npt66_calcadj(npf_netmask_t, const npf_addr_t *,
 		    const npf_addr_t *);

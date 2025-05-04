@@ -96,8 +96,6 @@ DID	[a-zA-Z_][a-zA-Z_0-9-]*
 SPID	[a-zA-Z][a-zA-Z_0-9.]*
 NUMBER	[0-9]+
 HEXDIG	[0-9a-fA-F]+
-HEXDOUBLE	[0-9a-fA-F]{2}
-HEXQUAT	[0-9a-fA-F]{4}
 
 %%
 %{
@@ -175,8 +173,6 @@ flags			return FLAGS;
 icmp-type		return ICMPTYPE;
 code			return CODE;
 any			return ANY;
-ether			return ETHER;
-layer-2		return L2;
 
 "/"			return SLASH;
 "{"			return CURLY_OPEN;

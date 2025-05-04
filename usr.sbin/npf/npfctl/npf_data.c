@@ -255,18 +255,6 @@ npfctl_parse_fam_addr_mask(const char *addr, const char *mask,
 }
 
 npfvar_t *
-npfctl_parse_mac_addr(const char *mac_addr)
-{
-	struct ether_addr *ether;
-
-	if ((ether = ether_aton(mac_addr)) == NULL) {
-		yyerror("invalid mac address format\n");
-	}
-
-	return npfvar_create_element(NPFVAR_MAC, ether, sizeof(*ether));
-}
-
-npfvar_t *
 npfctl_parse_table_id(const char *name)
 {
 	u_int tid;
