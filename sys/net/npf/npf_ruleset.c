@@ -902,7 +902,7 @@ npf_ruleset_inspect(npf_cache_t *npc, const npf_ruleset_t *rlset,
 			break;
 		}
 
-		printf("inspecting the rule %d\n", n);
+		printf("inspecting the rule %d at layer %d\n", n, (layer & NPF_LAYER_3) ? 3 : 2);
 		/* Main inspection of the rule. */
 		if (!npf_rule_inspect(rl, &bc_args, di_mask, ifid)) {
 			n = skip_to;
