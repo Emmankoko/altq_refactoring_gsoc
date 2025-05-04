@@ -203,7 +203,7 @@ enum {
 npf_bpf_t *	npfctl_bpf_create(void);
 struct bpf_program *npfctl_bpf_complete(npf_bpf_t *);
 const void *	npfctl_bpf_bmarks(npf_bpf_t *, size_t *);
-void		npfctl_bpf_ether(npf_bpf_t *, unsigned, struct ether_addr *);
+//void		npfctl_bpf_ether(npf_bpf_t *, unsigned, struct ether_addr *);
 void		npfctl_bpf_destroy(npf_bpf_t *);
 void		fetch_ether_type(npf_bpf_t *, uint16_t);
 

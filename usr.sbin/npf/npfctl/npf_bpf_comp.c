@@ -683,47 +683,6 @@ npfctl_bpf_cidr(npf_bpf_t *ctx, unsigned opts, sa_family_t af,
 }
 
 /*
- * for ether address, 6 octets(a word and halfword)
- * just fetch directly using a word and halfword fetch
- */
-void
-npfctl_bpf_ether(npf_bpf_t *ctx, unsigned opts, struct ether_addr *ether_addr)
-{
-	unsigned off;
-	assert(((opts & MATCH_SRC) != 0) ^ ((opts & MATCH_DST) != 0));
-	const uint32_t *awords = (const uint32_t *)ether_addr;
-
-	off = (opts & MATCH_SRC) ? offsetof(struct ether_header, ether_shost) :
-					offsetof(struct ether_header, ether_dhost);
-	const uint32_t word_offset = sizeof(uint32_t);
-
-
-	uint32_t mac_word = ntohl(awords[0]);
-	uint16_t mac_hword = (uint16_t)ntohl(awords[1]);
-
-	/* load and compare first word then do same to last halfword */
-	struct bpf_insn insns_ether_w[] = {
-		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, off),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, mac_word, 0, JUMP_MAGIC),
-	};
-	add_insns(ctx, insns_ether_w, __arraycount(insns_ether_w));
-
-	struct bpf_insn insns_ether_h[] = {
-		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, off + word_offset),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, mac_hword, 0, JUMP_MAGIC),
-	};
-	add_insns(ctx, insns_ether_h, __arraycount(insns_ether_h));
-
-	uint32_t mwords[] = {
-		(opts & MATCH_SRC) ? BM_SRC_ETHER: BM_DST_ETHER, 2,
-		mac_word, mac_hword
-	};
-
-	bm_invert_checkpoint(ctx, opts);
-	done_block(ctx, mwords, sizeof(mwords));
-}
-
-/*
  * npfctl_bpf_ports: code block to match TCP/UDP port range.
  *
  * => Port numbers shall be in the network byte order.

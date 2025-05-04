@@ -337,11 +337,6 @@ npfctl_build_vars(npf_bpf_t *ctx, sa_family_t family, npfvar_t *vars, int opts)
 			npfctl_bpf_table(ctx, opts, tid);
 			break;
 		}
-		case NPFVAR_MAC: {
-			struct ether_addr *eth = data;
-			npfctl_bpf_ether(ctx, opts, eth);
-			break;
-		}
 		default:
 			yyerror("unexpected %s", npfvar_type(type));
 		}
