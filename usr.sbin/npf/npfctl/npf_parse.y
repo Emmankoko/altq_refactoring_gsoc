@@ -681,14 +681,13 @@ all_or_filt_opts
 	: ALL
 	{
 		$$.fo_finvert = false;
-		$$.filt.opt_3.fo_from.ap_netaddr = NULL;
-		$$.filt.opt_3.fo_from.ap_portrange = NULL;
+		$$.fo_from.ap_netaddr = NULL;
+		$$.fo_from.ap_portrange = NULL;
 		$$.fo_tinvert = false;
-		$$.filt.opt_3.fo_to.ap_netaddr = NULL;
-		$$.filt.opt_3.fo_to.ap_portrange = NULL;
-		$$.layer = NPF_LAYER_3;
+		$$.fo_to.ap_netaddr = NULL;
+		$$.fo_to.ap_portrange = NULL;
 	}
-	| filt_opts	{ $$ = $1; $$.layer = NPF_LAYER_3; }
+	| filt_opts	{ $$ = $1; }
 	;
 
 opt_stateful
@@ -713,29 +712,29 @@ filt_opts
 	: FROM maybe_not filt_addr filt_port TO maybe_not filt_addr filt_port
 	{
 		$$.fo_finvert = $2;
-		$$.filt.opt_3.fo_from.ap_netaddr = $3;
-		$$.filt.opt_3.fo_from.ap_portrange = $4;
+		$$.fo_from.ap_netaddr = $3;
+		$$.fo_from.ap_portrange = $4;
 		$$.fo_tinvert = $6;
-		$$.filt.opt_3.fo_to.ap_netaddr = $7;
-		$$.filt.opt_3.fo_to.ap_portrange = $8;
+		$$.fo_to.ap_netaddr = $7;
+		$$.fo_to.ap_portrange = $8;
 	}
 	| FROM maybe_not filt_addr filt_port
 	{
 		$$.fo_finvert = $2;
-		$$.filt.opt_3.fo_from.ap_netaddr = $3;
-		$$.filt.opt_3.fo_from.ap_portrange = $4;
+		$$.fo_from.ap_netaddr = $3;
+		$$.fo_from.ap_portrange = $4;
 		$$.fo_tinvert = false;
-		$$.filt.opt_3.fo_to.ap_netaddr = NULL;
-		$$.filt.opt_3.fo_to.ap_portrange = NULL;
+		$$.fo_to.ap_netaddr = NULL;
+		$$.fo_to.ap_portrange = NULL;
 	}
 	| TO maybe_not filt_addr filt_port
 	{
 		$$.fo_finvert = false;
-		$$.filt.opt_3.fo_from.ap_netaddr = NULL;
-		$$.filt.opt_3.fo_from.ap_portrange = NULL;
+		$$.fo_from.ap_netaddr = NULL;
+		$$.fo_from.ap_portrange = NULL;
 		$$.fo_tinvert = $2;
-		$$.filt.opt_3.fo_to.ap_netaddr = $3;
-		$$.filt.opt_3.fo_to.ap_portrange = $4;
+		$$.fo_to.ap_netaddr = $3;
+		$$.fo_to.ap_portrange = $4;
 	}
 	;
 

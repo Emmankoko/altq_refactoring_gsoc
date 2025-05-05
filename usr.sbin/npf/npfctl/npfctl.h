@@ -73,28 +73,9 @@ typedef struct addr_port {
 	npfvar_t *	ap_portrange;
 } addr_port_t;
 
-typedef struct macaddr {
-	npfvar_t *	hwaddr;
-} macaddr_t;
-
-typedef struct L3 {
+typedef struct filt_opts {
 	addr_port_t	fo_from;
 	addr_port_t	fo_to;
-} l3;
-
-typedef struct L2 {
-	macaddr_t 	fo_from;
-	macaddr_t 	fo_to;
-	uint16_t	ether_type;
-} l2;
-
-typedef struct filt_opts {
-	union {
-		l3 opt_3;
-		l2 opt_2;
-	} filt;
-
-	uint32_t	layer;
 	bool		fo_finvert;
 	bool		fo_tinvert;
 } filt_opts_t;
@@ -140,7 +121,7 @@ bool		npfctl_addr_iszero(const npf_addr_t *);
 
 void		npfctl_print_error(const npf_error_t *);
 char *		npfctl_print_addrmask(int, const char *, const npf_addr_t *,
-		    npf_netmask_t);
+			npf_netmask_t);
 void		npfctl_note_interface(const char *);
 nl_table_t *	npfctl_table_getbyname(nl_config_t *, const char *);
 unsigned	npfctl_table_getid(const char *);
@@ -156,14 +137,11 @@ npfvar_t *	npfctl_parse_table_id(const char *);
 npfvar_t * 	npfctl_parse_icmp(int, int, int);
 npfvar_t *	npfctl_parse_port_range(in_port_t, in_port_t);
 npfvar_t *	npfctl_parse_port_range_variable(const char *, npfvar_t *);
-//npfvar_t *	npfctl_parse_ether_variable(const char *, npfvar_t *);
-//npfvar_t *	npfctl_parse_ether(uint16_t *eth_type);
 npfvar_t *	npfctl_parse_fam_addr_mask(const char *, const char *,
-		    unsigned long *);
-//npfvar_t *	npfctl_parse_mac_addr(const char *);
+			unsigned long *);
 bool		npfctl_parse_cidr(char *, fam_addr_mask_t *, int *);
 uint16_t	npfctl_npt66_calcadj(npf_netmask_t, const npf_addr_t *,
-		    const npf_addr_t *);
+			const npf_addr_t *);
 int		npfctl_nat_ruleset_p(const char *, bool *);
 
 void		usage(void);
@@ -173,18 +151,18 @@ void		npfctl_table(int, int, char **);
 int		npfctl_conn_list(int, int, char **);
 
 /*
- * NPF extension loading.
- */
+* NPF extension loading.
+*/
 
 typedef struct npf_extmod npf_extmod_t;
 
 npf_extmod_t *	npf_extmod_get(const char *, nl_ext_t **);
 int		npf_extmod_param(npf_extmod_t *, nl_ext_t *,
-		    const char *, const char *);
+			const char *, const char *);
 
 /*
- * BFF byte-code generation interface.
- */
+* BFF byte-code generation interface.
+*/
 
 typedef struct npf_bpf npf_bpf_t;
 
@@ -193,9 +171,9 @@ typedef struct npf_bpf npf_bpf_t;
 #define	MATCH_INVERT	0x04
 
 enum {
-	BM_IPVER, BM_ETHER_TYPE, BM_PROTO, BM_SRC_CIDR, BM_SRC_TABLE, BM_DST_CIDR,
+	BM_IPVER, BM_PROTO, BM_SRC_CIDR, BM_SRC_TABLE, BM_DST_CIDR,
 	BM_DST_TABLE, BM_SRC_PORTS, BM_DST_PORTS, BM_TCPFL, BM_ICMP_TYPE,
-	BM_ICMP_CODE, BM_SRC_NEG, BM_DST_NEG, BM_SRC_ETHER, BM_DST_ETHER,
+	BM_ICMP_CODE, BM_SRC_NEG, BM_DST_NEG,
 
 	BM_COUNT // total number of the marks
 };
@@ -203,9 +181,7 @@ enum {
 npf_bpf_t *	npfctl_bpf_create(void);
 struct bpf_program *npfctl_bpf_complete(npf_bpf_t *);
 const void *	npfctl_bpf_bmarks(npf_bpf_t *, size_t *);
-//void		npfctl_bpf_ether(npf_bpf_t *, unsigned, struct ether_addr *);
 void		npfctl_bpf_destroy(npf_bpf_t *);
-void		fetch_ether_type(npf_bpf_t *, uint16_t);
 
 void		npfctl_bpf_group_enter(npf_bpf_t *, bool);
 void		npfctl_bpf_group_exit(npf_bpf_t *);
@@ -213,15 +189,15 @@ void		npfctl_bpf_group_exit(npf_bpf_t *);
 void		npfctl_bpf_ipver(npf_bpf_t *, sa_family_t);
 void		npfctl_bpf_proto(npf_bpf_t *, unsigned);
 void		npfctl_bpf_cidr(npf_bpf_t *, u_int, sa_family_t,
-		    const npf_addr_t *, const npf_netmask_t);
+			const npf_addr_t *, const npf_netmask_t);
 void		npfctl_bpf_ports(npf_bpf_t *, u_int, in_port_t, in_port_t);
 void		npfctl_bpf_tcpfl(npf_bpf_t *, uint8_t, uint8_t);
 void		npfctl_bpf_icmp(npf_bpf_t *, int, int);
 void		npfctl_bpf_table(npf_bpf_t *, u_int, u_int);
 
 /*
- * Configuration building interface.
- */
+* Configuration building interface.
+*/
 
 #define	NPFCTL_NAT_DYNAMIC	1
 #define	NPFCTL_NAT_STATIC	2
@@ -245,19 +221,19 @@ void		npfctl_build_rproc(const char *, npfvar_t *);
 void		npfctl_build_group(const char *, int, const char *, bool);
 void		npfctl_build_group_end(void);
 void		npfctl_build_rule(uint32_t, const char *, sa_family_t,
-		    const npfvar_t *, const filt_opts_t *,
-		    const char *, const char *);
+			const npfvar_t *, const filt_opts_t *,
+			const char *, const char *);
 void		npfctl_build_natseg(int, int, unsigned, const char *,
-		    const addr_port_t *, const addr_port_t *,
-		    const npfvar_t *, const filt_opts_t *, unsigned);
+			const addr_port_t *, const addr_port_t *,
+			const npfvar_t *, const filt_opts_t *, unsigned);
 void		npfctl_build_maprset(const char *, int, const char *);
 void		npfctl_build_table(const char *, u_int, const char *);
 
 void		npfctl_setparam(const char *, int);
 
 /*
- * For the systems which do not define TH_ECE and TW_CRW.
- */
+* For the systems which do not define TH_ECE and TW_CRW.
+*/
 #ifndef	TH_ECE
 #define	TH_ECE		0x40
 #endif

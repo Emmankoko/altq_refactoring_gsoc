@@ -447,8 +447,8 @@ static bool
 npfctl_build_code(nl_rule_t *rl, sa_family_t family, const npfvar_t *popts,
 	const filt_opts_t *fopts)
 {
-	const addr_port_t *apfrom = &fopts->filt.opt_3.fo_from;
-	const addr_port_t *apto = &fopts->filt.opt_3.fo_to;
+	const addr_port_t *apfrom = &fopts->fo_from;
+	const addr_port_t *apto = &fopts->fo_to;
 	bool any_proto, any_addrs, any_ports, stateful;
 	bool any_l4proto, non_tcpudp, tcp_with_nofl;
 	npf_bpf_t *bc;
@@ -684,13 +684,13 @@ npfctl_build_group(const char *name, int attr, const char *ifname, bool def)
 	rl = npf_rule_create(name, attr | NPF_RULE_GROUP, ifname);
 	npf_rule_setprio(rl, NPF_PRI_LAST);
 	if (def) {
-		if (attr & NPF_LAYER_2)
-			defgroup_l2 = set_defgroup(rl, defgroup_l2, attr);
-		else
-			defgroup = set_defgroup(rl, defgroup, attr);
-	}
-	else if (attr & NPF_LAYER_2) {
-		l2_group = true;
+		if (defgroup) {
+			yyerror("multiple default groups are not valid");
+		}
+		if (rule_nesting_level) {
+			yyerror("default group can only be at the top level");
+		}
+		defgroup = rl;
 	}
 
 	/* Set the current group and increase the nesting level. */
