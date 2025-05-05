@@ -652,6 +652,7 @@ npfctl_build_maprset(const char *name, int attr, const char *ifname)
 	npf_nat_insert(npf_conf, rl);
 }
 
+/*
 static nl_rule_t *
 set_defgroup(nl_rule_t *rl, nl_rule_t *def_group, int attr)
 {
@@ -666,6 +667,7 @@ set_defgroup(nl_rule_t *rl, nl_rule_t *def_group, int attr)
 
 	return rl;
 }
+*/
 
 /*
  * npfctl_build_group: create a group, update the current group pointer
