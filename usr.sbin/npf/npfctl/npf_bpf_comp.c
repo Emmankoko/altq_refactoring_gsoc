@@ -141,7 +141,7 @@ struct npf_bpf {
 	size_t			alen;
 	unsigned		nblocks;
 	sa_family_t		af;
-	uint16_t		eth_type;
+	//uint16_t		eth_type;
 	uint32_t		flags;
 
 	/*
@@ -469,47 +469,6 @@ fetch_l3(npf_bpf_t *ctx, sa_family_t af, unsigned flags)
 		ctx->flags |= X_EQ_L4OFF;
 	}
 }
-
-void
-fetch_ether_type(npf_bpf_t *ctx, uint16_t type)
-{
-	if ((ctx->flags & FETCHED_L2) == 0 || (type && ctx->eth_type == 0)) {
-		const uint8_t jt = type ? 0 : JUMP_MAGIC;
-		const uint8_t jf = type ? JUMP_MAGIC : 0;
-		const bool ingroup = ctx->ingroup != 0;
-		const bool invert = ctx->invert;
-
-		/*
-		 * L2 block cannot be inserted in the middle of a group.
-		 * Check and start the group after.
-		 */
-		if (ingroup) {
-			assert(ctx->nblocks == ctx->gblock);
-			npfctl_bpf_group_exit(ctx);
-		}
-
-		struct bpf_insn insns_et[] = {
-			BPF_STMT(BPF_LD+BPF_W+BPF_MEM, BPF_MW_ETHER_TYPE),
-			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, type, jt, jf),
-		};
-		add_insns(ctx, insns_et, __arraycount(insns_et));
-		ctx->flags |= FETCHED_L2;
-		ctx->eth_type = type;
-
-		if (type) {
-			uint32_t mwords[] = { BM_ETHER_TYPE, 1, type };
-			add_bmarks(ctx, mwords, sizeof(mwords));
-		}
-		if (ingroup) {
-			npfctl_bpf_group_enter(ctx, invert);
-		}
-
-	} else if (type && type != ctx->eth_type) {
-		errx(EXIT_FAILURE, "ether type mismatch");
-	}
-}
-
-
 
 static void
 bm_invert_checkpoint(npf_bpf_t *ctx, const unsigned opts)
