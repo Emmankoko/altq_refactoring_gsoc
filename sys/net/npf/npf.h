@@ -70,9 +70,10 @@ typedef uint8_t			npf_netmask_t;
 #define	NPF_COP_L3		0
 #define	NPF_COP_TABLE		1
 
-#define	BPF_MW_IPVER		0
-#define	BPF_MW_L4OFF		1
-#define	BPF_MW_L4PROTO		2
+#define	BPF_MW_ETHER_TYPE	0
+#define	BPF_MW_IPVER		1
+#define	BPF_MW_L4OFF		2
+#define	BPF_MW_L4PROTO		3
 #endif
 /* The number of words used. */
 #define	NPF_BPF_NWORDS		3
@@ -153,6 +154,8 @@ typedef struct {
 	npf_t *			npc_ctx;
 	uint32_t		npc_info;
 	nbuf_t *		npc_nbuf;
+
+	uint8_t			ether_type;
 
 	/*
 	 * Pointers to the IP source and destination addresses,

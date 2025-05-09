@@ -207,7 +207,7 @@ yyerror(const char *fmt, ...)
 
 %union {
 	char *		str;
-	uint8_t		etype;
+	uint16_t	etype;
 	unsigned long	num;
 	double		fpnum;
 	npfvar_t *	var;
@@ -595,7 +595,7 @@ rule
 		    AF_UNSPEC, NULL, NULL, $7, $8);
 	}
 	| block_or_pass ETHER rule_dir opt_final on_ifname
-		l2_filt_opts
+		l2_all_of_filt_opts
 	{
 		npfctl_build_rule($1 | $3 | $4, $5, 0, NULL, &$6, NULL, NULL);
 	}
@@ -760,8 +760,8 @@ l2_filt_opts
 	;
 
 ether_type
-	: TYPE number { $$ = $2; }
-	|		{ $$ = 0; }
+	: TYPE NUM { $$ = $2; }
+	|	{ $$ = 0; }
 	;
 
 filt_addr_list

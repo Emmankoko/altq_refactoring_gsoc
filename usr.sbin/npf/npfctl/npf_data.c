@@ -693,7 +693,7 @@ npfctl_parse_l3filt_opt(npfvar_t *src_addr, npfvar_t *src_port, bool tnot,
 
 filt_opts_t
 npfctl_parse_l2filt_opt(npfvar_t *src_addr, bool fnot, npfvar_t *dst_addr,
-			bool tnot, uint8_t eth_type)
+			bool tnot, uint16_t eth_type)
 {
 	filt_opts_t fopts;
 	fopts.filt.opt2.from_mac = src_addr;
