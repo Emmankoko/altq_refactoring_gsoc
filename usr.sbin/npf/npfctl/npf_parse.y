@@ -175,6 +175,7 @@ yyerror(const char *fmt, ...)
 %token	<num>		ICMP6
 
 %token	<num>		HEX
+%token	<str>		ETHERHEX
 %token	<str>		IDENTIFIER
 %token	<str>		IPV4ADDR
 %token	<str>		IPV6ADDR
@@ -760,7 +761,7 @@ l2_filt_opts
 	;
 
 ether_type
-	: TYPE NUM { $$ = $2; }
+	: TYPE ETHERHEX { $$ = npfctl_parse_ether_type($2); }
 	|	{ $$ = 0; }
 	;
 

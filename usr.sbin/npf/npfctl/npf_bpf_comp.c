@@ -479,6 +479,9 @@ fetch_ether_type(npf_bpf_t *ctx, uint16_t type)
 		const uint8_t jf = type ? JUMP_MAGIC : 0;
 		const bool ingroup = ctx->ingroup != 0;
 		const bool invert = ctx->invert;
+		unsigned off;
+
+		off = offsetof(struct ether_header, ether_type);
 
 		/*
 		 * L2 block cannot be inserted in the middle of a group.
@@ -489,8 +492,10 @@ fetch_ether_type(npf_bpf_t *ctx, uint16_t type)
 			npfctl_bpf_group_exit(ctx);
 		}
 
+		type = ntohs(type);
+
 		struct bpf_insn insns_et[] = {
-			BPF_STMT(BPF_LD+BPF_H+BPF_MEM, BPF_MW_ETHER_TYPE),
+			BPF_STMT(BPF_LD+BPF_H+BPF_ABS, off),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, type, jt, jf),
 		};
 		add_insns(ctx, insns_et, __arraycount(insns_et));

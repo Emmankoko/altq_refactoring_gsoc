@@ -526,7 +526,7 @@ build_l2_code(npf_bpf_t *bc, const filt_opts_t *fopts)
 
 	npfvar_t *ap_from = fopts->filt.opt2.from_mac;
 	npfvar_t *ap_to = fopts->filt.opt2.to_mac;
-	const uint16_t ether_type = ntohs(fopts->filt.opt2.ether_type);
+	const uint16_t ether_type = fopts->filt.opt2.ether_type;
 	bool addr_or_ether;
 
 	addr_or_ether = ap_from || ap_to || ether_type;

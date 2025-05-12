@@ -161,6 +161,7 @@ filt_opts_t	npfctl_parse_l3filt_opt(npfvar_t *, npfvar_t *, bool,
 filt_opts_t	npfctl_parse_l2filt_opt(npfvar_t *, bool, npfvar_t *,
 						bool, uint16_t);
 npfvar_t *	npfctl_parse_mac_addr(const char *);
+uint16_t	npfctl_parse_ether_type(const char *str);
 int		npfctl_nat_ruleset_p(const char *, bool *);
 
 void		usage(void);

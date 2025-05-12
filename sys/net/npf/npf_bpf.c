@@ -113,12 +113,10 @@ npf_bpf_prepare(npf_cache_t *npc, bpf_args_t *args, uint32_t *M)
 
 	/*
 	 * Output words in the memory store:
-	 *	BPF_MW_ETHER_TYPE L2 ether type
 	 *	BPF_MW_IPVER	IP version (4 or 6).
 	 *	BPF_MW_L4OFF	L4 header offset.
 	 *	BPF_MW_L4PROTO	L4 protocol.
 	 */
-	M[BPF_MW_ETHER_TYPE] = npc->ether_type;
 	M[BPF_MW_IPVER] = ver;
 	M[BPF_MW_L4OFF] = npc->npc_hlen;
 	M[BPF_MW_L4PROTO] = npc->npc_proto;
