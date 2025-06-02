@@ -124,6 +124,15 @@ print_rk(const fido_credman_rk_t *rk, size_t idx)
 		warnx("fido_credman_rk");
 		return -1;
 	}
+	/*
+	 * either of id or user_id can come out of this call allocated.
+	 * non-zero return in base64_encode can also come from failed allocation
+	 * either from id or user_id. if one fails and the other succeeds, the succeeded
+	 * allocation leaks and returns -1
+	 *
+	 * maybe can be trivial here if process immediately terminates and kernel frees the allocated
+	 * memory. but ensuring all resources are properly freed could be worthwhile
+	 */
 	if (base64_encode(fido_cred_id_ptr(cred), fido_cred_id_len(cred),
 	    &id) < 0 || base64_encode(fido_cred_user_id_ptr(cred),
 	    fido_cred_user_id_len(cred), &user_id) < 0) {
