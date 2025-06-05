@@ -1054,7 +1054,7 @@ npf_rule_match_rid(npf_rule_t *rl, npf_cache_t *npc, int dir)
 	KASSERT(npf_iscached(npc, NPC_IP46));
 	KASSERT(npf_iscached(npc, NPC_LAYER4));
 
-	if (rl->r_attr & NPF_UNPRIV_USER)
+	if (rl->r_attr & NPF_UNPRIV_USER && dir == PFIL_OUT)
 		return npf_unpriv_match_rid(rl);
 
 	if (rl->gid.op != NPF_OP_NONE) {
