@@ -707,6 +707,7 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 	nl_rule_t *rl;
 
 	attr |= (npf_conf ? 0 : NPF_RULE_DYNAMIC);
+	attr |= fopts->flag;
 
 	rl = npf_rule_create(NULL, attr, ifname);
 	if (pcap_filter) {

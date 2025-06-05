@@ -45,6 +45,7 @@ __KERNEL_RCSID(0, "$NetBSD: npf_ruleset.c,v 1.55 2025/06/01 00:54:36 joe Exp $")
 #include <sys/mbuf.h>
 #include <sys/types.h>
 #include <sys/kauth.h>
+#include <sys/cpu.h>
 
 #include <net/bpf.h>
 #include <net/bpfjit.h>
@@ -1008,7 +1009,39 @@ npf_rule_reverse(npf_cache_t *npc, npf_match_info_t *mi, int ret)
 	return (ret == 0) ? ENETUNREACH : 0;
 }
 
-/* only perform uid/gid checks when set */
+/*
+ * this function adds an extra layer protection mechanism for unix servers
+ * adds to factor servers that are bound to privileged ports and
+ * drop privileges after auth. configured not to filter based on socket
+ * cred but cred of process firing the sockets from userland
+ * we cannot chown on sockets here because we do not know the actual user
+ * the packet will go to, but only the disguised cred on the socket struct
+ */
+static int
+npf_unpriv_match_rid(npf_rule_t *rl)
+{
+	lwp_t *proc = curlwp;
+	uint32_t lwp_uid, lwp_gid;
+	bool uid_matched = false, gid_matched = false;
+
+	if (rl->gid.op != NPF_OP_NONE) {
+		lwp_gid = kauth_cred_getegid(proc->l_cred);
+		gid_matched |= npf_match_rid(&rl->gid, lwp_gid);
+	}
+	if (rl->uid.op != NPF_OP_NONE) {
+		lwp_uid = kauth_cred_geteuid(proc->l_cred);
+		uid_matched |= npf_match_rid(&rl->uid, lwp_uid);
+	}
+
+	if (rl->gid.op && rl->uid.op)
+		return gid_matched && uid_matched;
+	else
+		return gid_matched || uid_matched;
+}
+
+/*
+ * only perform uid/gid checks when set
+ */
 int
 npf_rule_match_rid(npf_rule_t *rl, npf_cache_t *npc, int dir)
 {
@@ -1020,6 +1053,9 @@ npf_rule_match_rid(npf_rule_t *rl, npf_cache_t *npc, int dir)
 
 	KASSERT(npf_iscached(npc, NPC_IP46));
 	KASSERT(npf_iscached(npc, NPC_LAYER4));
+
+	if (rl->r_attr & NPF_UNPRIV_USER)
+		return npf_unpriv_match_rid(rl);
 
 	if (rl->gid.op != NPF_OP_NONE) {
 		if (npf_socket_lookup_rid(npc, kauth_cred_getegid, &sock_gid, dir) == -1)

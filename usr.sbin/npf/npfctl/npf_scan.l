@@ -174,6 +174,7 @@ icmp-type		return ICMPTYPE;
 code			return CODE;
 any			return ANY;
 user			return USER;
+unpriv			return UNPRIV;
 
 "/"			return SLASH;
 "{"			return CURLY_OPEN;

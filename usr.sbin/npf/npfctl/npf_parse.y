@@ -186,7 +186,7 @@ yyerror(const char *fmt, ...)
 
 %type	<str>		addr some_name table_store dynamic_ifaddrs
 %type	<str>		proc_param_val opt_apply ifname on_ifname ifref
-%type	<num>		port opt_final number afamily opt_family
+%type	<num>		port opt_final number afamily opt_family opt_priv
 %type	<num>		block_or_pass rule_dir group_dir block_opts
 %type	<num>		maybe_not opt_stateful icmp_type table_type
 %type	<num>		map_sd map_algo map_flags map_type
@@ -684,8 +684,13 @@ opt_proto
 	|			{ $$ = NULL; }
 	;
 
+opt_priv
+	: UNPRIV	{ $$ = NPF_UNPRIV_USER; }
+	|			{ $$ =0; }
+	;
+
 all_or_filt_opts
-	: ALL user_id group_id
+	: ALL opt_priv user_id group_id
 	{
 		$$.fo_finvert = false;
 		$$.fo_from.ap_netaddr = NULL;
@@ -693,8 +698,9 @@ all_or_filt_opts
 		$$.fo_tinvert = false;
 		$$.fo_to.ap_netaddr = NULL;
 		$$.fo_to.ap_portrange = NULL;
-		$$.uid = $2;
-		$$.gid = $3;
+		$$.uid = $3;
+		$$.gid = $4;
+		$$.flag = $2;
 	}
 	| filt_opts	{ $$ = $1; }
 	;
@@ -719,7 +725,7 @@ block_opts
 
 filt_opts
 	: FROM maybe_not filt_addr filt_port TO maybe_not filt_addr filt_port
-	user_id group_id
+	opt_priv user_id group_id
 	{
 		$$.fo_finvert = $2;
 		$$.fo_from.ap_netaddr = $3;
@@ -727,10 +733,11 @@ filt_opts
 		$$.fo_tinvert = $6;
 		$$.fo_to.ap_netaddr = $7;
 		$$.fo_to.ap_portrange = $8;
-		$$.uid = $9;
-		$$.gid = $10;
+		$$.uid = $10;
+		$$.gid = $11;
+		$$.flag = $9;
 	}
-	| FROM maybe_not filt_addr filt_port user_id group_id
+	| FROM maybe_not filt_addr filt_port opt_priv user_id group_id
 	{
 		$$.fo_finvert = $2;
 		$$.fo_from.ap_netaddr = $3;
@@ -738,10 +745,11 @@ filt_opts
 		$$.fo_tinvert = false;
 		$$.fo_to.ap_netaddr = NULL;
 		$$.fo_to.ap_portrange = NULL;
-		$$.uid = $5;
-		$$.gid = $6;
+		$$.uid = $6;
+		$$.gid = $7;
+		$$.flag = $5;
 	}
-	| TO maybe_not filt_addr filt_port user_id group_id
+	| TO maybe_not filt_addr filt_port opt_priv user_id group_id
 	{
 		$$.fo_finvert = false;
 		$$.fo_from.ap_netaddr = NULL;
@@ -749,8 +757,9 @@ filt_opts
 		$$.fo_tinvert = $2;
 		$$.fo_to.ap_netaddr = $3;
 		$$.fo_to.ap_portrange = $4;
-		$$.uid = $5;
-		$$.gid = $6;
+		$$.uid = $6;
+		$$.gid = $7;
+		$$.flag = $5;
 	}
 	;
 

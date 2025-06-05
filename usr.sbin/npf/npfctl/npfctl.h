@@ -80,6 +80,7 @@ typedef struct filt_opts {
 	bool		fo_tinvert;
 	struct r_id	uid;
 	struct r_id	gid;
+	int	flag;
 } filt_opts_t;
 
 typedef struct opt_proto {
