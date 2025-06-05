@@ -1030,6 +1030,7 @@ npf_unpriv_match_rid(npf_rule_t *rl)
 	}
 	if (rl->uid.op != NPF_OP_NONE) {
 		lwp_uid = kauth_cred_geteuid(proc->l_cred);
+		printf("lwpuid is %u", lwp_uid);
 		uid_matched |= npf_match_rid(&rl->uid, lwp_uid);
 	}
 
