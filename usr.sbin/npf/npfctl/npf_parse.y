@@ -141,6 +141,7 @@ yyerror(const char *fmt, ...)
 %token			NAME
 %token			NETMAP
 %token			NPT66
+%token			SIIT
 %token			ON
 %token			OFF
 %token			OUT
@@ -395,6 +396,7 @@ table_store
  * Map definition.
  */
 
+/* look at, map definitions */
 map_sd
 	: TSTATIC	{ $$ = NPFCTL_NAT_STATIC; }
 	| TDYNAMIC	{ $$ = NPFCTL_NAT_DYNAMIC; }
@@ -406,6 +408,7 @@ map_algo
 	| ALGO IPHASH		{ $$ = NPF_ALGO_IPHASH; }
 	| ALGO ROUNDROBIN	{ $$ = NPF_ALGO_RR; }
 	| ALGO NPT66		{ $$ = NPF_ALGO_NPT66; }
+	| ALGO SIIT		{ $$ = NPF_ALGO_SIIT; }
 	|			{ $$ = 0; }
 	;
 
