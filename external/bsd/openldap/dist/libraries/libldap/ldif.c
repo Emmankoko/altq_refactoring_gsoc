@@ -729,17 +729,17 @@ ldif_open(
 )
 {
 	FILE *fp = fopen( file, mode );
-	LDIFFP *lfp = NULL;
+	if ( fp == NULL )
+		return NULL;
+	LDIFFP *lfp;
 
-	if ( fp ) {
-		lfp = ber_memalloc( sizeof( LDIFFP ));
-		if ( lfp == NULL ) {
-			fclose(fp); /* ?? i know kernel reclaims it but ??? */
-			return NULL;
-		}
-		lfp->fp = fp;
-		lfp->prev = NULL;
+	lfp = ber_memalloc( sizeof( LDIFFP ));
+	if ( lfp == NULL ) {
+		fclose(fp);
+		return NULL;
 	}
+	lfp->fp = fp;
+	lfp->prev = NULL;
 	return lfp;
 }
 
