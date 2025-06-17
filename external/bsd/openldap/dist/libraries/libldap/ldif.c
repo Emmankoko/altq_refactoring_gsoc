@@ -734,7 +734,8 @@ ldif_open(
 	if ( fp ) {
 		lfp = ber_memalloc( sizeof( LDIFFP ));
 		if ( lfp == NULL ) {
-		    return NULL;
+			fclose(fp); /* ?? i know kernel reclaims it but ??? */
+			return NULL;
 		}
 		lfp->fp = fp;
 		lfp->prev = NULL;
