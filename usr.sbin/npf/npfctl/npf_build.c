@@ -743,6 +743,14 @@ npfctl_build_rule(uint32_t attr, const char *ifname, sa_family_t family,
 }
 
 /*
+ * the function below builds the NAT rule to be sent to the kernel
+ * the kernel will do packet inspection and then rewrite
+ * so after it sets the address and port of both segment,
+ * then build the BPF code (npfctl_build_code) to inspect every packet
+ * that comes to check if it matches the criteria of packets we are to change
+ * /
+
+/*
  * npfctl_build_nat: create a single NAT policy of a specified
  * type with a given filter options.
  */
@@ -787,6 +795,9 @@ npfctl_build_nat(int type, const char *ifname, const addr_port_t *ap,
 		yyerror("map must have a valid translation address");
 		abort();
 	}
+
+	/* if yu want to see what goes on here, go to ./lib/libnpf/npf.c */
+	/* that code is responsible for sending the information to the kernel to process */
 	npf_nat_setport(nat, port);
 	npfctl_build_code(nat, family, popts, fopts);
 	return nat;

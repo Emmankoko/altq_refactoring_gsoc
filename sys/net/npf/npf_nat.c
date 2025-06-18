@@ -83,6 +83,8 @@ __KERNEL_RCSID(0, "$NetBSD: npf_nat.c,v 1.53 2023/02/24 11:03:01 riastradh Exp $
 #include "npf_impl.h"
 #include "npf_conn.h"
 
+/* this is kernel code for npf NAT */
+
 /*
  * NAT policy structure.
  */
@@ -403,6 +405,10 @@ npf_nat_which(const unsigned type, const npf_flow_t flow)
 	return which;
 }
 
+/* the NAT ruleset inspection will happen here */
+/* to check the criteria of the packets that we need to translate */
+/* remeber npfctl_build_code ??? in userland ??? */
+
 /*
  * npf_nat_inspect: inspect packet against NAT ruleset and return a policy.
  *
@@ -610,6 +616,16 @@ npf_dnat_translate(npf_cache_t *npc, npf_nat_t *nt, npf_flow_t flow)
 	}
 	KASSERT(!nbuf_flag_p(npc->npc_nbuf, NBUF_DATAREF_RESET));
 
+
+	/*
+	 * this is the code that does the real translation
+	 * tranlation must happens in the kernel becasue the function
+	 * of the kernel is to process instructions closer to the CPU.
+	 * so everything that has to with the CPU is run in the kernel.
+	 * memory allocations, code executions, network sockets connections etc.
+	 */
+
+	 /* NB: this is for dynamic(stateful) */
 	/* Finally, perform the translation. */
 	return npf_napt_rwr(npc, which, addr, port);
 }
@@ -634,10 +650,22 @@ npf_snat_translate(npf_cache_t *npc, const npf_natpolicy_t *np, npf_flow_t flow)
 	case NPF_ALGO_NPT66:
 		return npf_npt66_rwr(npc, which, &np->n_taddr,
 		    np->n_tmask, np->n_npt66_adj);
+	case NPF_ALGO_SIIT: /* OR WHATEVER ALGO WE ARE USING */
+		return npf_siit64_rwr(parameters go here);
 	default:
 		taddr = &np->n_taddr;
 		break;
 	}
+
+	/*
+	 * this is the code that does the real translation
+	 * tranlation must happens in the kernel becasue the function
+	 * of the kernel is to process instructions closer to the CPU.
+	 * so everything that has to with the CPU is run in the kernel.
+	 * memory allocations, code executions, network sockets connections etc.
+	 */
+
+	 /* NB : thi is for static : stateless */
 	return npf_napt_rwr(npc, which, taddr, np->n_tport);
 }
 

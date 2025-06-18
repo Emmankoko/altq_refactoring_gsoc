@@ -904,6 +904,18 @@ npf_npt66_rwr(const npf_cache_t *npc, u_int which, const npf_addr_t *pref,
 	return 0;
 }
 
+/*
+ * IPv6-to-IPv4 Network Prefix Translation (NPTv6), as per RFC 6052
+ */
+int
+npf_nat64_rwr(params)
+{
+
+
+	your alogithms comes hereeeeeeeeee
+
+}
+
 #if defined(DDB) || defined(_NPF_TESTING)
 
 const char *
