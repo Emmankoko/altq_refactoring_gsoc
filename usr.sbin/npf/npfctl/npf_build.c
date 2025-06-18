@@ -912,15 +912,67 @@ npfctl_build_natseg(int sd, int type, unsigned mflags, const char *ifname,
 				    "NETMAP algorithm must be 1:1");
 			}
 			break;
+		case NPF_ALGO_SIIT:
+			/* here is to validate the algorithm so */
+			/* so here what we can do is to verify that the algo match gotten from the kernel*/
+			/* because we must have a rule like */
+
+			if an ipv6 only host tries to github.com, the routing table in the ipv6 only host will know from DNS
+			that the github.com server is an ipv4 only, so when DNS is resolving the address for it, it will
+			have a dest address of the /96 prefix with ipv4 address in it.
+			so we have to verify that if the packet comes to us the router and it is leaving us(the NPF router ) to github,
+			the packet that came must have a destination address of the /96 prefixes or the other prefixes that we would
+			consider translating.
+
+			now when it is leaving us to google, we would need to take the dest address of the packet, create an new ipv4 mbuf(packet)
+			and resend.
+
+			when it is coming to us from google, it will come as a full ipv4 packet on the external interface,
+			we would need to take source ipv4 and dest ipv4, create a new ipv6 packet
+			and send with the destination address as the address of the local host we are sending to and then,
+			the source address as the ipv4(github's ipv4) converted ipv6 address then we forwards it. the kernel will know this packet
+			isn't for us and take it to the local host.
+
+			things we should care about:
+			1. a packet whose dest address is /96 i.e when a packet from the local computer comes to us and it
+			is leaving our interface to githug.
+			2. a packet coming to use whose source address is an ipv4 only source address.
+
+			so to get a rule,
+
+			map on $ext_if algo siit local_machines_ipv6addr -> router_pubip4
+
+			so when a useer gives this rule for an outgoing packet, it is tellling us that it wants a NAT64, so we implicitly also convert the /96
+			dest address to the ipv4 embeeded in it and put it in an ipv4 packet.
+
+			OR
+
+			map on $ext_if algo siit local_machines_ipv6addr <- router_pubip4
+
+			so when we also see this for an incoming packet, it is telling us that it wants a NAT64, so we change the destination address
+			to the local_machines_ipv6addr and then implicitly take the source address(github's ipv4 address), and embedd it into an ipv6 /96
+			packet and send it to the host(local_machines_ipv6addr).
+
+			so together, we can:
+
+			map on $ext_if algo siit local_machines_ipv6addr <-> router_pubip4 (BINAT)
+
+			one consistent trend in NAT64 is that one addres is ipv4 and the other is ipv6.
+
+			so we can see that to validate a NAT64 rule, we need to ensure that one segment musst be an ipv6 address
+			and the other an ipv4 address.
+
+			first coding task:
+			validate the NAT64 rule here. to ensure that the two addresses here, one is an ipv4 and the other is an ipv6
+			and also, print an error message if both are of the same address family.
+
+			break;
 		case NPF_ALGO_NONE:
 			if ((am1 && am1->fam_mask != NPF_NO_NETMASK) ||
 			    (am2 && am2->fam_mask != NPF_NO_NETMASK)) {
 				yyerror("static net-to-net translation "
 				    "must have an algorithm specified");
 			}
-			break;
-		case NPF_ALGO_SIIT:
-		/* maybe the algorithm goes here */
 			break;
 		default:
 			yyerror("invalid algorithm specified for static NAT");
