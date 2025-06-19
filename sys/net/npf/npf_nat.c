@@ -583,6 +583,7 @@ out:
 	return nt;
 }
 
+/* so you see here, kernel does dynamic sepaately */
 /*
  * npf_dnat_translate: perform translation given the state data.
  */
@@ -627,9 +628,10 @@ npf_dnat_translate(npf_cache_t *npc, npf_nat_t *nt, npf_flow_t flow)
 
 	 /* NB: this is for dynamic(stateful) */
 	/* Finally, perform the translation. */
-	return npf_napt_rwr(npc, which, addr, port);
+	return npf_napt_rwr(npc, which, addr, port); /* then here for dynamic, we do the stateful here */
 }
 
+/* and does static too separately here */
 /*
  * npf_snat_translate: perform translation given the algorithm.
  */
@@ -650,8 +652,8 @@ npf_snat_translate(npf_cache_t *npc, const npf_natpolicy_t *np, npf_flow_t flow)
 	case NPF_ALGO_NPT66:
 		return npf_npt66_rwr(npc, which, &np->n_taddr,
 		    np->n_tmask, np->n_npt66_adj);
-	case NPF_ALGO_SIIT: /* OR WHATEVER ALGO WE ARE USING */
-		return npf_siit64_rwr(parameters go here);
+	case NPF_ALGO_NAT64: /* OR WHATEVER ALGO WE ARE USING */
+		return npf_siit64_rwr(parameters go here); /* then we implement SIIT here */
 	default:
 		taddr = &np->n_taddr;
 		break;

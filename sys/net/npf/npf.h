@@ -259,7 +259,7 @@ bool		npf_autounload_p(void);
 #define	NPF_ALGO_IPHASH			2
 #define	NPF_ALGO_RR			3
 #define	NPF_ALGO_NPT66			4
-#define	NPF_ALGO_SIIT			5 /* define in kernel and also to appear defined in userland */
+#define	NPF_ALGO_NAT64			5 /* define in kernel and also to appear defined in userland */
 
 /* Table types. */
 #define	NPF_TABLE_IPSET			1

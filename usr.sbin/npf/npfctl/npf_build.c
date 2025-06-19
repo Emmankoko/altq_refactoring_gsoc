@@ -912,7 +912,7 @@ npfctl_build_natseg(int sd, int type, unsigned mflags, const char *ifname,
 				    "NETMAP algorithm must be 1:1");
 			}
 			break;
-		case NPF_ALGO_SIIT:
+		case NPF_ALGO_NAT64:
 			/* here is to validate the algorithm so */
 			/* so here what we can do is to verify that the algo match gotten from the kernel*/
 			/* because we must have a rule like */

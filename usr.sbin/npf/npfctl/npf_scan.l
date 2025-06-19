@@ -155,6 +155,7 @@ on			return ON;
 off			return OFF;
 inet6			return INET6;
 inet4			return INET4;
+nat64			return NAT64;
 ifaddrs			return IFADDRS;
 proto			return PROTO;
 family			return FAMILY;

@@ -141,7 +141,7 @@ yyerror(const char *fmt, ...)
 %token			NAME
 %token			NETMAP
 %token			NPT66
-%token			SIIT
+%token			NAT64
 %token			ON
 %token			OFF
 %token			OUT
