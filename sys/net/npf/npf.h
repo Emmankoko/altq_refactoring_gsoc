@@ -53,6 +53,11 @@ typedef struct npf npf_t;
 /*
  * Storage of address (both for IPv4 and IPv6) and netmask.
  */
+
+asignemnt for tonight: study why the npf address structure is designed this way.
+
+ip address is 32 bits, 4 bytes and ipv6 is 128 bits 16 bytes.
+what a word is in computing and share your understanding with me tomorrow
 typedef union {
 	uint8_t			word8[16];
 	uint16_t		word16[8];
