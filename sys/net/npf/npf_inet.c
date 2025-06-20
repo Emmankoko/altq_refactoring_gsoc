@@ -905,14 +905,39 @@ npf_npt66_rwr(const npf_cache_t *npc, u_int which, const npf_addr_t *pref,
 }
 
 /*
- * IPv6-to-IPv4 Network Prefix Translation (NPTv6), as per RFC 6052
+ * IPv6-to-IPv4 Network Address Translation (NAT64), as per RFC 6052
  */
 int
-npf_nat64_rwr(params)
+npf_siit64_rwr(params)
 {
 
+	now we need to conider two jobs here.
+	1. when packet is leaving the interface
+	2. when the packet is entering the interface
 
-	your alogithms comes hereeeeeeeeee
+	map bla bla bla algo nat64 src_ipv6addr_of_internal_host -> pubipv4_of_external_interface
+	after we change the source address, we have to also change the dest(here not just change),
+	but generate a new ipv4 packet.
+
+	first we need to fetch the dest ipv6 of the packet. (which is the ipv4 embedded ipv6 address)
+
+	and find out the prefix length(either 32, 40, 48, 56, 64, or 96) : RFC 6052 : section 2.2
+	then use the prefix lenght to determine the poition of the ipv4 address,
+
+	then build our new ipv4 packet based on that.
+	resend
+	free ipv6 packet.
+
+
+	first assignemt:
+	write the algo to get the ipv4 address from the ipv4 embedded ipv6 destination address.
+
+	hint:
+	you can find the addresses of the packet in the cache utility (npf_cache)
+	from the function that this function is called from, find the possible things you need.
+	and determine the needed parameters you will use to get the ipv4 address from the ipv6 address.
+
+
 
 }
 

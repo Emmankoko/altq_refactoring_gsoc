@@ -436,6 +436,7 @@ npf_mk_rules(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc)
 	return error;
 }
 
+/* function that rebuilds nat in kernel */
 static int __noinline
 npf_mk_singlenat(npf_t *npf, const nvlist_t *nat, nvlist_t *resp,
     npf_ruleset_t *ntset, npf_tableset_t *tblset, npf_rule_t **rlp)
@@ -471,6 +472,9 @@ npf_mk_singlenat(npf_t *npf, const nvlist_t *nat, nvlist_t *resp,
 		}
 	}
 
+
+now it creates a new nat pocily here
+
 	/* Allocate a new NAT policy and assign it to the rule. */
 	np = npf_natpolicy_create(npf, nat, ntset);
 	if (np == NULL) {
@@ -486,6 +490,7 @@ out:
 	return error;
 }
 
+/* builds all nats listed in the NPF config */
 static int __noinline
 npf_mk_natlist(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc)
 {
