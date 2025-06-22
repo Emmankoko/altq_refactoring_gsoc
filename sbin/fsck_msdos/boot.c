@@ -60,10 +60,10 @@ readboot(int dosfs, struct bootblock *boot)
 	if (secsize < DOSBOOTBLOCKSIZE)
 		pfatal("Invalid sector size %u\n", secsize);
 
-	block = calloc(1, secsize);
+	block = calloc(1, secsize); /* allocated */
 	if (block == NULL)
 		pfatal("Out of memory");
-	
+
 	if ((size_t)read(dosfs, block, secsize) != secsize) {
 		perr("could not read boot block");
 		free(block);
@@ -103,10 +103,10 @@ readboot(int dosfs, struct bootblock *boot)
 
 	boot->FATsecs = boot->FATsmall;
 
-	fsinfo = calloc(2, secsize);
+	fsinfo = calloc(2, secsize); /* allocated */
 	if (fsinfo == NULL)
 		pfatal("Out of memory");
-	backup = calloc(1, secsize);
+	backup = calloc(1, secsize); /* backup allocated */
 	if (backup == NULL)
 		pfatal("Out of memory");
 
@@ -123,7 +123,8 @@ readboot(int dosfs, struct bootblock *boot)
 			/* Correct?				XXX */
 			pfatal("Unknown filesystem version: %x.%x",
 			       block[43], block[42]);
-			return FSFATAL;
+			err = FSFATAL;
+			goto out; /* can also free here */
 		}
 		boot->RootCl = block[44] + (block[45] << 8)
 			       + (block[46] << 16) + ((uint32_t)block[47] << 24);
@@ -135,7 +136,9 @@ readboot(int dosfs, struct bootblock *boot)
 		    || (size_t)read(dosfs, fsinfo, 2 * secsize)
 		    != 2 * secsize) {
 			perr("could not read fsinfo block");
-			return FSFATAL;
+			/* leaks here when fails so need to free */
+			err = FSFATAL;
+			goto out;
 		}
 		if (memcmp(fsinfo, "RRaA", 4)
 		    || memcmp(fsinfo + 0x1e4, "rrAa", 4)
@@ -162,15 +165,14 @@ readboot(int dosfs, struct bootblock *boot)
 				    || (size_t)write(dosfs, fsinfo, 2 * secsize)
 				    != 2 * secsize) {
 					perr("Unable to write FSInfo");
-					free(fsinfo);
-					free(backup);
-					free(block);
-					return FSFATAL;
+					err = FSFATAL;
+					goto out;
 				}
 				ret = FSBOOTMOD;
 			} else
 				boot->FSInfo = 0;
 		}
+
 		if (boot->FSInfo) {
 			boot->FSFree = fsinfo[0x1e8] + (fsinfo[0x1e9] << 8)
 				       + (fsinfo[0x1ea] << 16)
@@ -184,10 +186,8 @@ readboot(int dosfs, struct bootblock *boot)
 		    != boot->Backup * boot->BytesPerSec
 		    || (size_t)read(dosfs, backup, secsize) != secsize) {
 			perr("could not read backup bootblock");
-			free(fsinfo);
-			free(backup);
-			free(block);
-			return FSFATAL;
+			err = FSFATAL;
+			goto out;
 		}
 		backup[65] = block[65];				/* XXX */
 		if (memcmp(block + 11, backup + 11, 79)) {
@@ -211,9 +211,12 @@ readboot(int dosfs, struct bootblock *boot)
 		/* Check backup FSInfo?					XXX */
 	}
 
+out:
 	free(fsinfo);
 	free(backup);
 	free(block);
+	if (err = FSFATAL)
+		return err;
 
 	if (boot->FATsecs == 0) {
 		pfatal("Invalid number of FAT sectors: %u\n", boot->FATsecs);
