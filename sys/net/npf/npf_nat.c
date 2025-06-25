@@ -650,9 +650,11 @@ npf_snat_translate(npf_cache_t *npc, const npf_natpolicy_t *np, npf_flow_t flow)
 		taddr = &addr;
 		break;
 	case NPF_ALGO_NPT66:
+		/* this is where it is called. so i know the arguments passed to the functions */
 		return npf_npt66_rwr(npc, which, &np->n_taddr,
 		    np->n_tmask, np->n_npt66_adj);
 	case NPF_ALGO_NAT64: /* OR WHATEVER ALGO WE ARE USING */
+		/* so i expect to see the call with arguments here so i understand what those arguments mean */
 		return npf_siit64_rwr(parameters go here); /* then we implement SIIT here */
 	default:
 		taddr = &np->n_taddr;

@@ -832,6 +832,8 @@ npf_napt_rwr(const npf_cache_t *npc, u_int which,
 	return 0;
 }
 
+
+this is the implementation of NPF66 translation
 /*
  * IPv6-to-IPv6 Network Prefix Translation (NPTv6), as per RFC 6296.
  */
