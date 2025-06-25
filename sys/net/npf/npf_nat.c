@@ -113,6 +113,7 @@ struct npf_natpolicy {
 
 	unsigned		n_algo;
 	union {
+		uint8_t		nat64_plen;
 		unsigned	n_rr_idx;
 		uint16_t	n_npt66_adj;
 	};
@@ -235,6 +236,8 @@ npf_natpolicy_create(npf_t *npf, const nvlist_t *nat, npf_ruleset_t *rset)
 	case NPF_ALGO_NPT66:
 		np->n_npt66_adj = dnvlist_get_number(nat, "npt66-adj", 0);
 		break;
+	case NPF_ALGO_NAT64:
+		np->nat64_plen = dnvlist_get_number(nat, "nat64-plen", 0);
 	case NPF_ALGO_NETMAP:
 		break;
 	case NPF_ALGO_IPHASH:

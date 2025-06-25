@@ -142,6 +142,7 @@ yyerror(const char *fmt, ...)
 %token			NETMAP
 %token			NPT66
 %token			NAT64
+%token			NAT64_PLEN
 %token			ON
 %token			OFF
 %token			OUT
@@ -408,8 +409,12 @@ map_algo
 	| ALGO IPHASH		{ $$ = NPF_ALGO_IPHASH; }
 	| ALGO ROUNDROBIN	{ $$ = NPF_ALGO_RR; }
 	| ALGO NPT66		{ $$ = NPF_ALGO_NPT66; }
-	| ALGO SIIT		{ $$ = NPF_ALGO_SIIT; }
+	| ALGO NAT64	{ $$ = NPF_ALGO_NAT64; }
 	|			{ $$ = 0; }
+	;
+
+plen
+	: NAT64_PLEN number 	{ $$ = $2; }
 	;
 
 map_flags
@@ -432,18 +437,18 @@ mapseg
 	;
 
 map
-	: MAP ifref map_sd map_algo map_flags mapseg map_type mapseg
+	: MAP ifref map_sd map_algo plen map_flags mapseg map_type mapseg
 	  PASS opt_family opt_proto all_or_filt_opts
 	{
-		npfctl_build_natseg($3, $7, $5, $2, &$6, &$8, $11, &$12, $4);
+		npfctl_build_natseg($3, $8, $6, $2, &$7, &$9, $12, &$13, $4, $5);
 	}
 	| MAP ifref map_sd map_algo map_flags mapseg map_type mapseg
 	{
-		npfctl_build_natseg($3, $7, $5, $2, &$6, &$8, NULL, NULL, $4);
+		npfctl_build_natseg($3, $8, $6, $2, &$7, &$9, NULL, NULL, $4, $5);
 	}
 	| MAP ifref map_sd map_algo map_flags proto mapseg map_type mapseg
 	{
-		npfctl_build_natseg($3, $8, $5, $2, &$7, &$9, $6, NULL, $4);
+		npfctl_build_natseg($3, $9, $6, $2, &$8, &$10, $7, NULL, $4, $5);
 	}
 	| MAP RULESET group_opts
 	{

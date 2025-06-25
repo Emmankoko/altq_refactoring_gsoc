@@ -841,7 +841,7 @@ npfctl_dnat_check(const addr_port_t *ap, const unsigned algo)
 void
 npfctl_build_natseg(int sd, int type, unsigned mflags, const char *ifname,
     const addr_port_t *ap1, const addr_port_t *ap2, const npfvar_t *popts,
-    const filt_opts_t *fopts, unsigned algo)
+    const filt_opts_t *fopts, unsigned algo, unsigned plen)
 {
 	fam_addr_mask_t *am1 = NULL, *am2 = NULL;
 	nl_nat_t *nt1 = NULL, *nt2 = NULL;
@@ -966,6 +966,24 @@ npfctl_build_natseg(int sd, int type, unsigned mflags, const char *ifname,
 			validate the NAT64 rule here. to ensure that the two addresses here, one is an ipv4 and the other is an ipv6
 			and also, print an error message if both are of the same address family.
 
+
+			just an addition. i remember that you did a family address validation here right ?
+
+			ensuing that the two families must be different right?
+
+			so in addition, we also need to check that the plen listed is a valid one.
+
+			switch(plen) {
+				case 96:
+				case 64:
+				case 56:
+				case 48:
+				case 40:
+				case 32:
+				default:
+					yyerror("invlaid prefix length %u", plen);
+			}
+
 			break;
 		case NPF_ALGO_NONE:
 			if ((am1 && am1->fam_mask != NPF_NO_NETMASK) ||
@@ -1024,6 +1042,14 @@ npfctl_build_natseg(int sd, int type, unsigned mflags, const char *ifname,
 		npf_nat_setnpt66(nt1, ~adj);
 		npf_nat_setnpt66(nt2, adj);
 		break;
+	case NPF_ALGO_NAT64:
+		if (nt1) {
+			npf_nat_setnat64plen(nt1, plen);
+		}
+		if (nt2) {
+			npf_nat_setnat64plen(nt2, plen);
+		}
+
 	default:
 		/*
 		 * Set the algorithm.
