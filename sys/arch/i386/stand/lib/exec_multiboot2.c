@@ -27,9 +27,9 @@
  */
 
 #include <sys/param.h>
-#include <sys/reboot.h> 
-#include <sys/types.h> 
- 
+#include <sys/reboot.h>
+#include <sys/types.h>
+
 #include <i386/multiboot2.h>
 
 #include <dev/acpi/acpica.h>
@@ -1554,7 +1554,7 @@ probe_multiboot2(const char *path)
 			break;
 		case MULTIBOOT_HEADER_TAG_CONSOLE_FLAGS:
 			mbp->mbp_priv->mpp_console = (void *)mbt;
-
+			/* is console flags case truly made to fallthrough to framebufeer ? */
 		case MULTIBOOT_HEADER_TAG_FRAMEBUFFER:
 			mbp->mbp_priv->mpp_framebuffer = (void *)mbt;
 			break;
