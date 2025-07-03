@@ -703,18 +703,29 @@ npfctl_bpf_ether(npf_bpf_t *ctx, unsigned opts, struct ether_addr *ether_addr)
 	memcpy(&mac_hword, (uint8_t *)ether_addr + sizeof(mac_word), sizeof(mac_hword));
 	mac_hword = ntohs(mac_hword);
 
-	/* load and compare first word then do same to last halfword */
+	/* load and compare first word then do same to last halfword
+	 * if first word is false, no need to inspect the halfword, skip it
+	 */
 	struct bpf_insn insns_ether_w[] = {
+
 		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, off),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, mac_word, 0, JUMP_MAGIC),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, mac_word, 0, 2),
 	};
 	add_insns(ctx, insns_ether_w, __arraycount(insns_ether_w));
 
 	struct bpf_insn insns_ether_h[] = {
+
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, off + sizeof(mac_word)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, mac_hword, 0, JUMP_MAGIC),
 	};
 	add_insns(ctx, insns_ether_h, __arraycount(insns_ether_h));
+
+	/*
+	 * we need this to be able to make instructions in group fallthrough within
+	 * and not quickly backout from the group when multiple mac addresses need to be assessed.
+	 * don't care about this if we are processing only one mac address
+	 */
+	ctx->multiword = true;
 
 	uint32_t mwords[] = {
 		(opts & MATCH_SRC) ? BM_SRC_ETHER: BM_DST_ETHER, 2,
