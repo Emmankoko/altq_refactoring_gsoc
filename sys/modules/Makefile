@@ -144,7 +144,7 @@ SUBDIR+=	npf_alg_icmp
 SUBDIR+=	npf_ext_log
 SUBDIR+=	npf_ext_normalize
 SUBDIR+=	npf_ext_rndblock
-SUBDIR+=    npf_ext_route
+SUBDIR+=	npf_ext_route
 SUBDIR+=	ntfs
 SUBDIR+=	null
 SUBDIR+=	onewire
@@ -218,26 +218,26 @@ SUBDIR+=	xldscripts
 
 # Machine dependent section
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_CPU} == "m68k"
+	${MACHINE_CPU} == "m68k"
 SUBDIR+=	exec_aout
 .endif
 
 .if ${MACHINE_ARCH} != "alpha" && \
-    ${MACHINE_ARCH} != "ia64"
+	${MACHINE_ARCH} != "ia64"
 SUBDIR+=	exec_elf32
 .endif
 
 .if ${MACHINE_CPU} == "aarch64" || \
-    ${MACHINE_ARCH} == "alpha" || \
-    ${MACHINE_ARCH} == "ia64" || \
-    ${MACHINE_ARCH} == "riscv64" || \
-    ${MACHINE_ARCH} == "sparc64" || \
-    ${MACHINE_ARCH} == "x86_64"
+	${MACHINE_ARCH} == "alpha" || \
+	${MACHINE_ARCH} == "ia64" || \
+	${MACHINE_ARCH} == "riscv64" || \
+	${MACHINE_ARCH} == "sparc64" || \
+	${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	exec_elf64
 .endif
 
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64"
+	${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	amdsmn
 SUBDIR+=	amdtemp
 SUBDIR+=	amdzentemp
@@ -256,8 +256,8 @@ SUBDIR+=	tprof_x86
 .endif
 
 .if ${MACHINE_CPU} == "aarch64" || \
-    ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64"
+	${MACHINE_ARCH} == "i386" || \
+	${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	vmt
 .endif
 
@@ -267,9 +267,9 @@ SUBDIR+=	nvmm
 
 # Builds on architectures with PCI bus
 .if \
-     ${MACHINE} == "evbarm" || \
-     ${MACHINE_ARCH} == "i386" || \
-     ${MACHINE_ARCH} == "x86_64"
+	 ${MACHINE} == "evbarm" || \
+	 ${MACHINE_ARCH} == "i386" || \
+	 ${MACHINE_ARCH} == "x86_64"
 #SUBDIR+=	hifn
 SUBDIR+=	if_iavf
 SUBDIR+=	if_ixl
@@ -285,13 +285,13 @@ SUBDIR+=	sljit
 # ACPI modules
 #
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "ia64" || \
-    ${MACHINE_ARCH} == "x86_64"
+	${MACHINE_ARCH} == "ia64" || \
+	${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	acpiverbose
 .endif
 
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64"
+	${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	acpiacad
 SUBDIR+=	acpibat
 SUBDIR+=	acpibut
@@ -365,8 +365,8 @@ SUBDIR+=	viac7temp
 .endif
 
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64" || \
-    ${MACHINE_CPU} == "aarch64"
+	${MACHINE_ARCH} == "x86_64" || \
+	${MACHINE_CPU} == "aarch64"
 SUBDIR+=	amdgpu
 SUBDIR+=	drmkms
 SUBDIR+=	drmkms_linux
@@ -376,7 +376,7 @@ SUBDIR+=	drmkms_ttm
 .endif
 
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64"
+	${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	drm
 SUBDIR+=	compat_linux
 SUBDIR+=	drmkms_agp
@@ -408,8 +408,8 @@ SUBDIR+=	compat_aoutm68k
 .endif
 
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64" || \
-    ${MACHINE_ARCH} == "sparc64"
+	${MACHINE_ARCH} == "x86_64" || \
+	${MACHINE_ARCH} == "sparc64"
 SUBDIR+=	pwdog
 .endif
 
@@ -419,7 +419,7 @@ SUBDIR+=	pwdog
 # NetBSD/usermode support
 #
 .if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64"
+	${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	../arch/usermode/modules/syscallemu
 .endif
 
