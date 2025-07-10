@@ -59,6 +59,12 @@ static const struct test_case {
 		.ifname = IFNAME_INT,		.etype = htons(ETHERTYPE_IP),
 		.di = PFIL_IN,			.ret = RESULT_PASS
 	},
+	{
+		/* pass from nested options : 05 */
+		.src = "00:00:5E:00:53:05",	.dst = "00:00:5E:00:53:5A",
+		.ifname = IFNAME_INT,		.etype = htons(ETHERTYPE_IP),
+		.di = PFIL_IN,			.ret = RESULT_PASS
+	},
 };
 
 static int
