@@ -710,8 +710,9 @@ npfctl_print_nat(npf_conf_info_t *ctx, nl_nat_t *nt)
 	flags = npf_nat_getflags(nt);
 	ifname = npf_rule_getinterface(rl);
 	assert(ifname != NULL);
+	uint32_t attr = npf_rule_getattr(rl);
 
-	if ((npf_rule_getattr(rl) & dynamic_natset) == dynamic_natset) {
+	if ((attr & dynamic_natset) == dynamic_natset) {
 		const char *name = npf_rule_getname(rl);
 		ctx->fpos += fprintf(ctx->fp,
 		    "map ruleset \"%s\" on %s\n", name, ifname);
@@ -778,7 +779,7 @@ npfctl_print_nat(npf_conf_info_t *ctx, nl_nat_t *nt)
 	    ifname, (flags & NPF_NAT_STATIC) ? "static" : "dynamic",
 	    algo, (flags & NPF_NAT_PORTS) ? "" : "no-ports ",
 	    seg1, arrow, seg2);
-	npfctl_print_filter(ctx, rl, 0);
+	npfctl_print_filter(ctx, rl, attr);
 	npfctl_print_id(ctx, rl);
 	ctx->fpos += fprintf(ctx->fp, "\n");
 	free(seg);
