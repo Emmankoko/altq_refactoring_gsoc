@@ -663,6 +663,9 @@ npfctl_print_rule(npf_conf_info_t *ctx, nl_rule_t *rl, unsigned level)
 	if (attr == (NPF_RULE_GROUP | NPF_RULE_OUT | NPF_RULE_LAYER_2)) {
 		ctx->fpos += fprintf(ctx->fp, "layer-2 ");
 	}
+	if (attr == (NPF_RULE_GROUP | NPF_RULE_OUT | NPF_RULE_IN | NPF_RULE_LAYER_2)) {
+		ctx->fpos += fprintf(ctx->fp, "layer-2 ");
+	}
 	if ((attr & NPF_DYNAMIC_GROUP) == NPF_RULE_GROUP) {
 		/* Group; done. */
 		ctx->fpos += fprintf(ctx->fp, "{ ");
