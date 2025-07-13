@@ -391,15 +391,9 @@ npfk_layer2_handler(npf_t *npf, struct mbuf **mp, ifnet_t *ifp, int di)
 
 	rl = npf_ruleset_inspect(&npc, rlset, di, NPF_RULE_LAYER_2);
 	if (__predict_false(rl == NULL)) {
-		const bool pass = npf_default_pass(npf);
-		npf_config_read_exit(npf, slock);
 
-		if (pass) {
-			npf_stats_inc(npf, NPF_STAT_PASS_DEFAULT);
-			goto pass;
-		}
-		npf_stats_inc(npf, NPF_STAT_BLOCK_DEFAULT);
-		goto out;
+		npf_stats_inc(npf, NPF_STAT_PASS_DEFAULT);
+		goto pass;
 	}
 
 	/* Conclude with the rule and release the lock. */
