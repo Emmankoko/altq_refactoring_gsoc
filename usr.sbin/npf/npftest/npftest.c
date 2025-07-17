@@ -330,6 +330,11 @@ main(int argc, char **argv)
 			fail |= result("rules - layer 2", ok);
 			tname_matched = true;
 		}
+		if (!testname || strcmp("l2def-pass", testname) == 0) {
+			ok = rumpns_npf_layer2only_test(verbose);
+			fail |= result(" layer 2 default pass", ok);
+			tname_matched = true;
+		}
 
 		if (!testname || strcmp("guid", testname) == 0) {
 			ok = rumpns_npf_guid_test(verbose);
