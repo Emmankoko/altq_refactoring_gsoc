@@ -215,10 +215,14 @@ npf_natpolicy_create(npf_t *npf, const nvlist_t *nat, npf_ruleset_t *rset)
 		np->n_tmask = NPF_NO_NETMASK;
 		np->n_flags |= NPF_NAT_USETABLE;
 	} else {
+		/* see here, "nat-addr" referenced binary/variable is stored in addr pointer */
+		/* i have referneced it in ./lib/libnpf/npf.c you will see what it means from userland */
 		addr = dnvlist_get_binary(nat, "nat-addr", &len, NULL, 0);
 		if (!addr || len == 0 || len > sizeof(npf_addr_t)) {
 			goto err;
 		}
+		/* addr is copied into np->n_taddr which is the translation address */
+		/* so most likely, when you do ipv6address -> ipv4address for NAT64, np->n_taddr will be the ipv4 address passed from userland */
 		memcpy(&np->n_taddr, addr, len);
 		np->n_alen = len;
 		np->n_tmask = dnvlist_get_number(nat, "nat-mask", NPF_NO_NETMASK);
@@ -638,6 +642,8 @@ npf_dnat_translate(npf_cache_t *npc, npf_nat_t *nt, npf_flow_t flow)
 /*
  * npf_snat_translate: perform translation given the algorithm.
  */
+
+ 									/* remeber nat policy here ? np->nt_taddr */
 static inline int
 npf_snat_translate(npf_cache_t *npc, const npf_natpolicy_t *np, npf_flow_t flow)
 {
@@ -658,6 +664,15 @@ npf_snat_translate(npf_cache_t *npc, const npf_natpolicy_t *np, npf_flow_t flow)
 		    np->n_tmask, np->n_npt66_adj);
 	case NPF_ALGO_NAT64: /* OR WHATEVER ALGO WE ARE USING */
 		/* so i expect to see the call with arguments here so i understand what those arguments mean */
+
+
+		/* passing np->nt_taddr to this function so you will use that as the source address of the ipv4 header in the packet */
+		/* and then you access the ipv6 destination address in the cache */
+		/* get the prefix length that was pased from userland and use it to get the ipv4 dest address from the (cached) ipv6 dest address */
+		/* then fix it in the dest adddress of the ipv4 header */
+		/* then fill the rest of the ipv4 header based on RFC ?*/
+		/* find a way to replace the ipv6 header with the ipv4 header you have? */
+		/* pass packet to next layer */
 		return npf_siit64_rwr(parameters go here); /* then we implement SIIT here */
 	default:
 		taddr = &np->n_taddr;

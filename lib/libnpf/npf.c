@@ -1040,9 +1040,12 @@ npf_nat_iterate(nl_config_t *ncf, nl_iter_t *iter)
 	return _npf_rule_iterate1(ncf, "nat", iter, &level);
 }
 
+
+/* this is how it is set to be transferred in kernel */
 int
 npf_nat_setaddr(nl_nat_t *nt, int af, npf_addr_t *addr, npf_netmask_t mask)
 {
+	/* nat-addr here ? i pointed to it from sys/net/npf/npf_nat.c in natpolic_create */
 	/* Translation IP and mask. */
 	if (!_npf_add_addr(nt->rule_dict, "nat-addr", af, addr)) {
 		return nvlist_error(nt->rule_dict);

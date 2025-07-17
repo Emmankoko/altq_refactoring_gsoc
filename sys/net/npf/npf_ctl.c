@@ -477,6 +477,11 @@ now it creates a new nat pocily here
 
 	/* Allocate a new NAT policy and assign it to the rule. */
 	np = npf_natpolicy_create(npf, nat, ntset);
+
+	/* so np->nt_taddr will contain the target/translation address
+	 * remember, in rule matching, address1 -> address2, the address1 is just primarily used for matching.
+	 * so any packet coming that has source address to be address1, change the source address to address 2
+	 */
 	if (np == NULL) {
 		NPF_ERR_DEBUG(resp);
 		error = ENOMEM;
@@ -490,6 +495,8 @@ out:
 	return error;
 }
 
+
+/* wanted to do the pointers but checked and realized that I've even done that already for you. */
 /* builds all nats listed in the NPF config */
 static int __noinline
 npf_mk_natlist(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc)
@@ -517,6 +524,8 @@ npf_mk_natlist(npf_t *npf, const nvlist_t *req, nvlist_t *resp, npf_config_t *nc
 		const nvlist_t *nat = nat_rules[i];
 		npf_rule_t *rl = NULL;
 
+		/* remakes a single NAT rule in kernel */
+		/* remeber np->nt_taddr */
 		error = npf_mk_singlenat(npf, nat, resp, ntset,
 		    nc->tableset, &rl);
 		if (error) {

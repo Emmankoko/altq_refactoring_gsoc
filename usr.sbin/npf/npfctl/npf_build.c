@@ -780,9 +780,13 @@ npfctl_build_nat(int type, const char *ifname, const addr_port_t *ap,
 
 	switch (npfvar_get_type(ap->ap_netaddr, 0)) {
 	case NPFVAR_FAM:
+
+	/* look at the translation address */
+	/* map address1 -> address2 (address2 is the translation address for now we are just focuing on outgoing ) */
 		/* Translation address. */
 		am = npfctl_get_singlefam(ap->ap_netaddr);
 		family = am->fam_family;
+		/* it is set here : can be found ./lib/libnpf/npf.c */
 		npf_nat_setaddr(nat, family, &am->fam_addr, am->fam_mask);
 		break;
 	case NPFVAR_TABLE:

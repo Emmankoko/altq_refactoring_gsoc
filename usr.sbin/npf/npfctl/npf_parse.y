@@ -436,6 +436,11 @@ mapseg
 	}
 	;
 
+/*
+ * mapseg map_type mapseg
+ * address1 ->		address2
+ * go to fifth and sixth param of npfctl_build_natseg function
+ */
 map
 	: MAP ifref map_sd map_algo plen map_flags mapseg map_type mapseg
 	  PASS opt_family opt_proto all_or_filt_opts
