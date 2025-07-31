@@ -949,6 +949,7 @@ dt_proc_create_thread(dtrace_hdl_t *dtp, dt_proc_t *dpr, uint_t stop)
 			err = ESRCH; /* cause grab() or create() to fail */
 		}
 	} else {
+		(void) pthread_mutex_unlock(&dpr->dpr_lock); ????
 		(void) dt_proc_error(dpr->dpr_hdl, dpr,
 		    "failed to create control thread for process-id %d: %s\n",
 		    (int)dpr->dpr_pid, strerror(err));
@@ -996,6 +997,7 @@ dt_proc_create(dtrace_hdl_t *dtp, const char *file, char *const *argv,
 	(void) Psetflags(dpr->dpr_proc, PR_KLC);
 
 	if (dt_proc_create_thread(dtp, dpr, dtp->dt_prcmode) != 0)
+	/* returns without unlocking */
 		return (NULL); /* dt_proc_error() has been called for us */
 
 	dpr->dpr_hash = dph->dph_hash[dpr->dpr_pid & (dph->dph_hashlen - 1)];
