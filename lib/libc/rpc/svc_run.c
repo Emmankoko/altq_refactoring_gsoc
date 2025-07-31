@@ -85,6 +85,7 @@ svc_run_select(void)
 
 		maxfd = svc_fdset_getmax();
 		if (maxfd == NULL) {
+			rwlock_unlock(&svc_fd_lock);
 			warn("%s: can't get maxfd", __func__);
 			goto out;
 		}
@@ -94,6 +95,7 @@ svc_run_select(void)
 			free(readfds);
 			readfds = svc_fdset_copy(svc_fdset_get());
 			if (readfds == NULL) {
+				rwlock_unlock(&svc_fd_lock);
 				warn("%s: can't copy fdset", __func__);
 				goto out;
 			}
