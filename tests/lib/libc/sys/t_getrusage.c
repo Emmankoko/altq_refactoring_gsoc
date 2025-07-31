@@ -149,6 +149,7 @@ ATF_TC_BODY(getrusage_maxrss, tc)
 		void *p = malloc(CHUNK);
 		memset(p, 0, CHUNK);
 		write(fd, p, CHUNK);
+		// no freeing of 40 blocks of 2048 bytes ?
 	}
 	close(fd);
 	unlink(DUMP_FILE);
