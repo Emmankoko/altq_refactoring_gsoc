@@ -672,6 +672,7 @@ pseye_submit_payload(struct pseye_softc *sc, uint32_t tlen)
 	uint32_t len;
 	uint32_t brem = (640*480*2);
 
+	/* in this while loop */
 	while (brem > 0 && tlen > 0) {
 		len = uimin(tlen, PSEYE_BULKIN_BLKLEN);
 		if (len < UVIDEO_PAYLOAD_HEADER_SIZE) {
@@ -679,6 +680,7 @@ pseye_submit_payload(struct pseye_softc *sc, uint32_t tlen)
 			return;
 		}
 
+		/* if any of the if statements evals to true, goes to next to restart the loop on altered params */
 		uvchdr = (uvideo_payload_header_t *)buf;
 		if (uvchdr->bHeaderLength != UVIDEO_PAYLOAD_HEADER_SIZE)
 			goto next;
@@ -699,7 +701,7 @@ pseye_submit_payload(struct pseye_softc *sc, uint32_t tlen)
 next:
 		tlen -= len;
 		buf += len;
-		brem -= payload.size;
+		brem -= payload.size; /* notice here payload.size won't be initialized hence will use garbage values */
 	}
 }
 
