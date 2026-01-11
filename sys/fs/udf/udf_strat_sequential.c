@@ -67,7 +67,7 @@ __KERNEL_RCSID(0, "$NetBSD: udf_strat_sequential.c,v 1.20 2023/06/27 09:58:50 re
 
 
 #define VTOI(vnode) ((struct udf_node *) vnode->v_data)
-#define PRIV(ump) ((struct strat_private *) ump->strategy_private)
+#define PRIV(ump) ((struct strat_private *) ump->strategy_private) // PRIV derefs ump
 
 /* --------------------------------------------------------------------- */
 
@@ -687,9 +687,9 @@ static void
 udf_discstrat_finish_seq(struct udf_strat_args *args)
 {
 	struct udf_mount *ump = args->ump;
-	struct strat_private *priv = PRIV(ump);
+	struct strat_private *priv = PRIV(ump); // ump is dereferenced here
 
-	if (ump == NULL)
+	if (ump == NULL) // before being checked for NULL, best we check for NULL before passing it to PRIV
 		return;
 
 	/* stop our scheduling thread */
