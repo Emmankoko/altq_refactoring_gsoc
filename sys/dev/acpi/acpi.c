@@ -1343,7 +1343,7 @@ acpi_register_notify(struct acpi_devnode *ad, ACPI_NOTIFY_HANDLER notify)
 	if (acpi_suspended != 0)
 		goto fail;
 
-	if (ad == NULL || notify == NULL)
+	if (ad == NULL || notify == NULL) // ad happens to be null
 		goto fail;
 
 	KASSERTMSG(ad->ad_notify == NULL,
@@ -1357,7 +1357,7 @@ acpi_register_notify(struct acpi_devnode *ad, ACPI_NOTIFY_HANDLER notify)
 
 fail:
 	aprint_error_dev(sc->sc_dev, "failed to register notify "
-	    "handler for %s (%p)\n", ad->ad_name, ad->ad_handle);
+	    "handler for %s (%p)\n", ad->ad_name, ad->ad_handle); // ad is unconditionally dereferenced, kernel crashes
 
 	return false;
 }
