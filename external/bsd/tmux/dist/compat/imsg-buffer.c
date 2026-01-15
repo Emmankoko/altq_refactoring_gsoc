@@ -516,7 +516,7 @@ ibuf_free(struct ibuf *buf)
 	if (buf->fd != -1)
 		close(buf->fd);
 	freezero(buf->buf, buf->size);
-	free(buf);
+	free(buf); //ibuf_free here
 }
 
 int

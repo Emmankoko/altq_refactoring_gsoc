@@ -279,7 +279,7 @@ imsg_composev(struct imsgbuf *imsgbuf, uint32_t type, uint32_t id, pid_t pid,
 }
 
 /*
- * Enqueue imsg with payload from ibuf buf. fd passing is not possible 
+ * Enqueue imsg with payload from ibuf buf. fd passing is not possible
  * with this function.
  */
 int
@@ -304,7 +304,7 @@ imsg_compose_ibuf(struct imsgbuf *imsgbuf, uint32_t type, uint32_t id,
 
 	if ((hdrbuf = ibuf_open(IMSG_HEADER_SIZE)) == NULL)
 		goto fail;
-	if (imsg_add(hdrbuf, &hdr, sizeof(hdr)) == -1)
+	if (imsg_add(hdrbuf, &hdr, sizeof(hdr)) == -1) // frees hdrbuf if it returns -1
 		goto fail;
 
 	ibuf_close(&imsgbuf->w, hdrbuf);
@@ -314,7 +314,7 @@ imsg_compose_ibuf(struct imsgbuf *imsgbuf, uint32_t type, uint32_t id,
  fail:
 	save_errno = errno;
 	ibuf_free(buf);
-	ibuf_free(hdrbuf);
+	ibuf_free(hdrbuf); // ibuf_free called again to free
 	errno = save_errno;
 	return (-1);
 }
@@ -386,7 +386,7 @@ imsg_add(struct ibuf *msg, const void *data, size_t datalen)
 	if (datalen)
 		if (ibuf_add(msg, data, datalen) == -1) {
 			ibuf_free(msg);
-			return (-1);
+			return (-1); // here is imsg_add, freeing before returning -1
 		}
 	return (datalen);
 }
