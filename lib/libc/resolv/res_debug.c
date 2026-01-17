@@ -719,8 +719,8 @@ const char *
 p_time(u_int32_t value) {
 	char *nbuf = p_time_nbuf;
 
-	if (ns_format_ttl((u_long)value, nbuf, sizeof nbuf) < 0)
-		sprintf(nbuf, "%u", value);
+	if (ns_format_ttl((u_long)value, nbuf, sizeof nbuf) < 0) // sizeof pointer, so we bind our character buffer to 8 bytes ??
+		sprintf(nbuf, "%u", value);    // user sets DNS TTL for more that logs for more than 8 chars,
 	return (nbuf);
 }
 

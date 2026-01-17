@@ -540,7 +540,7 @@ typedef enum __ns_cert_types {
 #define ns_parserr2		__ns_parserr2
 #define	ns_sprintrr		__ns_sprintrr
 #define	ns_sprintrrf		__ns_sprintrrf
-#define	ns_format_ttl		__ns_format_ttl
+#define	ns_format_ttl		__ns_format_ttl // macro replacemtn here
 #define	ns_parse_ttl		__ns_parse_ttl
 #define ns_datetosecs		__ns_datetosecs
 #define	ns_name_ntol		__ns_name_ntol
@@ -599,7 +599,7 @@ int		ns_sprintrrf __P((const u_char *, size_t, const char *,
 				  ns_class, ns_type, u_long, const u_char *,
 				  size_t, const char *, const char *,
 				  char *, size_t));
-int		ns_format_ttl __P((u_long, char *, size_t));
+int		ns_format_ttl __P((u_long, char *, size_t)); // function sig here
 int		ns_parse_ttl __P((const char *, u_long *));
 u_int32_t	ns_datetosecs __P((const char *cp, int *errp));
 int		ns_name_ntol __P((const u_char *, u_char *, size_t));

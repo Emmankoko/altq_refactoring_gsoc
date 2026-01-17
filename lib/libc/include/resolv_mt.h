@@ -23,7 +23,7 @@ char	inet_nsap_ntoa_tmpbuf[255*3];
 char	sym_ntos_unname[20];
 char	sym_ntop_unname[20];
 char	p_option_nbuf[40];
-char	p_time_nbuf[40];
+char	p_time_nbuf[40]; // p_type_nbuf is a static array here of known size so maybe we take the sizeof it rather ?
 char	precsize_ntoa_retbuf[sizeof "90000000.00"];
 char	loc_ntoa_tmpbuf[sizeof
 "1000 60 60.000 N 1000 60 60.000 W -12345678.00m 90000000.00m 90000000.00m 90000000.00m"];

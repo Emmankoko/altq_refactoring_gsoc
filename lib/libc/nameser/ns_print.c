@@ -150,7 +150,7 @@ ns_sprintrrf(const u_char *msg, size_t msglen,
 	/*
 	 * TTL, Class, Type.
 	 */
-	T(x = ns_format_ttl(ttl, buf, buflen));
+	T(x = ns_format_ttl(ttl, buf, buflen)); // when being passed, it passes the buffer length
 	addlen((size_t)x, &buf, &buflen);
 	len = SPRINTF((tmp, " %s %s", p_class(class), p_type(type)));
 	T(addstr(tmp, (size_t)len, &buf, &buflen));
