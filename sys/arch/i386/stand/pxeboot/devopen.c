@@ -82,7 +82,7 @@ devopen(struct open_file *f, const char *fname, char **file)
 	memcpy(file_system, pxeboot_fstab[0].fst_ops, sizeof(struct fs_ops));
 
 	/* if we got passed a filename, pass it to the BOOTP server */
-	if (fname)
+	if (fname) //if fname is NULL
 		strncpy(bootfile, fname, FNAME_SIZE);
 
 	/* Open the device; this might give us a boot file name. */
@@ -102,10 +102,10 @@ devopen(struct open_file *f, const char *fname, char **file)
 	 * So we cater to simple DHCP servers while being able to
 	 * use the power of conditional behaviour in modern ones.
 	 */
-	if (strchr(bootfile, ':'))
+	if (strchr(bootfile, ':')) // if bootfile doesn't contain ":", fname remians NULL
 		fname = bootfile;
 
-	filename = (fname ? strchr(fname, ':') : NULL);
+	filename = (fname ? strchr(fname, ':') : NULL); // fname NULL, filename is NULL
 	if (filename != NULL) {
 		fsnamelen = (size_t)((const char *)filename - fname);
 		for (i = 0; i < npxeboot_fstab; i++) {
@@ -129,12 +129,12 @@ devopen(struct open_file *f, const char *fname, char **file)
 			goto bad;
 		}
 	} else
-		filename = (char *)fname;
+		filename = (char *)fname; //filename still NULL here
 
 	*file = filename;
 
 #ifdef _STANDALONE
-	strncpy(bibp.bootpath, filename, sizeof(bibp.bootpath));
+	strncpy(bibp.bootpath, filename, sizeof(bibp.bootpath)); //strncpy on filename dereferecnes it
 	BI_ADD(&bibp, BTINFO_BOOTPATH, sizeof(bibp));
 #endif
 
