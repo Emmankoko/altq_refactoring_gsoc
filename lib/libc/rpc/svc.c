@@ -181,9 +181,9 @@ xprt_register(SVCXPRT *xprt)
 		goto out;
 
 	__svc_xports[sock] = xprt;
-	if (sock != -1) {
-		if (svc_fdset_set(sock) == -1)
-			return FALSE;
+	if (sock != -1) { // if sock = -1
+		if (svc_fdset_set(sock) == -1) // returns -1, shouldn't it unlock ?
+			return FALSE; // goto out rather
 	}
 	rwlock_unlock(&svc_fd_lock);
 	return (TRUE);
