@@ -229,8 +229,10 @@ malloc(size_t nbytes)
 	}
 	while (nbytes > amt + n) {
 		amt <<= 1;
-		if (amt == 0)
+		if (amt == 0) {
+			mutex_unlock(&malloc_mutex);
 			return (NULL);
+		}
 		bucket++;
 	}
 	/*
