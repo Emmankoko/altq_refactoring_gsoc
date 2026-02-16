@@ -122,7 +122,10 @@ rf_CreateRaidOneDegradedReadDAG(RF_Raid_t *raidPtr,
 	RF_StripeNum_t parityStripeID;
 	RF_ReconUnitNum_t which_ru;
 	RF_PhysDiskAddr_t *pda;
+	RF_RaidDisk_t *disks = raidPtr->Disks;
 	int     useMirror;
+	int numparity = raidPtr->Layout.numParityCol;
+	void *bufPtr;
 
 	useMirror = 0;
 	parityStripeID = rf_RaidAddressToParityStripeID(&(raidPtr->Layout),
@@ -173,9 +176,11 @@ rf_CreateRaidOneDegradedReadDAG(RF_Raid_t *raidPtr,
 	    NULL, 0, 1, 0, 0, dag_h, "Trm", allocList);
 
 	pda = asmap->physInfo;
+	bufPtr = pda->bufPtr;
 	RF_ASSERT(pda != NULL);
 	/* parityInfo must describe entire parity unit */
-	RF_ASSERT(asmap->parityInfo->next == NULL);
+	if (numparity == 1)
+		RF_ASSERT(asmap->parityInfo->next == NULL);
 
 	/* initialize the data node */
 	if (!useMirror) {
@@ -183,7 +188,7 @@ rf_CreateRaidOneDegradedReadDAG(RF_Raid_t *raidPtr,
 		rf_InitNode(rdNode, rf_wait, RF_FALSE, rf_DiskReadFunc, rf_DiskReadUndoFunc,
 		    rf_GenericWakeupFunc, 1, 1, 4, 0, dag_h, "Rpd", allocList);
 		rdNode->params[0].p = pda;
-		rdNode->params[1].p = pda->bufPtr;
+		rdNode->params[1].p = bufPtr;
 		rdNode->params[2].v = parityStripeID;
 		rdNode->params[3].v = RF_CREATE_PARAM3(RF_IO_NORMAL_PRIORITY,
 						       which_ru);
@@ -191,8 +196,21 @@ rf_CreateRaidOneDegradedReadDAG(RF_Raid_t *raidPtr,
 		/* read secondary copy of data */
 		rf_InitNode(rdNode, rf_wait, RF_FALSE, rf_DiskReadFunc, rf_DiskReadUndoFunc,
 		    rf_GenericWakeupFunc, 1, 1, 4, 0, dag_h, "Rsd", allocList);
-		rdNode->params[0].p = asmap->parityInfo;
-		rdNode->params[1].p = pda->bufPtr;
+
+		pda = asmap->parityInfo;
+
+		/* just get from the surviving disks */
+		for (int i = 1; i <= numparity; i++) {
+			if (!RF_DEAD_DISK(disks[i].status)) {
+				pda->col = i;
+				/* it might be using the spare column, verify and adjust */
+				rf_ASMCheckStatus(raidPtr, pda, asmap, disks, 1);
+				break;
+			}
+		}
+
+		rdNode->params[0].p = pda;
+		rdNode->params[1].p = bufPtr;
 		rdNode->params[2].v = parityStripeID;
 		rdNode->params[3].v = RF_CREATE_PARAM3(RF_IO_NORMAL_PRIORITY,
 						       which_ru);

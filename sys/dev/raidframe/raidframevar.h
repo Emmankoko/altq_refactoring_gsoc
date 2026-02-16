@@ -386,7 +386,7 @@ enum RF_DiskStatus_e {
 	rf_ds_reconstructing,   /* reconstruction ongoing */
 	rf_ds_dist_spared,      /* reconstruction complete to distributed
                                  * spare space, dead disk not yet replaced */
-	rf_ds_spared,           /* reconstruction complete, dead disk not 
+	rf_ds_spared,           /* reconstruction complete, dead disk not
 				   yet replaced */
 	rf_ds_spare,            /* an available spare disk */
 	rf_ds_used_spare,       /* a spare which has been used, and hence is

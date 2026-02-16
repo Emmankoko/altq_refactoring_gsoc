@@ -1363,3 +1363,194 @@ rf_CreateRaidOneWriteDAG(RF_Raid_t *raidPtr, RF_AccessStripeMap_t *asmap,
 	termNode->antecedents[0] = unblockNode;
 	termNode->antType[0] = rf_control;
 }
+
+void
+rf_CreateRaidNWriteDAG(RF_Raid_t *raidPtr, RF_AccessStripeMap_t *asmap,
+			 RF_DagHeader_t *dag_h, void *bp,
+			 RF_RaidAccessFlags_t flags,
+			 RF_AllocListElem_t *allocList)
+{
+	RF_DagNode_t *unblockNode, *termNode, *commitNode;
+	RF_DagNode_t *wndNode, *wmirNode;
+	RF_DagNode_t *tmpNode, *tmpwndNode, *tmpwmirNode;
+	int     nWndNodes, nWmirNodes, i;
+	RF_ReconUnitNum_t which_ru;
+	RF_PhysDiskAddr_t *pda, *pdaP, *iterpdaP;
+	RF_StripeNum_t parityStripeID;
+	int faultsTolerated = raidPtr->Layout.numParityCol;
+	RF_RaidDisk_t *disks = raidPtr->Disks;
+
+	parityStripeID = rf_RaidAddressToParityStripeID(&(raidPtr->Layout),
+	    asmap->raidAddress, &which_ru);
+#if RF_DEBUG_DAG
+	if (rf_dagDebug) {
+		printf("[Creating RAID level 1 write DAG]\n");
+	}
+#endif
+	dag_h->creator = "RaidNWriteDAG";
+
+	nWmirNodes = faultsTolerated;
+	nWndNodes = 1;
+
+	if (faultsTolerated > 1) {
+		pdaP = asmap->parityInfo->next;
+		for (i = 2; i <= faultsTolerated; i++) {
+			iterpdaP = pdaP;
+			RF_ASSERT(iterpdaP);
+			pdaP = iterpdaP->next;
+			memcpy(iterpdaP, asmap->parityInfo , sizeof(*iterpdaP));
+			iterpdaP->next = pdaP;
+			iterpdaP->col = i;
+			/* run asm status check before you write */
+			rf_ASMCheckStatus(raidPtr, iterpdaP, asmap, disks, 1);
+		}
+	}
+
+	/* alloc the Wnd nodes and the Wmir node */
+	if (asmap->numDataFailed == 1)
+		nWndNodes--;
+	if (asmap->numParityFailed)
+		nWmirNodes -= asmap->numParityFailed;
+
+	/* total number of nodes = nWndNodes + nWmirNodes + (commit + unblock
+	 * + terminator) */
+	for (i = 0; i < nWndNodes; i++) {
+		tmpNode = rf_AllocDAGNode(raidPtr);
+		tmpNode->list_next = dag_h->nodes;
+		dag_h->nodes = tmpNode;
+	}
+	wndNode = dag_h->nodes;
+
+	for (i = 0; i < nWmirNodes; i++) {
+		tmpNode = rf_AllocDAGNode(raidPtr);
+		tmpNode->list_next = dag_h->nodes;
+		dag_h->nodes = tmpNode;
+	}
+	wmirNode = dag_h->nodes;
+
+	commitNode = rf_AllocDAGNode(raidPtr);
+	commitNode->list_next = dag_h->nodes;
+	dag_h->nodes = commitNode;
+
+	unblockNode = rf_AllocDAGNode(raidPtr);
+	unblockNode->list_next = dag_h->nodes;
+	dag_h->nodes = unblockNode;
+
+	termNode = rf_AllocDAGNode(raidPtr);
+	termNode->list_next = dag_h->nodes;
+	dag_h->nodes = termNode;
+
+	/* this dag can commit immediately */
+	dag_h->numCommitNodes = 1;
+	dag_h->numCommits = 0;
+	dag_h->numSuccedents = 1;
+
+	/* initialize the commit, unblock, and term nodes */
+	rf_InitNode(commitNode, rf_wait, RF_TRUE, rf_NullNodeFunc,
+		    rf_NullNodeUndoFunc, NULL, (nWndNodes + nWmirNodes),
+		    0, 0, 0, dag_h, "Cmt", allocList);
+	rf_InitNode(unblockNode, rf_wait, RF_FALSE, rf_NullNodeFunc,
+		    rf_NullNodeUndoFunc, NULL, 1, (nWndNodes + nWmirNodes),
+		    0, 0, dag_h, "Nil", allocList);
+	rf_InitNode(termNode, rf_wait, RF_FALSE, rf_TerminateFunc,
+		    rf_TerminateUndoFunc, NULL, 0, 1, 0, 0,
+		    dag_h, "Trm", allocList);
+
+	/* initialize the wnd nodes */
+	if (nWndNodes > 0) {
+		pda = asmap->physInfo;
+		tmpwndNode = wndNode;
+		for (i = 0; i < nWndNodes; i++) {
+			rf_InitNode(tmpwndNode, rf_wait, RF_FALSE,
+				    rf_DiskWriteFunc, rf_DiskWriteUndoFunc,
+				    rf_GenericWakeupFunc, 1, 1, 4, 0,
+				    dag_h, "Wpd", allocList);
+			RF_ASSERT(pda != NULL);
+			tmpwndNode->params[0].p = pda;
+			tmpwndNode->params[1].p = pda->bufPtr;
+			tmpwndNode->params[2].v = parityStripeID;
+			tmpwndNode->params[3].v = RF_CREATE_PARAM3(RF_IO_NORMAL_PRIORITY, which_ru);
+			pda = pda->next;
+			tmpwndNode = tmpwndNode->list_next;
+		}
+		RF_ASSERT(pda == NULL);
+	}
+	/* initialize the mirror nodes */
+	if (nWmirNodes > 0) {
+		pda = asmap->physInfo;
+		pdaP = asmap->parityInfo;
+		tmpwmirNode = wmirNode;
+		RF_ASSERT(nWmirNodes = faultsTolerated - asmap->numParityFailed)
+		for (i = 0; i < faultsTolerated; i++) {
+			rf_InitNode(tmpwmirNode, rf_wait, RF_FALSE,
+				    rf_DiskWriteFunc, rf_DiskWriteUndoFunc,
+				    rf_GenericWakeupFunc, 1, 1, 4, 0,
+				    dag_h, "Wsd", allocList);
+			RF_ASSERT(pda != NULL);
+
+			if (RF_DEAD_DISK(disks[pdaP->col].status)) {
+				pdaP = pdaP->next;
+				continue;
+			}
+			tmpwmirNode->params[0].p = pdaP;
+			tmpwmirNode->params[1].p = pda->bufPtr;
+			tmpwmirNode->params[2].v = parityStripeID;
+			tmpwmirNode->params[3].v = RF_CREATE_PARAM3(RF_IO_NORMAL_PRIORITY, which_ru);
+
+			pdaP = pdaP->next;
+			tmpwmirNode = tmpwmirNode->list_next;
+		}
+		pda->next = NULL;
+		RF_ASSERT(pdaP == NULL);
+	}
+	/* link the header node to the commit node */
+	RF_ASSERT(dag_h->numSuccedents == 1);
+	RF_ASSERT(commitNode->numAntecedents == 0);
+	dag_h->succedents[0] = commitNode;
+
+	/* link the commit node to the write nodes */
+	RF_ASSERT(commitNode->numSuccedents == (nWndNodes + nWmirNodes));
+	tmpwndNode = wndNode;
+	for (i = 0; i < nWndNodes; i++) {
+		RF_ASSERT(tmpwndNode->numAntecedents == 1);
+		commitNode->succedents[i] = tmpwndNode;
+		tmpwndNode->antecedents[0] = commitNode;
+		tmpwndNode->antType[0] = rf_control;
+		tmpwndNode = tmpwndNode->list_next;
+	}
+	tmpwmirNode = wmirNode;
+	for (i = 0; i < nWmirNodes; i++) {
+		RF_ASSERT(tmpwmirNode->numAntecedents == 1);
+		commitNode->succedents[i + nWndNodes] = tmpwmirNode;
+		tmpwmirNode->antecedents[0] = commitNode;
+		tmpwmirNode->antType[0] = rf_control;
+		tmpwmirNode = tmpwmirNode->list_next;
+	}
+
+	/* link the write nodes to the unblock node */
+	RF_ASSERT(unblockNode->numAntecedents == (nWndNodes + nWmirNodes));
+	tmpwndNode = wndNode;
+	for (i = 0; i < nWndNodes; i++) {
+		RF_ASSERT(tmpwndNode->numSuccedents == 1);
+		tmpwndNode->succedents[0] = unblockNode;
+		unblockNode->antecedents[i] = tmpwndNode;
+		unblockNode->antType[i] = rf_control;
+		tmpwndNode = tmpwndNode->list_next;
+	}
+	tmpwmirNode = wmirNode;
+	for (i = 0; i < nWmirNodes; i++) {
+		RF_ASSERT(tmpwmirNode->numSuccedents == 1);
+		tmpwmirNode->succedents[0] = unblockNode;
+		unblockNode->antecedents[i + nWndNodes] = tmpwmirNode;
+		unblockNode->antType[i + nWndNodes] = rf_control;
+		tmpwmirNode = tmpwmirNode->list_next;
+	}
+
+	/* link the unblock node to the term node */
+	RF_ASSERT(unblockNode->numSuccedents == 1);
+	RF_ASSERT(termNode->numAntecedents == 1);
+	RF_ASSERT(termNode->numSuccedents == 0);
+	unblockNode->succedents[0] = termNode;
+	termNode->antecedents[0] = unblockNode;
+	termNode->antType[0] = rf_control;
+}

@@ -179,6 +179,12 @@ rf_VerifyParity(RF_Raid_t *raidPtr, RF_AccessStripeMap_t *aasm,
 					 * works */
 					rc = lrc;
 				}
+				/*
+				 * for raidn, the verify parity call scans all the pdas in parity config once
+				 * so no need to go over again
+				 */
+				if (lp->parityConfig == 'N')
+					break;
 			}
 		}
 	} else {

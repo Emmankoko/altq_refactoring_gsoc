@@ -69,7 +69,7 @@ rf_ConfigureRAID1(RF_ShutdownList_t **listp, RF_Raid_t *raidPtr,
 	if (raidPtr->numCol < 2 || raidPtr->numCol % 2 != 0) {
 		return (EINVAL);
 	}
-	
+
 	/* create a RAID level 1 configuration structure */
 	info = RF_MallocAndAdd(sizeof(*info), raidPtr->cleanupList);
 	if (info == NULL)

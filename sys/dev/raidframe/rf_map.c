@@ -110,6 +110,10 @@ rf_MapAccess(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddress,
 
 	asmList = rf_AllocASMList(raidPtr, totStripes);
 
+	if (raidPtr->Layout.map->parityConfig == 'N') {
+		faultsTolerated = raidPtr->Layout.numParityCol;
+	}
+
 	/* may also need pda(s) per stripe for parity */
 	pdaList = rf_AllocPDAList(raidPtr, lastSUID - SUID + 1 +
 				  faultsTolerated * totStripes);
@@ -240,6 +244,33 @@ rf_MapAccess(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddress,
 			rf_ASMParityAdjust(raidPtr, asm_p->qInfo, startAddrWithinStripe, endAddress, layoutPtr, asm_p);
 			break;
 #endif
+		default:
+			if (layoutPtr->map->parityConfig == 'N') {
+
+				RF_ASSERT(pdaList);
+				pda_p = asm_p->parityInfo = pdaList;
+				pdaList = pdaList->next;
+				memset(pda_p, 0, sizeof(*pda_p));
+				pda_p->type = RF_PDA_TYPE_PARITY;
+				pda_p->next = pdaList;
+				(layoutPtr->map->MapParity) (raidPtr, rf_RaidAddressOfPrevStripeUnitBoundary(layoutPtr, startAddrWithinStripe),
+					&(pda_p->col), &(pda_p->startSector), remap);
+				pda_p->numSector = layoutPtr->sectorsPerStripeUnit;
+				/* raidAddr may be needed to find unit to redirect to */
+				pda_p->raidAddress = rf_RaidAddressOfPrevStripeUnitBoundary(layoutPtr, startAddrWithinStripe);
+				rf_ASMCheckStatus(raidPtr, pda_p, asm_p, disks, 1);
+				rf_ASMParityAdjust(raidPtr, asm_p->parityInfo, startAddrWithinStripe, endAddress, layoutPtr, asm_p);
+
+				for (int i = 2; i <= faultsTolerated; i++) {
+					pda_p = pdaList;
+					pdaList = pdaList->next;
+				}
+				if (pda_p)
+					pda_p->next = NULL;
+
+			}
+
+			break;
 		}
 	}
 	RF_ASSERT(asmList == NULL && pdaList == NULL);

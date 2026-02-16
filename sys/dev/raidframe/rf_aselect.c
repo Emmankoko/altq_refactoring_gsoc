@@ -452,7 +452,7 @@ rf_SelectAlgorithm(RF_RaidAccessDesc_t *desc, RF_RaidAccessFlags_t flags)
 				} else
 					endASMList = NULL;
 
-				if (stripeFuncs->fp == NULL) {					
+				if (stripeFuncs->fp == NULL) {
 					numStripeUnits = asm_p->numStripeUnitsAccessed;
 					/* walk through stripe, stripe unit by
 					 * stripe unit */

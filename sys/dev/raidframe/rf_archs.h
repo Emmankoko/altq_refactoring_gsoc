@@ -84,6 +84,10 @@
 #define RF_INCLUDE_RAID1   1
 #endif
 
+#ifndef RF_INCLUDE_RAIDN
+#define RF_INCLUDE_RAIDN   1
+#endif
+
 #ifndef RF_INCLUDE_RAID4
 #define RF_INCLUDE_RAID4   1
 #endif

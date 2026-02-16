@@ -114,6 +114,8 @@ static const RF_LayoutSW_t mapsw[] = {
 	 rf_MakeLayoutSpecificDeclustered, &distSpareNo},
 	/* parity logging */
 	{'L', "Parity logging", rf_MakeLayoutSpecificNULL, NULL},
+	/* N - way RAID 1 */
+	{'N', "N way RAID 1", rf_MakeLayoutSpecificNULL, NULL},
 	/* end-of-list marker */
 	{'\0', NULL, NULL, NULL}
 };
