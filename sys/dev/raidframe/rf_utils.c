@@ -53,7 +53,7 @@ rf_make_2d_array(int b, int k, RF_AllocListElem_t *allocList)
 	return (retval);
 }
 
-#if (RF_INCLUDE_PARITY_DECLUSTERING > 0) || (RF_INCLUDE_PARITY_DECLUSTERING_PQ > 0)
+#if (RF_INCLUDE_PARITY_DECLUSTERING > 0) || (RF_INCLUDE_PARITY_DECLUSTERING_PQ > 0) || (RF_INCLUDE_RAIDN > 0)
 
 void
 rf_free_2d_array(RF_RowCol_t **a, int b, int k)

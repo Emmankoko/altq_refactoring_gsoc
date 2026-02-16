@@ -49,6 +49,7 @@ file	dev/raidframe/rf_pqdegdags.c		raid
 file	dev/raidframe/rf_psstatus.c		raid
 file	dev/raidframe/rf_raid0.c		raid
 file	dev/raidframe/rf_raid1.c		raid
+file    dev/raidframe/rf_raidn.c        raid
 file	dev/raidframe/rf_raid4.c		raid
 file	dev/raidframe/rf_raid5.c		raid
 file	dev/raidframe/rf_raid5_rotatedspare.c	raid

@@ -100,7 +100,7 @@ rf_InitNode(RF_DagNode_t *node, RF_NodeStatus_t initstatus, int commit,
 	void  **ptrs;
 	int     nptrs;
 	RF_Raid_t *raidPtr;
-	
+
 	if (nAnte > RF_MAX_ANTECEDENTS)
 		RF_PANIC();
 	node->status = initstatus;
@@ -125,7 +125,7 @@ rf_InitNode(RF_DagNode_t *node, RF_NodeStatus_t initstatus, int commit,
 
 	RF_ASSERT(hdr != NULL);
 	raidPtr = hdr->raidPtr;
-	
+
 	/* allocate all the pointers with one call to malloc */
 	nptrs = nSucc + nAnte + nResult + nSucc;
 
@@ -187,7 +187,7 @@ rf_FreeDAG(RF_DagHeader_t *dag_h)
 
 	if (dag_h)
 		raidPtr = dag_h->raidPtr;
-	
+
 	while (dag_h) {
 		nextDag = dag_h->next;
 		rf_FreeAllocList(dag_h->allocList);
@@ -1315,18 +1315,18 @@ rf_SelectMirrorDiskIdle(RF_DagNode_t * node)
 {
 	RF_Raid_t *raidPtr = (RF_Raid_t *) node->dagHdr->raidPtr;
 	RF_RowCol_t colData, colMirror;
-	int     dataQueueLength, mirrorQueueLength, usemirror;
+	int     dataQueueLength, mirrorQueueLength = 0, usemirror, minMirrorQueueLength = 0;
 	RF_PhysDiskAddr_t *data_pda = (RF_PhysDiskAddr_t *) node->params[0].p;
 	RF_PhysDiskAddr_t *mirror_pda = (RF_PhysDiskAddr_t *) node->params[4].p;
 	RF_PhysDiskAddr_t *tmp_pda;
 	RF_RaidDisk_t *disks = raidPtr->Disks;
-	RF_DiskQueue_t *dqs = raidPtr->Queues, *dataQueue, *mirrorQueue;
+	RF_DiskQueue_t *dqs = raidPtr->Queues, *dataQueue, *mirrorQueue = NULL;
+	int faultsTolerated = raidPtr->Layout.numParityCol;
 
 	/* return the [row col] of the disk with the shortest queue */
 	colData = data_pda->col;
 	colMirror = mirror_pda->col;
 	dataQueue = &(dqs[colData]);
-	mirrorQueue = &(dqs[colMirror]);
 
 #ifdef RF_LOCK_QUEUES_TO_READ_LEN
 	RF_LOCK_QUEUE_MUTEX(dataQueue, "SelectMirrorDiskIdle");
@@ -1336,10 +1336,27 @@ rf_SelectMirrorDiskIdle(RF_DagNode_t * node)
 	RF_UNLOCK_QUEUE_MUTEX(dataQueue, "SelectMirrorDiskIdle");
 	RF_LOCK_QUEUE_MUTEX(mirrorQueue, "SelectMirrorDiskIdle");
 #endif				/* RF_LOCK_QUEUES_TO_READ_LEN */
-	mirrorQueueLength = mirrorQueue->queueLength + mirrorQueue->numOutstanding;
+	/* get the disk with the shortest queue */
+	for (int i = 1; i <= faultsTolerated; i++) {
+
+		mirrorQueue = &(dqs[i]);
+		mirrorQueueLength = mirrorQueue->queueLength + mirrorQueue->numOutstanding;
+
+		/* check all queue length of components and read from the shortest */
+		if (!RF_DEAD_DISK(disks[i].status)) {
+			if (i == 0 || mirrorQueueLength < minMirrorQueueLength) {
+				minMirrorQueueLength = mirrorQueueLength;
+				mirror_pda->col = i;
+				colMirror = mirror_pda->col;
+			}
+		}
+	}
 #ifdef RF_LOCK_QUEUES_TO_READ_LEN
 	RF_UNLOCK_QUEUE_MUTEX(mirrorQueue, "SelectMirrorDiskIdle");
 #endif				/* RF_LOCK_QUEUES_TO_READ_LEN */
+
+	KASSERT(mirrorQueue != NULL);
+
 
 	usemirror = 0;
 	if (RF_DEAD_DISK(disks[colMirror].status)) {
@@ -1352,7 +1369,7 @@ rf_SelectMirrorDiskIdle(RF_DagNode_t * node)
 				/* Trust only the main disk */
 				usemirror = 0;
 			} else
-				if (dataQueueLength < mirrorQueueLength) {
+				if (dataQueueLength < minMirrorQueueLength) {
 					usemirror = 0;
 				} else
 					if (mirrorQueueLength < dataQueueLength) {

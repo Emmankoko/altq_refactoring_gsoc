@@ -69,6 +69,10 @@ void    rf_CommonCreateSmallWriteDAGFwd(RF_Raid_t * raidPtr,
 void    rf_CreateRaidOneWriteDAG(RF_Raid_t * raidPtr, RF_AccessStripeMap_t * asmap,
     RF_DagHeader_t * dag_h, void *bp, RF_RaidAccessFlags_t flags,
     RF_AllocListElem_t * allocList);
+void    rf_CreateRaidNWriteDAG(RF_Raid_t *raidPtr, RF_AccessStripeMap_t *asmap,
+    RF_DagHeader_t *dag_h, void *bp,
+    RF_RaidAccessFlags_t flags,
+    RF_AllocListElem_t *allocList);
 void    rf_CreateRaidOneWriteDAGFwd(RF_Raid_t * raidPtr,
     RF_AccessStripeMap_t * asmap, RF_DagHeader_t * dag_h, void *bp,
     RF_RaidAccessFlags_t flags, RF_AllocListElem_t * allocList);
