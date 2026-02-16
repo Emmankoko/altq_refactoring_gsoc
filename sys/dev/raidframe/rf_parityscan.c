@@ -179,6 +179,8 @@ rf_VerifyParity(RF_Raid_t *raidPtr, RF_AccessStripeMap_t *aasm,
 					 * works */
 					rc = lrc;
 				}
+				if (lp->parityConfig == 'N')
+					break;
 			}
 		}
 	} else {

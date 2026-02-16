@@ -117,7 +117,7 @@ static int ComputePSDiskOffsets(RF_Raid_t *, RF_StripeNum_t, RF_RowCol_t,
 static int IssueNextWriteRequest(RF_Raid_t *);
 static void ReconReadDoneProc(void *, int);
 static void ReconWriteDoneProc(void *, int);
-static void CheckForNewMinHeadSep(RF_Raid_t *, RF_HeadSepLimit_t);
+static void CheckForNewMinHeadSep(RF_Raid_t *, RF_HeadSepLimit_t, RF_RowCol_t);
 static int CheckHeadSeparation(RF_Raid_t *, RF_PerDiskReconCtrl_t *,
 			       RF_RowCol_t, RF_HeadSepLimit_t,
 			       RF_ReconUnitNum_t);
@@ -576,13 +576,15 @@ rf_ContinueReconstructFailedDisk(RF_RaidReconDesc_t *reconDesc)
 	unsigned long xor_s, xor_resid_us;
 	int     i, ds;
 	int status, done;
-	int recon_error, write_error;
+	int recon_error, write_error, recon_disk_count;
+
+	int trace_number = raidPtr->numCol;
 
 	raidPtr->accumXorTimeUs = 0;
 #if RF_ACC_TRACE > 0
 	/* create one trace record per physical disk */
 	raidPtr->recon_tracerecs =
-	    RF_Malloc(raidPtr->numCol * sizeof(*raidPtr->recon_tracerecs));
+	    RF_Malloc(trace_number * sizeof(*raidPtr->recon_tracerecs));
 #endif
 
 	/* quiesce the array prior to starting recon.  this is needed
@@ -665,61 +667,73 @@ rf_ContinueReconstructFailedDisk(RF_RaidReconDesc_t *reconDesc)
 		   scheduled.
 
 		   XXX: Should be fixed for PARITY_DECLUSTERING and
-		   others too! 
+		   others too!
 
 		*/
 
-		if (raidPtr->Layout.numDataCol < 
+		if (raidPtr->Layout.numDataCol <
 		    raidPtr->numCol - raidPtr->Layout.numParityCol) {
 			/* numDataCol is at least 2 less than numCol, so
 			   should be RAID 5 with Rotated Spares */
 
 			/* XXX need to update for RAID 6 */
-			
+
 			startPSID = raidPtr->reconControl->lastPSID - pending_writes + 1;
 			endPSID = raidPtr->reconControl->lastPSID;
-			
+
 			offPSID = raidPtr->numCol - col - 1;
-			
+
 			aPSID = startPSID - startPSID % raidPtr->numCol + offPSID;
 			if (aPSID < startPSID) {
 				aPSID += raidPtr->numCol;
 			}
-			
+
 			bPSID = endPSID - ((endPSID - offPSID) % raidPtr->numCol);
-			
+
 			if (aPSID < endPSID) {
 				num_writes = ((bPSID - aPSID) / raidPtr->numCol) + 1;
 			}
-			
+
 			if ((aPSID == endPSID) && (bPSID == endPSID)) {
 				num_writes++;
 			}
 		}
 #endif
-		
+
 		/* issue a read for each surviving disk */
-		
+
 		reconDesc->numDisksDone = 0;
 		for (i = 0; i < raidPtr->numCol; i++) {
 			if (i != col) {
+				if (raidPtr->Layout.map->parityConfig == 'N' &&
+				RF_DEAD_DISK(raidPtr->Disks[i].status)) {
+					continue;
+				}
 				/* find and issue the next I/O on the
 				 * indicated disk */
 				if (IssueNextReadRequest(raidPtr, i)) {
 					Dprintf1("RECON: done issuing for c%d\n", i);
 					reconDesc->numDisksDone++;
 				}
+				if (raidPtr->Layout.map->parityConfig == 'N')
+					break;
 			}
 		}
 
 		/* process reconstruction events until all disks report that
 		 * they've completed all work */
 
-		while (reconDesc->numDisksDone < raidPtr->numCol - 1) {
+		/* we only need to read one disk for recon in raidn, otherwise use numcol -1*/
+		if (raidPtr->Layout.map->parityConfig == 'N')
+			recon_disk_count = 1;
+		else
+			recon_disk_count = raidPtr->numCol - 1;
+
+		while (reconDesc->numDisksDone < recon_disk_count) {
 
 			event = rf_GetNextReconEvent(reconDesc);
 			status = ProcessReconEvent(raidPtr, event);
-			
+
 			/* the normal case is that a read completes, and all is well. */
 			if (status == RF_RECON_DONE_READS) {
 				reconDesc->numDisksDone++;
@@ -780,9 +794,10 @@ rf_ContinueReconstructFailedDisk(RF_RaidReconDesc_t *reconDesc)
 		rf_WakeupHeadSepCBWaiters(raidPtr);
 
 		while (!recon_error && (num_writes < pending_writes)) {
+
 			event = rf_GetNextReconEvent(reconDesc);
 			status = ProcessReconEvent(raidPtr, event);
-			
+
 			if (status == RF_RECON_WRITE_ERROR) {
 				num_writes++;
 				recon_error = 1;
@@ -805,11 +820,19 @@ rf_ContinueReconstructFailedDisk(RF_RaidReconDesc_t *reconDesc)
 			pending_writes = lastPSID - prev;
 			raidPtr->reconControl->lastPSID = lastPSID;
 		}
+
 		/* back down curPSID to get ready for the next round... */
-		for (i = 0; i < raidPtr->numCol; i++) {
-			if (i != col) {
-				raidPtr->reconControl->perDiskInfo[i].curPSID--;
-				raidPtr->reconControl->perDiskInfo[i].ru_count = RUsPerPU - 1;
+		/* for raidn, just continue with the disk in earlier reads */
+		if (raidPtr->Layout.map->parityConfig == 'N') {
+			raidPtr->reconControl->perDiskInfo[i].curPSID--;
+			raidPtr->reconControl->perDiskInfo[i].ru_count = RUsPerPU - 1;
+		}
+		else {
+			for (i = 0; i < trace_number; i++) {
+				if (i != col) {
+					raidPtr->reconControl->perDiskInfo[i].curPSID--;
+					raidPtr->reconControl->perDiskInfo[i].ru_count = RUsPerPU - 1;
+				}
 			}
 		}
 	}
@@ -818,6 +841,7 @@ rf_ContinueReconstructFailedDisk(RF_RaidReconDesc_t *reconDesc)
 	if (rf_reconDebug) {
 		printf("RECON: all reads completed\n");
 	}
+
 	/* at this point all the reads have completed.  We now wait
 	 * for any pending writes to complete, and then we're done */
 
@@ -840,6 +864,7 @@ rf_ContinueReconstructFailedDisk(RF_RaidReconDesc_t *reconDesc)
 		}
 	}
 
+	printf("recon error is %d\n", recon_error);
 	if (recon_error) {
 		/* we've encountered an error in reconstructing. */
 		printf("raid%d: reconstruction failed.\n", raidPtr->raidid);
@@ -1198,7 +1223,7 @@ IssueNextReadRequest(RF_Raid_t *raidPtr, RF_RowCol_t col)
 			/* code left over from when head-sep was based on
 			 * parity stripe id */
 			if (ctrl->curPSID > raidPtr->reconControl->lastPSID) {
-				CheckForNewMinHeadSep(raidPtr, ++(ctrl->headSepCounter));
+				CheckForNewMinHeadSep(raidPtr, ++(ctrl->headSepCounter), col);
 				return (RF_RECON_DONE_READS);	/* finito! */
 			}
 			/* find the disk offsets of the start of the parity
@@ -1223,7 +1248,7 @@ IssueNextReadRequest(RF_Raid_t *raidPtr, RF_RowCol_t col)
 	}
 	ctrl->headSepCounter++;
 	if (do_new_check)
-		CheckForNewMinHeadSep(raidPtr, ctrl->headSepCounter);	/* update min if needed */
+		CheckForNewMinHeadSep(raidPtr, ctrl->headSepCounter, col);	/* update min if needed */
 
 
 	/* at this point, we have definitely decided what to do, and we have
@@ -1403,51 +1428,55 @@ ComputePSDiskOffsets(RF_Raid_t *raidPtr, RF_StripeNum_t psid,
 	if (j == stripeWidth) {
 		goto skipit;
 	}
+
 	/* find out which disk the parity is on */
 	(layoutPtr->map->MapParity) (raidPtr, sosRaidAddress, &pcol, &poffset, RF_DONT_REMAP);
 
-	/* find out if either the current RU or the failed RU is parity */
-	/* also, if the parity occurs in this stripe prior to the data and/or
-	 * failed col, we need to decrement i and/or j */
-	for (k = 0; k < stripeWidth; k++)
-		if (diskids[k] == pcol)
-			break;
-	RF_ASSERT(k < stripeWidth);
-	i_offset = i;
-	j_offset = j;
-	if (k < i)
-		i_offset--;
-	else
-		if (k == i) {
-			i_is_parity = 1;
-			i_offset = 0;
-		}		/* set offsets to zero to disable multiply
-				 * below */
-	if (k < j)
-		j_offset--;
-	else
-		if (k == j) {
-			j_is_parity = 1;
-			j_offset = 0;
-		}
-	/* at this point, [ij]_is_parity tells us whether the [current,failed]
-	 * disk is parity at the start of this RU, and, if data, "[ij]_offset"
-	 * tells us how far into the stripe the [current,failed] disk is. */
+	if (layoutPtr->map->parityConfig != 'N') {
+		/* find out if either the current RU or the failed RU is parity */
+		/* also, if the parity occurs in this stripe prior to the data and/or
+		* failed col, we need to decrement i and/or j */
+		for (k = 0; k < stripeWidth; k++)
+			if (diskids[k] == pcol)
+				break;
+		RF_ASSERT(k < stripeWidth);
+		i_offset = i;
+		j_offset = j;
+		if (k < i)
+			i_offset--;
+		else
+			if (k == i) {
+				i_is_parity = 1;
+				i_offset = 0;
+			}		/* set offsets to zero to disable multiply
+					* below */
+		if (k < j)
+			j_offset--;
+		else
+			if (k == j) {
+				j_is_parity = 1;
+				j_offset = 0;
+			}
+		/* at this point, [ij]_is_parity tells us whether the [current,failed]
+		* disk is parity at the start of this RU, and, if data, "[ij]_offset"
+		* tells us how far into the stripe the [current,failed] disk is. */
 
-	/* call the mapping routine to get the offset into the current disk,
-	 * repeat for failed disk. */
-	if (i_is_parity)
-		layoutPtr->map->MapParity(raidPtr, sosRaidAddress + i_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outDiskOffset, RF_DONT_REMAP);
-	else
-		layoutPtr->map->MapSector(raidPtr, sosRaidAddress + i_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outDiskOffset, RF_DONT_REMAP);
+		/* call the mapping routine to get the offset into the current disk,
+		* repeat for failed disk. */
 
-	RF_ASSERT(col == testcol);
+		if (i_is_parity)
+			layoutPtr->map->MapParity(raidPtr, sosRaidAddress + i_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outDiskOffset, RF_DONT_REMAP);
+		else
+			layoutPtr->map->MapSector(raidPtr, sosRaidAddress + i_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outDiskOffset, RF_DONT_REMAP);
 
-	if (j_is_parity)
-		layoutPtr->map->MapParity(raidPtr, sosRaidAddress + j_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outFailedDiskSectorOffset, RF_DONT_REMAP);
-	else
-		layoutPtr->map->MapSector(raidPtr, sosRaidAddress + j_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outFailedDiskSectorOffset, RF_DONT_REMAP);
-	RF_ASSERT(fcol == testcol);
+		RF_ASSERT(col == testcol);
+
+		if (j_is_parity)
+			layoutPtr->map->MapParity(raidPtr, sosRaidAddress + j_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outFailedDiskSectorOffset, RF_DONT_REMAP);
+		else
+			layoutPtr->map->MapSector(raidPtr, sosRaidAddress + j_offset * layoutPtr->sectorsPerStripeUnit, &testcol, outFailedDiskSectorOffset, RF_DONT_REMAP);
+		RF_ASSERT(fcol == testcol);
+	}
 
 	/* now locate the spare unit for the failed unit */
 #if RF_INCLUDE_PARITY_DECLUSTERING_DS > 0
@@ -1459,7 +1488,12 @@ ComputePSDiskOffsets(RF_Raid_t *raidPtr, RF_StripeNum_t psid,
 	} else {
 #endif
 		*spCol = raidPtr->reconControl->spareCol;
-		*spOffset = *outFailedDiskSectorOffset;
+
+		/* all the offsets should be the same for raidn */
+		if (layoutPtr->map->parityConfig == 'N')
+			*spOffset = *outFailedDiskSectorOffset = *outDiskOffset = poffset;
+		else
+			*spOffset = *outFailedDiskSectorOffset;
 #if RF_INCLUDE_PARITY_DECLUSTERING_DS > 0
 	}
 #endif
@@ -1589,7 +1623,7 @@ ReconWriteDoneProc(void *arg, int status)
  * be woken as a result
  */
 static void
-CheckForNewMinHeadSep(RF_Raid_t *raidPtr, RF_HeadSepLimit_t hsCtr)
+CheckForNewMinHeadSep(RF_Raid_t *raidPtr, RF_HeadSepLimit_t hsCtr, RF_RowCol_t col)
 {
 	RF_ReconCtrl_t *reconCtrlPtr = raidPtr->reconControl;
 	RF_HeadSepLimit_t new_min;
@@ -1607,11 +1641,15 @@ CheckForNewMinHeadSep(RF_Raid_t *raidPtr, RF_HeadSepLimit_t hsCtr)
 	rf_unlock_mutex2(reconCtrlPtr->rb_mutex);
 
 	new_min = ~(1L << (8 * sizeof(long) - 1));	/* 0x7FFF....FFF */
-	for (i = 0; i < raidPtr->numCol; i++)
+	for (i = 0; i < raidPtr->numCol; i++) {
+		if ((raidPtr->Layout.map->parityConfig == 'N') && i != col)
+			continue;
 		if (i != reconCtrlPtr->fcol) {
 			if (reconCtrlPtr->perDiskInfo[i].headSepCounter < new_min)
 				new_min = reconCtrlPtr->perDiskInfo[i].headSepCounter;
 		}
+	}
+
 	/* set the new minimum and wake up anyone who can now run again */
 	if (new_min != reconCtrlPtr->minHeadSepCounter) {
 		reconCtrlPtr->minHeadSepCounter = new_min;

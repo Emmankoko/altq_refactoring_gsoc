@@ -1226,11 +1226,15 @@ rf_fail_disk(RF_Raid_t *raidPtr, struct rf_recon_req *rr)
 	if (raidPtr->status == rf_rs_reconstructing) {
 		raidPtr->abortRecon[rr->col] = 1;
 	}
+	/* for n-way raid 1, we are allowed to fail more than 1 but at least save two disks*/
 	if ((raidPtr->Disks[rr->col].status == rf_ds_optimal) &&
 	    (raidPtr->numFailures > 0)) {
 		/* some other component has failed.  Let's not make
-		   things worse. XXX wrong for RAID6 */
-		goto out;
+	    things worse. XXX wrong for RAID6 */
+		if (raidPtr->Layout.map->parityConfig != 'N' || raidPtr->numFailures == raidPtr->numCol - 2) {
+			printf("raidN: cannot fail more than %d disks\n", raidPtr->numFailures);
+			goto out;
+		}
 	}
 	if (raidPtr->Disks[rr->col].status == rf_ds_spared) {
 		int spareCol = raidPtr->Disks[rr->col].spareCol;

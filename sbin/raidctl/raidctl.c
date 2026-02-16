@@ -1233,13 +1233,14 @@ component_err(int level)
 	const char *limit;
 	switch (level) {
 	case 0:
-		limit = "more than one";
-		break;
 	case 1:
 		limit = "exactly two";
 		break;
 	case 5:
 		limit = "more than two";
+		break;
+	case 'N':
+		limit = "more than one";
 		break;
 	default:
 		return; /* no use */
@@ -1269,25 +1270,27 @@ rf_simple_create(int fd, int argc, char *argv[])
 
 	if (strcmp(argv[0],"mirror")==0) {
 		level = 1;
+	} else if (strcmp(argv[0], "N") == 0) { /* N indicates a n-way RAID 1*/
+		level = 'N';
 	} else
 		level = xstrtouint(argv[0]);
 
-	if (level != 0 && level != 1 && level !=5)
+	if (level != 0 && level != 1 && level !=5 && level != 'N')
 		usage();
 
-	/* remaining args must be components */
+
+	/* remaining args must be components, components checks done next  */
 	num_components = 0;
-	for (i=1 ; i<argc ; i++) {
+	for (i=1; i<argc ; i++) {
 		components[i-1] = argv[i];
 		num_components++;
 	}
 
 	/* Level 0 must have at least two components.
-	   Level 1 must have exactly two components.
+	   Level 1 must have more than one components.
 	   Level 5 must have at least three components. */
-	if ((level == 0 && num_components < 2) ||
-	    (level == 1 && num_components != 2) ||
-	    (level == 5 && num_components < 3))
+	if (((level == 0 || level == 'N') && num_components < 2) ||
+	    (level == 5 && num_components < 3) || (level == 1 && num_components != 2))
 		component_err(level);
 
 	/* build a config... */
@@ -1315,7 +1318,7 @@ rf_simple_create(int fd, int argc, char *argv[])
 			/* 16 blocks (8K) per component */
 			cfg.sectPerSU = 16;
 		}
-	} else if (level == 1) {
+	} else if (level == 1 || level == 'N') {
 		/* 128 blocks (64K per component) - 64K per stripe */
 		cfg.sectPerSU = 128;
 	} else if (level == 5) {
@@ -1340,7 +1343,7 @@ rf_simple_create(int fd, int argc, char *argv[])
 
 	cfg.SUsPerPU = 1;
 	cfg.SUsPerRU = 1;
-	cfg.parityConfig = '0' + level;
+	cfg.parityConfig = level == 'N' ? level : '0' + level;
 	strlcpy(cfg.diskQueueType, "fifo", sizeof(cfg.diskQueueType));
 	cfg.maxOutstandingDiskReqs = 1;
 	cfg.force = 1;
@@ -1350,7 +1353,7 @@ rf_simple_create(int fd, int argc, char *argv[])
 	generic = &cfg;
 	do_ioctl(fd, RAIDFRAME_CONFIGURE, &generic, "RAIDFRAME_CONFIGURE");
 
-	if (level == 1 || level == 5)
+	if (level == 1 || level == 5 || level == 'N')
 		do_ioctl(fd, RAIDFRAME_REWRITEPARITY, NULL,
 			 "RAIDFRAME_REWRITEPARITY");
 }

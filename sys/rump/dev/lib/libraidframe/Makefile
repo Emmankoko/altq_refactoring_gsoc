@@ -21,7 +21,7 @@ SRCS=   rf_acctrace.c rf_alloclist.c rf_aselect.c rf_callback.c		\
 	rf_raid5.c rf_raid5_rotatedspare.c rf_reconbuffer.c		\
 	rf_reconmap.c rf_reconstruct.c rf_reconutil.c rf_revent.c	\
 	rf_shutdown.c rf_sstf.c rf_states.c rf_stripelocks.c		\
-	rf_strutils.c rf_utils.c rf_paritymap.c
+	rf_strutils.c rf_utils.c rf_paritymap.c rf_raidn.c
 
 SRCS+=	raidframe_component.c
 

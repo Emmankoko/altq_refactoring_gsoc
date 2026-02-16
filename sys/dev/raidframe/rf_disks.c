@@ -1266,7 +1266,7 @@ rf_swap_components(RF_Raid_t *raidPtr, int a, int b)
 
 
 	/* This function *MUST* be called with all IO suspended. */
-	RF_ASSERT(raidPtr->accesses_suspended == 0);
+	RF_ASSERT(raidPtr->accesses_suspended > 0);
 	
 	/* Swap the component names... */
 	snprintf(tmpdevname, sizeof(tmpdevname), "%s", raidPtr->Disks[a].devname);

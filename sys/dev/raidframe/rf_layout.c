@@ -43,6 +43,7 @@ __KERNEL_RCSID(0, "$NetBSD: rf_layout.c,v 1.20 2008/05/04 20:57:23 oster Exp $")
 #include "rf_declusterPQ.h"
 #include "rf_raid0.h"
 #include "rf_raid1.h"
+#include "rf_raidn.h"
 #include "rf_raid4.h"
 #include "rf_raid5.h"
 #include "rf_states.h"
@@ -255,6 +256,26 @@ static const RF_LayoutSW_t mapsw[] = {
 	},
 #endif				/* RF_INCLUDE_RAID1 > 0 */
 
+#if RF_INCLUDE_RAIDN > 0 /* n-way raid 1*/
+	/* RAID level 1 */
+	{'N', "RAID Level N", /* use ascii N for raid level */
+		RF_NU(
+		    rf_ConfigureRAIDN,
+		    rf_MapSectorRAIDN, rf_MapParityRAIDN, NULL,
+		    rf_IdentifyStripeRAIDN,
+		    rf_RAIDNDagSelect,
+		    rf_MapSIDToPSIDRAIDN,
+		    rf_GetDefaultHeadSepLimitRAID1,
+		    NULL,
+		    NULL, NULL,
+		    rf_SubmitReconBufferRAID1,
+		    rf_VerifyParityRAIDN,
+		    1, /* set fault tolerance it to 1, will change at config to ndisks - 1 */
+		    DefaultStates,
+		    0)
+	},
+#endif				/* RF_INCLUDE_RAIDN > 0 */
+
 #if RF_INCLUDE_RAID4 > 0
 	/* RAID level 4 */
 	{'4', "RAID Level 4",
@@ -441,6 +462,7 @@ rf_ConfigureLayout(RF_ShutdownList_t **listp, RF_Raid_t *raidPtr,
 		return (EINVAL);
 	}
 	RF_ASSERT(p->parityConfig == parityConfig);
+
 	layoutPtr->map = p;
 
 	/* initialize the specific layout */
