@@ -28,6 +28,7 @@ printdstl_live(d, fd, name, opts, fields)
 	int printed, last;
 	ipfobj_t obj;
 
+	/* d just gets starting being used */
 	if ((name != NULL) && strncmp(name, d->ipld_name, FR_GROUPLEN))
 		return d->ipld_next;
 

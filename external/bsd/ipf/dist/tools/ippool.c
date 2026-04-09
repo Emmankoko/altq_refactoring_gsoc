@@ -981,7 +981,7 @@ showhashs_live(fd, role, htstp, poolname)
 	}
 }
 
-
+/* in this function, which is called by poollist_live */
 void
 showdstls_live(fd, role, dlstp, poolname)
 	int fd, role;
@@ -989,7 +989,7 @@ showdstls_live(fd, role, dlstp, poolname)
 	char *poolname;
 {
 	ipflookupiter_t iter;
-	ippool_dst_t table;
+	ippool_dst_t table; /* table is unitialized, garbage */
 	ipfobj_t obj;
 
 	obj.ipfo_rev = IPFILTER_VERSION;
@@ -1001,7 +1001,7 @@ showdstls_live(fd, role, dlstp, poolname)
 	iter.ili_otype = IPFLOOKUPITER_LIST;
 	iter.ili_ival = IPFGENITER_LOOKUP;
 	iter.ili_nitems = 1;
-	iter.ili_data = &table;
+	iter.ili_data = &table; /* address of table is given to ili_data */
 	iter.ili_unit = role;
 	*iter.ili_name = '\0';
 
@@ -1011,6 +1011,8 @@ showdstls_live(fd, role, dlstp, poolname)
 			break;
 		}
 
+		/* right here, we don't see table or ili_data being written to,
+		yet, table is accessed and used */
 		printdstl_live(&table, fd, poolname, opts, pool_fields);
 
 		dlstp->ipls_list[role] = table.ipld_next;
