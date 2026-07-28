@@ -305,6 +305,8 @@
 ./usr/libdata/debug/@MODULEDIR@/npf_ext_normalize/npf_ext_normalize.kmod.debug	modules-base-kernel	kmod,debug
 ./usr/libdata/debug/@MODULEDIR@/npf_ext_rndblock			modules-base-kernel	kmod,debug
 ./usr/libdata/debug/@MODULEDIR@/npf_ext_rndblock/npf_ext_rndblock.kmod.debug	modules-base-kernel	kmod,debug
+./usr/libdata/debug/@MODULEDIR@/npf_ext_ratelimit			modules-base-kernel	kmod,debug
+./usr/libdata/debug/@MODULEDIR@/npf_ext_ratelimit/npf_ext_ratelimit.kmod.debug	modules-base-kernel	kmod,debug
 ./usr/libdata/debug/@MODULEDIR@/ntfs				modules-base-kernel	kmod,debug
 ./usr/libdata/debug/@MODULEDIR@/ntfs/ntfs.kmod.debug			modules-base-kernel	kmod,debug
 ./usr/libdata/debug/@MODULEDIR@/null				modules-base-kernel	kmod,debug

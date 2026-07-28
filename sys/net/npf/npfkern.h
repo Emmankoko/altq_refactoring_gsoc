@@ -111,4 +111,7 @@ int	npf_alg_icmp_fini(npf_t *);
 int	npf_alg_pptp_init(npf_t *);
 int	npf_alg_pptp_fini(npf_t *);
 
+int	npf_ext_ratelimit_fini(npf_t *);
+int	npf_ext_ratelimit_init(npf_t *);
+
 #endif

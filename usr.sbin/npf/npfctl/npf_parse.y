@@ -179,6 +179,7 @@ yyerror(const char *fmt, ...)
 %token	<num>		ICMP
 %token	<num>		ICMP6
 
+%token	<str>		RTLIM_SPEC
 %token	<num>		HEX
 %token	<str>		ETHERHEX
 %token	<str>		IDENTIFIER
@@ -517,6 +518,7 @@ proc_param_val
 	: some_name	{ $$ = $1; }
 	| number	{ (void)asprintf(&$$, "%ld", $1); }
 	| FPNUM		{ (void)asprintf(&$$, "%lf", $1); }
+	| RTLIM_SPEC	{ $$ = $1; }
 	|		{ $$ = NULL; }
 	;
 

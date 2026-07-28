@@ -33,6 +33,7 @@ npf_ext_construct
 npf_ext_param_bool
 npf_ext_param_string
 npf_ext_param_u32
+npf_ext_param_u64
 npf_nat_create
 npf_nat_getaddr
 npf_nat_getalgo

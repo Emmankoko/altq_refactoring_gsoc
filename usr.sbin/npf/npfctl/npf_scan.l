@@ -190,6 +190,16 @@ layer-2			return L2;
 "<>"			return XRG;
 "><"			return IRG;
 
+{NUMBER}*[a-zA-Z] {
+			yylval.str = estrndup(yytext, yyleng);
+			return RTLIM_SPEC;
+}
+
+{NUMBER}[\.]*[0-9]*[a-zA-Z] {
+			yylval.str = estrndup(yytext, yyleng);
+			return RTLIM_SPEC;
+}
+
 "0x"{HEXDIG} {
 			char *endp, *buf = ecalloc(1, yyleng + 1);
 			buf[yyleng] = 0;
