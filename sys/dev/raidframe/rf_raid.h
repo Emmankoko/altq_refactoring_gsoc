@@ -205,12 +205,18 @@ struct RF_Raid_s {
 	int     waiting_for_quiescence;
 	RF_CallbackFuncDesc_t *quiesce_wait_list;
 
+	/* scrub */
+	RF_Scrub_t scrub;
+	int abortScrub;
+
 	/*
          * Statistics
          */
 	RF_StripeCount_t     parity_rewrite_stripes_done;
+	RF_StripeCount_t     scrub_stripes_done;
 
 	int     recon_in_progress;
+	int		scrub_in_progress;
 	int     parity_rewrite_in_progress;
 	int     changing_components;
 
@@ -224,6 +230,7 @@ struct RF_Raid_s {
 	rf_declare_cond2(node_queue_cv);
 	RF_DagNode_t *node_queue;
 	RF_Thread_t parity_rewrite_thread;
+	RF_Thread_t scrub_thread;
 	RF_Thread_t engine_thread;
 	RF_Thread_t engine_helper_thread;
 	RF_Thread_t recon_thread;

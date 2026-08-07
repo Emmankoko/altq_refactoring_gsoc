@@ -47,6 +47,7 @@ __KERNEL_RCSID(0, "$NetBSD: rf_parityscan.c,v 1.38 2021/08/08 21:45:53 andvar Ex
 #include "rf_parityscan.h"
 #include "rf_map.h"
 #include "rf_paritymap.h"
+#include "rf_raid0.h"
 
 /*****************************************************************************
  *
@@ -140,6 +141,98 @@ rf_RewriteParityRange(RF_Raid_t *raidPtr, RF_SectorNum_t sec_begin,
 	}
 	return (ret_val);
 }
+
+int
+rf_Component_scrub(RF_Raid_t *raidPtr)
+{
+	RF_AccessStripeMapHeader_t *asm_h;
+	RF_SectorNum_t Sec_begin;
+	RF_RaidLayout_t *layoutPtr = &raidPtr->Layout;
+	RF_StripeCount_t start_stripe, end_stripe, i;
+	RF_Scrub_t *scrub = &raidPtr->scrub;
+	RF_AccessStripeMap_t *doasm;
+	const RF_LayoutSW_t *lp;
+	RF_PhysDiskAddr_t *parityPDA, *failedPDA;
+	struct timeval starttime, etime, elpsd;
+	int failedCols[RF_MAXCOL];
+
+	int (*scrub_fnctl) (RF_Raid_t *, RF_RaidAddr_t, RF_PhysDiskAddr_t *,
+				 int, RF_RaidAccessFlags_t);
+
+	RF_GETTIME(starttime);
+
+	start_stripe = scrub->start_percentage * raidPtr->Layout.stripeUnitsPerDisk / 100;
+	end_stripe = scrub->end_percentage * raidPtr->Layout.stripeUnitsPerDisk / 100;
+	scrub->scrub_stripes = end_stripe - start_stripe;
+
+	Sec_begin = rf_StripeIDToRaidAddress(layoutPtr, start_stripe);
+
+	lp = layoutPtr->map;
+	memset(failedCols, 0, raidPtr->numCol * sizeof(int));
+
+	for (i = start_stripe; i < end_stripe; i++) {
+
+		rf_lock_mutex2(raidPtr->mutex);
+		if (raidPtr->abortScrub) {
+			printf("raid%d: aborting scrubbing of raid device\n", raidPtr->raidid);
+			rf_unlock_mutex2(raidPtr->mutex);
+			return 0;
+		}
+		rf_unlock_mutex2(raidPtr->mutex);
+
+		/* get the first sector on this stripe */
+		Sec_begin = rf_StripeIDToRaidAddress(layoutPtr, i);
+		asm_h = rf_MapAccess(raidPtr, Sec_begin, layoutPtr->sectorsPerStripeUnit,
+					NULL, RF_DONT_REMAP);
+
+		if (asm_h == NULL)
+			return -1;
+
+		scrub_fnctl = lp->VerifyParity;
+		if (lp->parityConfig == '0')
+			scrub_fnctl = rf_RAID0Scrub;
+
+		for (doasm = asm_h->stripeMap; doasm; doasm = doasm->next) {
+			parityPDA = doasm->parityInfo;
+			scrub_fnctl(raidPtr,
+			doasm->raidAddress, parityPDA, 0, scrub->flags);
+
+			rf_lock_mutex2(raidPtr->mutex);
+			raidPtr->scrub_stripes_done++;
+			rf_unlock_mutex2(raidPtr->mutex);
+
+			for (int j = 0; j < doasm->numFailedPDAs; j++) {
+				failedPDA = doasm->failedPDAs[j];
+				failedCols[failedPDA->col]++;
+			}
+		}
+		rf_FreeAccessStripeMap(raidPtr, asm_h);
+	}
+
+	RF_GETTIME(etime);
+	RF_TIMEVAL_DIFF(&starttime, &etime, &elpsd);
+
+	printf("raid%d: Scrubbing disk from stripe %lu to stripe %lu completed\n",
+	       raidPtr->raidid,  start_stripe,  end_stripe);
+	printf("raid%d: Scrub time was %d.%06d seconds\n",
+	       raidPtr->raidid,
+	       (int) elpsd.tv_sec, (int) elpsd.tv_usec);
+	printf("raid%d:  (start time %d sec %d usec, end time %d sec %d usec)\n",
+	       raidPtr->raidid,
+	       (int) starttime.tv_sec,
+	       (int) starttime.tv_usec,
+	       (int) etime.tv_sec, (int) etime.tv_usec);
+
+	for (int j = 0; j < raidPtr->numCol; j++) {
+		printf("raid%d: Total number of read failures on Component %s: %d\n",
+	       raidPtr->raidid, raidPtr->Disks[j].devname, failedCols[j]);
+	}
+
+	/* when done, get the failed PDAs and report to the user */
+	return 0;
+}
+
+
 /*****************************************************************************
  *
  * verify that the parity in a particular stripe is correct.  we
@@ -280,11 +373,22 @@ rf_VerifyParityBasic(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddr,
 	while (!mcpair->flag)
 		RF_WAIT_MCPAIR(mcpair);
 	RF_UNLOCK_MCPAIR(mcpair);
+
 	if (rd_dag_h->status != rf_enable) {
-		RF_ERRORMSG("Unable to verify parity:  can't read the stripe\n");
+
+		if ((flags & (RF_SCRUB_READ | RF_SCRUB_CORRECT)) == 0)
+			RF_ERRORMSG("Unable to verify raidn parity: can't read stripe\n");
+
 		retcode = RF_PARITY_COULD_NOT_VERIFY;
 		goto out;
+	} else {
+		/* read sucesses, if we are just read scrubbing, we end here otherwise, continue */
+		if (flags &  RF_SCRUB_READ) {
+			retcode = RF_PARITY_OKAY;
+			goto out;
+		}
 	}
+
 	for (p = bf; p < end_p; p += numbytes) {
 		rf_bxor(p, pbuf, numbytes);
 	}

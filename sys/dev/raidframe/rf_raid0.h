@@ -53,5 +53,8 @@ rf_RAID0DagSelect(RF_Raid_t * raidPtr, RF_IoType_t type,
 int
 rf_VerifyParityRAID0(RF_Raid_t * raidPtr, RF_RaidAddr_t raidAddr,
     RF_PhysDiskAddr_t * parityPDA, int correct_it, RF_RaidAccessFlags_t flags);
+int
+rf_RAID0Scrub(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddr,
+    RF_PhysDiskAddr_t *parityPDA, int correct_it, RF_RaidAccessFlags_t flags);
 
 #endif				/* !_RF__RF_RAID0_H_ */

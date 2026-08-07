@@ -93,6 +93,7 @@ static  void get_time_string(char *, size_t, int);
 static  void rf_output_pmstat(int, int);
 static  void rf_pm_configure(int, int, char *, int[]);
 static  void rf_simple_create(int, int, char *[]);
+static  void rf_simple_scrub(int , int , char *[]);
 static  unsigned int xstrtouint(const char *);
 
 int verbose;
@@ -141,11 +142,10 @@ main(int argc,char *argv[])
 	last_unit = 0;
 	openmode = O_RDWR;	/* default to read/write */
 
-	if (argc > 5) {
-		/* we have at least 5 args, so it might be a simplified config */
-
+	if (argc > 2) {
 		strlcpy(name, argv[1], sizeof(name));
 		fd = opendisk(name, openmode, dev_name, sizeof(dev_name), 0);
+		/* we have at least 5 args, so it might be a simplified config */
 		if (fd != -1) {
 			/* we were able to open the device... */
 			if (fstat(fd, &st) == -1)
@@ -168,6 +168,8 @@ main(int argc,char *argv[])
 				strlcpy(autoconf, "yes", sizeof(autoconf));
 				set_autoconfig(fd, raidID, autoconf);
 
+			} else if (strncmp(argv[2],"scrub",5)==0) {
+				rf_simple_scrub(fd, argc -3, &argv[3]);
 			} else
 				usage();
 
@@ -1039,6 +1041,7 @@ check_status(int fd, int meter)
 {
 	int recon_percent_done = 0;
 	int parity_percent_done = 0;
+	int scrub_percent_done = 0;
 
 	do_ioctl(fd, RAIDFRAME_CHECK_RECON_STATUS, &recon_percent_done,
 		 "RAIDFRAME_CHECK_RECON_STATUS");
@@ -1047,6 +1050,10 @@ check_status(int fd, int meter)
 		 &parity_percent_done,
 		 "RAIDFRAME_CHECK_PARITYREWRITE_STATUS");
 	printf("Parity Re-write is %d%% complete.\n", parity_percent_done);
+
+	do_ioctl(fd, RAIDFRAME_CHECK_SCRUB_STATUS, &scrub_percent_done,
+		 "RAIDFRAME_CHECK_SCRUB_STATUS");
+	printf("scrubbing is %d%% complete.\n", scrub_percent_done);
 
 	if (meter) {
 		/* These 3 should be mutually exclusive at this point */
@@ -1250,6 +1257,30 @@ component_err(int level)
 	usage();
 }
 
+static void
+rf_simple_scrub(int fd, int argc, char *argv[]) {
+	RF_Scrub_t scrub;
+	memset(&scrub, 0, sizeof(scrub));
+
+
+	if (argc == 0) { /* no more args */
+			scrub.start_percentage = 0;
+			scrub.end_percentage = 100;
+	} else if (argc == 3 && strcmp(argv[0], "percentage") == 0) {
+			scrub.start_percentage = xstrtouint(argv[1]);
+			scrub.end_percentage = xstrtouint(argv[2]);
+	} else if (argc == 1 && strcmp(argv[0], "stop") == 0) {
+		do_ioctl(fd, RAIDFRAME_SCRUB_STOP, NULL, "RAIDFRAME_SCRUB_STOP");
+		return;
+	} else
+		usage();
+
+	if (scrub.end_percentage < scrub.start_percentage)
+		errx(EXIT_FAILURE, "invalid scrub range: upper bound expected to be higher than lower bound \n");
+
+	do_ioctl(fd, RAIDFRAME_SCRUB, &scrub, "RAIDFRAME_SCRUB");
+}
+
 /* Simplified RAID creation with a single command line... */
 static void
 rf_simple_create(int fd, int argc, char *argv[])
@@ -1366,6 +1397,12 @@ usage(void)
 
 	fprintf(stderr,
 		"usage: %s dev create [0 | 1 | mirror | 5] component component ...\n",
+		progname);
+	fprintf(stderr,
+		"usage: %s dev scrub percentage start_percentage end_percentage\n",
+		progname);
+	fprintf(stderr,
+		"usage: %s dev scrub stop\n",
 		progname);
 	fprintf(stderr, "       %s [-v] -A [yes | no | softroot | hardroot] dev\n",
 		progname);

@@ -419,11 +419,22 @@ rf_VerifyParityEvenOdd(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddr,
 	while (!mcpair->flag)
 		RF_WAIT_MCPAIR(mcpair);
 	RF_UNLOCK_MCPAIR(mcpair);
+
 	if (rd_dag_h->status != rf_enable) {
-		RF_ERRORMSG("Unable to verify parity:  can't read the stripe\n");
+
+		if ((flags & (RF_SCRUB_READ | RF_SCRUB_CORRECT)) == 0)
+			RF_ERRORMSG("Unable to verify raidn parity: can't read stripe\n");
+
 		retcode = RF_PARITY_COULD_NOT_VERIFY;
 		goto out;
+	} else {
+		/* read sucesses, if we are just read scrubbing, we end here otherwise, continue */
+		if (flags &  RF_SCRUB_READ) {
+			retcode = RF_PARITY_OKAY;
+			goto out;
+		}
 	}
+
 	for (p = buf, i = 0; p < end_p; p += numbytes, i++) {
 		rf_e_encToBuf(raidPtr, i, p, RF_EO_MATRIX_DIM - 2, redundantbuf2, numsector);
 		/* the corresponding columes in EvenOdd encoding Matrix for

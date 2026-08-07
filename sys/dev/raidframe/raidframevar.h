@@ -205,6 +205,10 @@ typedef RF_uint32 RF_DiskQueueDataFlags_t;
 typedef RF_uint32 RF_DiskQueueFlags_t;
 typedef RF_uint32 RF_RaidAccessFlags_t;
 
+/* scrubbing routines */
+#define RF_SCRUB_READ		0x10000000	/* detect read errors */
+#define RF_SCRUB_CORRECT	0x01000000	/* correct parity */
+
 #define RF_DISKQUEUE_DATA_FLAGS_NONE ((RF_DiskQueueDataFlags_t)0)
 
 typedef struct RF_AccessStripeMap_s RF_AccessStripeMap_t;
@@ -260,6 +264,7 @@ typedef struct RF_RegionBufferQueue_s RF_RegionBufferQueue_t;
 typedef struct RF_RegionInfo_s RF_RegionInfo_t;
 typedef struct RF_ShutdownList_s RF_ShutdownList_t;
 typedef struct RF_SpareTableEntry_s RF_SpareTableEntry_t;
+typedef struct RF_Scrub_s RF_Scrub_t;
 typedef struct RF_SparetWait_s RF_SparetWait_t;
 typedef struct RF_StripeLockDesc_s RF_StripeLockDesc_t;
 typedef struct RF_ThreadGroup_s RF_ThreadGroup_t;
@@ -305,6 +310,13 @@ struct RF_SpareTableEntry_s {
         u_int   spareDisk;          /* disk to which this block is spared */
         u_int   spareBlockOffsetInSUs;  /* offset into spare table for that
                                          * disk */
+};
+
+struct RF_Scrub_s {
+	RF_uint32 start_percentage;
+	RF_uint32 end_percentage;
+	RF_StripeCount_t scrub_stripes;
+	int flags;
 };
 
 union RF_GenericParam_u {
@@ -636,7 +648,5 @@ struct rf_pmstat {
 	char dirty[RF_PARITYMAP_NBYTE];
 	struct rf_pmctrs ctrs;
 };
-
-
 
 #endif				/* !_RF_RAIDFRAMEVAR_H_ */

@@ -272,6 +272,7 @@ rf_VerifyParityRAIDN(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddr,
 			t_pda->col = i;
 			t_pda->next = next_pda;
 		}
+		rf_ASMCheckStatus(raidPtr, t_pda, aasm, raidPtr->Disks, 1);
 
 		rf_RangeRestrictPDA(raidPtr, parityPDA, t_pda, 0, 1);
 		RF_ASSERT(t_pda->numSector != 0);
@@ -313,10 +314,26 @@ rf_VerifyParityRAIDN(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddr,
 	}
 	RF_UNLOCK_MCPAIR(mcpair);
 
+	/*
+	 * if we are just scrubbing to detect read errors without correcting,
+	 * we are fine to exit this function after getting the read status
+	 * if we care about correcting, let's go ahead and correct
+	 * if we are not scrubbing but doing parity verification, we can rely on
+	 * this kernel message
+	 */
 	if (rd_dag_h->status != rf_enable) {
-		RF_ERRORMSG("Unable to verify raidn parity: can't read stripe\n");
+
+		if ((flags & (RF_SCRUB_READ | RF_SCRUB_CORRECT)) == 0)
+			RF_ERRORMSG("Unable to verify raidn parity: can't read stripe\n");
+
 		ret = RF_PARITY_COULD_NOT_VERIFY;
 		goto done;
+	} else {
+		/* read sucesses, if we are just read scrubbing, we end here otherwise, continue */
+		if (flags &  RF_SCRUB_READ) {
+			ret = RF_PARITY_OKAY;
+			goto done;
+		}
 	}
 	/*
          * buf1 is the beginning of the data blocks chunk

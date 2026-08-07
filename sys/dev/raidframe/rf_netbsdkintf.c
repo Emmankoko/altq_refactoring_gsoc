@@ -296,6 +296,7 @@ static void rf_markalldirty(RF_Raid_t *);
 static void rf_set_geometry(struct raid_softc *, RF_Raid_t *);
 
 static void rf_ReconThread(struct rf_recon_req_internal *);
+static void rf_ScrubThread(RF_Raid_t *);
 static void rf_RewriteParityThread(RF_Raid_t *raidPtr);
 static void rf_ReconstructInPlaceThread(struct rf_recon_req_internal *);
 static int rf_autoconfig(device_t);
@@ -472,6 +473,36 @@ rf_containsboot(RF_Raid_t *r, device_t bdv) {
 			return 1;
 		}
 	}
+	return 0;
+}
+
+static int
+rf_scrub(RF_Raid_t *raidPtr, RF_Scrub_t *data)
+{
+	rf_lock_mutex2(raidPtr->mutex);
+	if (raidPtr->scrub_in_progress) {
+		printf("Scrubbing already in progress\n");
+		rf_unlock_mutex2(raidPtr->mutex);
+		return EBUSY;
+	}
+
+	memcpy(&raidPtr->scrub, data, sizeof(raidPtr->scrub));
+	rf_unlock_mutex2(raidPtr->mutex);
+
+	return RF_CREATE_THREAD(raidPtr->scrub_thread,
+		    rf_ScrubThread, raidPtr, "raid_scrub");
+}
+
+static int
+rf_scrub_stop(RF_Raid_t *raidPtr)
+{
+	rf_lock_mutex2(raidPtr->mutex);
+	if (!raidPtr->scrub_in_progress) {
+		rf_unlock_mutex2(raidPtr->mutex);
+		return 0;
+	}
+	raidPtr->abortScrub = 1;
+	rf_unlock_mutex2(raidPtr->mutex);
 	return 0;
 }
 
@@ -1181,7 +1212,8 @@ raid_detach_unlocked(struct raid_softc *rs)
 
 	if (DK_BUSY(dksc, 0) ||
 	    raidPtr->recon_in_progress != 0 ||
-	    raidPtr->parity_rewrite_in_progress != 0)
+	    raidPtr->parity_rewrite_in_progress != 0 ||
+		raidPtr->scrub_in_progress != 0)
 		return EBUSY;
 
 	if ((rs->sc_flags & RAIDF_INITED) == 0)
@@ -1627,7 +1659,8 @@ raidioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 
 		if (DK_BUSY(dksc, pmask) ||
 		    raidPtr->recon_in_progress != 0 ||
-		    raidPtr->parity_rewrite_in_progress != 0)
+		    raidPtr->parity_rewrite_in_progress != 0 ||
+			raidPtr->scrub_in_progress != 0)
 			retcode = EBUSY;
 		else {
 			/* detach and free on close */
@@ -1747,6 +1780,12 @@ raidioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 	case RAIDFRAME_RESCAN:
 		return rf_rescan();
 
+	case RAIDFRAME_SCRUB:
+		return rf_scrub(raidPtr, data);
+
+	case RAIDFRAME_SCRUB_STOP:
+		return rf_scrub_stop(raidPtr);
+
 	case RAIDFRAME_RESET_ACCTOTALS:
 		memset(&raidPtr->acc_totals, 0, sizeof(raidPtr->acc_totals));
 		return 0;
@@ -1777,6 +1816,15 @@ raidioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 
 	case RAIDFRAME_CHECK_RECON_STATUS_EXT:
 		rf_check_recon_status_ext(raidPtr, data);
+		return 0;
+
+	case RAIDFRAME_CHECK_SCRUB_STATUS:
+		if (raidPtr->scrub.scrub_stripes) {
+			*(int *) data =  100 *
+			raidPtr->scrub_stripes_done / raidPtr->scrub.scrub_stripes;
+		} else {
+			*(int *) data = 0;
+		}
 		return 0;
 
 	case RAIDFRAME_CHECK_PARITYREWRITE_STATUS:
@@ -2880,6 +2928,32 @@ rf_RewriteParityThread(RF_Raid_t *raidPtr)
 	}
 
 	/* That's all... */
+	kthread_exit(0);	/* does not return */
+}
+
+static void
+rf_ScrubThread(RF_Raid_t *raidPtr)
+{
+	int s, ret;
+	RF_Scrub_t scrub = raidPtr->scrub;
+
+	rf_lock_mutex2(raidPtr->mutex);
+	raidPtr->scrub_stripes_done = 0;
+	printf("Starting scrubbing at %u percent to %u percent \n", scrub.start_percentage, scrub.end_percentage);
+	raidPtr->scrub_in_progress = 1;
+	rf_unlock_mutex2(raidPtr->mutex);
+
+	s = splbio();
+	ret = rf_Component_scrub(raidPtr);
+	splx(s);
+	if (ret) {
+		printf("raid%d: Error scrubbing components (%d)!\n",
+		    raidPtr->raidid, ret);
+	}
+	rf_lock_mutex2(raidPtr->mutex);
+	raidPtr->scrub_in_progress = 0;
+	rf_unlock_mutex2(raidPtr->mutex);
+
 	kthread_exit(0);	/* does not return */
 }
 

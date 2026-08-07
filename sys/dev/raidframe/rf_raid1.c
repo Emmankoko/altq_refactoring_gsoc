@@ -397,10 +397,20 @@ rf_VerifyParityRAID1(RF_Raid_t *raidPtr, RF_RaidAddr_t raidAddr,
 	RF_UNLOCK_MCPAIR(mcpair);
 
 	if (rd_dag_h->status != rf_enable) {
-		RF_ERRORMSG("Unable to verify raid1 parity: can't read stripe\n");
+
+		if (flags & (RF_SCRUB_READ | RF_SCRUB_CORRECT) == 0)
+			RF_ERRORMSG("Unable to verify raidn parity: can't read stripe\n");
+
 		ret = RF_PARITY_COULD_NOT_VERIFY;
 		goto done;
+	} else {
+		/* read sucesses, if we are just read scrubbing, we end here otherwise, continue */
+		if (flags &  RF_SCRUB_READ) {
+			ret = RF_PARITY_OKAY;
+			goto done;
+		}
 	}
+
 	/*
          * buf1 is the beginning of the data blocks chunk
          * buf2 is the beginning of the parity blocks chunk
